@@ -91,8 +91,41 @@
       </header>
       <main class="content">
         <section class="content__page is-active" data-page="calendario">
-          <h1>Calendário</h1>
-          <p>Selecione uma ação no menu superior para gerenciar seus eventos e folgas.</p>
+          <div class="calendar" aria-label="Calendário mensal">
+            <div class="calendar__menu" role="toolbar">
+              <button class="calendar__month-button" type="button">
+                <span class="calendar__month-label" aria-live="polite"></span>
+              </button>
+              <div class="calendar__nav">
+                <button
+                  class="calendar__nav-button calendar__nav-button--prev"
+                  type="button"
+                  aria-label="Mês anterior"
+                >
+                  <span aria-hidden="true">&#8249;</span>
+                </button>
+                <button
+                  class="calendar__nav-button calendar__nav-button--next"
+                  type="button"
+                  aria-label="Próximo mês"
+                >
+                  <span aria-hidden="true">&#8250;</span>
+                </button>
+              </div>
+            </div>
+            <div class="calendar__grid" role="grid">
+              <div class="calendar__weekdays" role="row">
+                <span class="calendar__weekday" role="columnheader">DOM</span>
+                <span class="calendar__weekday" role="columnheader">SEG</span>
+                <span class="calendar__weekday" role="columnheader">TER</span>
+                <span class="calendar__weekday" role="columnheader">QUA</span>
+                <span class="calendar__weekday" role="columnheader">QUI</span>
+                <span class="calendar__weekday" role="columnheader">SEX</span>
+                <span class="calendar__weekday" role="columnheader">SÁB</span>
+              </div>
+              <div class="calendar__dates" role="rowgroup"></div>
+            </div>
+          </div>
         </section>
         <section class="content__page" data-page="clientes">
           <h1>Clientes</h1>
