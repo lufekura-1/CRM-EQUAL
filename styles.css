@@ -16,6 +16,10 @@ body {
   min-height: 100vh;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .sidebar {
   background-color: #141414;
   display: flex;
@@ -271,13 +275,13 @@ body {
 }
 
 .calendar__add-button {
-  width: 40px;
-  height: 40px;
+  width: 35px;
+  height: 35px;
   border-radius: 12px;
   border: none;
   background-color: #ff9800;
   color: #141414;
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -304,13 +308,13 @@ body {
 }
 
 .calendar__nav-button {
-  width: 40px;
-  height: 40px;
+  width: 35px;
+  height: 35px;
   border-radius: 12px;
   border: none;
   background-color: #2c2c2c;
   color: #ffffff;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -330,6 +334,7 @@ body {
   font-size: 15px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  height: 35px;
 }
 
 .calendar__grid {
@@ -389,7 +394,7 @@ body {
 
 .calendar__date-today-tag {
   font-size: 12px;
-  color: #81c784;
+  color: #00e676;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -402,13 +407,26 @@ body {
 }
 
 .calendar__event-chip {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: #ff9800;
   border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 4px 10px;
+  font-size: 12px;
   font-weight: 600;
-  color: #ffffff;
+  color: #141414;
   width: fit-content;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.calendar__event-chip:hover,
+.calendar__event-chip:focus {
+  transform: translateY(-2px);
+}
+
+.calendar__event-chip:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
 }
 
 .calendar__date--today {
@@ -418,6 +436,178 @@ body {
 .calendar__date--today .calendar__date-number {
   background-color: #2e7d32;
   box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.3);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.modal-overlay.is-visible {
+  display: flex;
+}
+
+.modal {
+  background-color: #1f1f1f;
+  border-radius: 16px;
+  width: min(480px, 100%);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  position: relative;
+  padding: 24px;
+  gap: 16px;
+}
+
+.modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal__title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.modal__close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal__label {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.modal__input,
+.modal__textarea {
+  background-color: #2c2c2c;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #ffffff;
+}
+
+.modal__input:focus,
+.modal__textarea:focus {
+  outline: none;
+  border-color: #ff9800;
+}
+
+.modal__textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.modal__footer {
+  margin-left: auto;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal__save-button {
+  background-color: #00e676;
+  color: #0c0c0c;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.modal__save-button:hover,
+.modal__save-button:focus {
+  background-color: #00c853;
+}
+
+.modal__details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.modal__details-content span {
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+.modal__details-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal__actions {
+  margin-left: auto;
+  margin-top: auto;
+  display: flex;
+  gap: 10px;
+}
+
+.modal__action {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal__action--edit {
+  color: #ff9800;
+}
+
+.modal__action--delete {
+  color: #ff5252;
+}
+
+.modal__empty-message {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
 }
 
 .calendar__date--empty {

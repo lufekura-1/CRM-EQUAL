@@ -145,6 +145,98 @@
         </section>
       </main>
     </div>
+    <div class="modal-overlay" data-modal="add-event" aria-hidden="true">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-event-title"
+      >
+        <div class="modal__header">
+          <h2 class="modal__title" id="add-event-title">Adicionar evento</h2>
+          <button
+            class="modal__close"
+            type="button"
+            data-action="close"
+            aria-label="Fechar modal"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal__content">
+          <form class="modal__form" autocomplete="off">
+            <label class="modal__field">
+              <span class="modal__label">Data do evento</span>
+              <input class="modal__input" type="date" name="date" required />
+            </label>
+            <label class="modal__field">
+              <span class="modal__label">Título</span>
+              <input
+                class="modal__input"
+                type="text"
+                name="title"
+                placeholder="Título do evento"
+                required
+              />
+            </label>
+            <label class="modal__field">
+              <span class="modal__label">Descrição</span>
+              <textarea
+                class="modal__textarea"
+                name="description"
+                placeholder="Detalhes do evento"
+              ></textarea>
+            </label>
+          </form>
+        </div>
+        <div class="modal__footer">
+          <button class="modal__save-button" type="button" data-action="save">
+            Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" data-modal="event-details" aria-hidden="true">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="event-details-title"
+      >
+        <div class="modal__header">
+          <h2 class="modal__title" id="event-details-title">Detalhes do evento</h2>
+          <button
+            class="modal__close"
+            type="button"
+            data-action="close"
+            aria-label="Fechar modal"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal__content">
+          <div class="modal__details-content" data-details="body"></div>
+        </div>
+        <div class="modal__actions">
+          <button
+            class="modal__action modal__action--edit"
+            type="button"
+            data-action="edit"
+            aria-label="Editar evento"
+          >
+            ✎
+          </button>
+          <button
+            class="modal__action modal__action--delete"
+            type="button"
+            data-action="delete"
+            aria-label="Excluir evento"
+          >
+            🗑
+          </button>
+        </div>
+      </div>
+    </div>
     <script src="script.js"></script>
   </body>
 </html>
