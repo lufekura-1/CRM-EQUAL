@@ -8,7 +8,13 @@
   </head>
   <body>
     <aside class="sidebar">
-      <button class="icon-button" aria-label="Calendário" data-tooltip="Calendário">
+      <button
+        class="icon-button is-active"
+        aria-label="Calendário"
+        data-tooltip="Calendário"
+        data-page="calendario"
+        data-label="Calendário"
+      >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <rect x="3" y="4" width="18" height="17" rx="2"></rect>
           <line x1="3" y1="9" x2="21" y2="9"></line>
@@ -16,7 +22,13 @@
           <line x1="16" y1="2" x2="16" y2="6"></line>
         </svg>
       </button>
-      <button class="icon-button" aria-label="Clientes" data-tooltip="Clientes">
+      <button
+        class="icon-button"
+        aria-label="Clientes"
+        data-tooltip="Clientes"
+        data-page="clientes"
+        data-label="Clientes"
+      >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="8" cy="8" r="3"></circle>
           <circle cx="16" cy="11" r="3"></circle>
@@ -24,20 +36,67 @@
           <path d="M12 19c0-2.7614 2.2386-5 5-5h1"></path>
         </svg>
       </button>
-      <button class="icon-button" aria-label="Contatos" data-tooltip="Contatos">
+      <button
+        class="icon-button"
+        aria-label="Contatos"
+        data-tooltip="Contatos"
+        data-page="contatos"
+        data-label="Contatos"
+      >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <rect x="3" y="4" width="18" height="14" rx="2"></rect>
           <polyline points="7,20 7,16 12,16 12,20"></polyline>
         </svg>
       </button>
     </aside>
-    <header class="topbar">
-      <nav class="topbar__actions">
-        <button class="topbar__button">Ação 1</button>
-        <button class="topbar__button">Ação 2</button>
-        <button class="topbar__button">Ação 3</button>
-      </nav>
-    </header>
-    <main class="content"></main>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar__title" aria-live="polite">CALENDÁRIO</div>
+        <div class="topbar__menus">
+          <div class="topbar__menu is-active" data-page="calendario">
+            <div class="topbar__group topbar__group--left">
+              <button class="topbar__button">Adicionar Evento</button>
+            </div>
+            <div class="topbar__group topbar__group--right">
+              <button class="topbar__button">Folgas</button>
+              <button class="topbar__button">Eventos</button>
+              <button class="topbar__button">Contatos</button>
+            </div>
+          </div>
+          <div class="topbar__menu" data-page="clientes">
+            <div class="topbar__group topbar__group--left">
+              <button class="topbar__button">Novo Cliente</button>
+              <label class="topbar__search">
+                <span class="visually-hidden">Encontre o cliente</span>
+                <input type="search" placeholder="Encontre o cliente..." />
+              </label>
+            </div>
+            <div class="topbar__group topbar__group--right"></div>
+          </div>
+          <div class="topbar__menu" data-page="contatos">
+            <div class="topbar__group topbar__group--left"></div>
+            <div class="topbar__group topbar__group--right">
+              <button class="topbar__button">Histórico</button>
+              <button class="topbar__button">Novo Contato</button>
+            </div>
+          </div>
+        </div>
+      </header>
+      <main class="content">
+        <section class="content__page is-active" data-page="calendario">
+          <h1>Calendário</h1>
+          <p>Selecione uma ação no menu superior para gerenciar seus eventos e folgas.</p>
+        </section>
+        <section class="content__page" data-page="clientes">
+          <h1>Clientes</h1>
+          <p>Cadastre novos clientes e utilize a busca para encontrar informações com rapidez.</p>
+        </section>
+        <section class="content__page" data-page="contatos">
+          <h1>Contatos</h1>
+          <p>Gerencie o histórico e crie novos contatos através das ações disponíveis no topo.</p>
+        </section>
+      </main>
+    </div>
+    <script src="script.js"></script>
   </body>
 </html>
