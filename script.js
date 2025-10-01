@@ -33,13 +33,30 @@ function createDateCell(content, { isEmpty = false, isToday = false } = {}) {
     return cell;
   }
 
-  const span = document.createElement('span');
   if (isToday) {
     cell.classList.add('calendar__date--today');
   }
+
+  const header = document.createElement('div');
+  header.className = 'calendar__date-header';
+
+  const span = document.createElement('span');
   span.className = 'calendar__date-number';
   span.textContent = content;
-  cell.appendChild(span);
+  header.appendChild(span);
+
+  if (isToday) {
+    const todayTag = document.createElement('span');
+    todayTag.className = 'calendar__date-today-tag';
+    todayTag.textContent = '(hoje)';
+    header.appendChild(todayTag);
+  }
+
+  cell.appendChild(header);
+
+  const eventsContainer = document.createElement('div');
+  eventsContainer.className = 'calendar__date-events';
+  cell.appendChild(eventsContainer);
   return cell;
 }
 
