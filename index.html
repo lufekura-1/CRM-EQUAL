@@ -54,11 +54,6 @@
         <div class="topbar__title" aria-live="polite">CALENDÁRIO</div>
         <div class="topbar__menus">
           <div class="topbar__menu is-active" data-page="calendario">
-            <div class="topbar__group topbar__group--left">
-              <button class="topbar__button topbar__button--orange">
-                Adicionar Evento
-              </button>
-            </div>
             <div class="topbar__group topbar__group--right">
               <button class="topbar__button">Folgas</button>
               <button class="topbar__button topbar__button--orange">Eventos</button>
@@ -93,7 +88,13 @@
         <section class="content__page is-active" data-page="calendario">
           <div class="calendar" aria-label="Calendário mensal">
             <div class="calendar__menu" role="toolbar">
-              <div class="calendar__menu-spacer" aria-hidden="true"></div>
+              <button
+                class="calendar__add-button"
+                type="button"
+                aria-label="Adicionar evento"
+              >
+                +
+              </button>
               <div class="calendar__month-display" aria-live="polite">
                 <span class="calendar__month-label"></span>
               </div>
