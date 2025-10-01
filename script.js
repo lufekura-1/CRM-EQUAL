@@ -5,6 +5,7 @@ const contentPages = document.querySelectorAll('.content__page');
 const monthLabel = document.querySelector('.calendar__month-label');
 const prevMonthButton = document.querySelector('.calendar__nav-button--prev');
 const nextMonthButton = document.querySelector('.calendar__nav-button--next');
+const todayButton = document.querySelector('.calendar__nav-button--today');
 const datesContainer = document.querySelector('.calendar__dates');
 
 const MONTH_NAMES = [
@@ -24,7 +25,7 @@ const MONTH_NAMES = [
 
 let currentCalendarDate = new Date();
 
-function createDateCell(content, isEmpty = false) {
+function createDateCell(content, { isEmpty = false, isToday = false } = {}) {
   const cell = document.createElement('div');
   cell.className = 'calendar__date';
   if (isEmpty) {
@@ -33,6 +34,10 @@ function createDateCell(content, isEmpty = false) {
   }
 
   const span = document.createElement('span');
+  if (isToday) {
+    cell.classList.add('calendar__date--today');
+  }
+  span.className = 'calendar__date-number';
   span.textContent = content;
   cell.appendChild(span);
   return cell;
@@ -54,11 +59,18 @@ function renderCalendar() {
   datesContainer.innerHTML = '';
 
   for (let i = 0; i < firstWeekday; i += 1) {
-    datesContainer.appendChild(createDateCell('', true));
+    datesContainer.appendChild(createDateCell('', { isEmpty: true }));
   }
 
+  const today = new Date();
+
   for (let day = 1; day <= totalDays; day += 1) {
-    datesContainer.appendChild(createDateCell(day));
+    const isToday =
+      day === today.getDate() &&
+      month === today.getMonth() &&
+      year === today.getFullYear();
+
+    datesContainer.appendChild(createDateCell(day, { isToday }));
   }
 
   const totalCells = datesContainer.children.length;
@@ -66,7 +78,7 @@ function renderCalendar() {
   if (remainder !== 0) {
     const emptyCellsToAdd = 7 - remainder;
     for (let i = 0; i < emptyCellsToAdd; i += 1) {
-      datesContainer.appendChild(createDateCell('', true));
+      datesContainer.appendChild(createDateCell('', { isEmpty: true }));
     }
   }
 }
@@ -112,6 +124,14 @@ setActivePage('calendario');
 if (prevMonthButton && nextMonthButton) {
   prevMonthButton.addEventListener('click', () => changeMonth(-1));
   nextMonthButton.addEventListener('click', () => changeMonth(1));
+}
+
+if (todayButton) {
+  todayButton.addEventListener('click', () => {
+    currentCalendarDate = new Date();
+    currentCalendarDate.setDate(1);
+    renderCalendar();
+  });
 }
 
 renderCalendar();
