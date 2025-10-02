@@ -360,7 +360,7 @@ body.modal-open {
 }
 
 .calendar__dates {
-  grid-auto-rows: minmax(80px, auto);
+  grid-auto-rows: minmax(100px, auto);
 }
 
 .calendar__date {
@@ -373,6 +373,7 @@ body.modal-open {
   color: #b5b5b5;
   font-weight: 600;
   font-size: 16px;
+  min-height: 100%;
 }
 
 .calendar__date-header {
@@ -409,14 +410,18 @@ body.modal-open {
 .calendar__event-chip {
   background-color: #ff9800;
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
   color: #141414;
-  width: fit-content;
   border: none;
   cursor: pointer;
   transition: transform 0.2s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .calendar__event-chip:hover,
@@ -566,18 +571,21 @@ body.modal-open {
   font-size: 15px;
 }
 
-.modal__details-content span {
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.75);
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 0.05em;
-}
-
 .modal__details-row {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.modal__details-value {
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.modal__details-value--empty {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
 }
 
 .modal__actions {
@@ -603,11 +611,6 @@ body.modal-open {
 
 .modal__action--delete {
   color: #ff5252;
-}
-
-.modal__empty-message {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
 }
 
 .calendar__date--empty {
