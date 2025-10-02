@@ -740,7 +740,15 @@ const CLIENTS = [
     if (!(mappedKey in state.filters)) {
       return;
     }
-    state.filters[mappedKey] = input.value;
+
+    if (mappedKey === 'ageMin' || mappedKey === 'ageMax') {
+      const rawValue = input.value.replace(/\D/g, '').slice(0, 2);
+      const sanitizedValue = rawValue ? String(Math.min(Number(rawValue), 99)) : '';
+      input.value = sanitizedValue;
+      state.filters[mappedKey] = sanitizedValue;
+    } else {
+      state.filters[mappedKey] = input.value;
+    }
     state.page = 1;
     renderClients();
   }
@@ -881,6 +889,7 @@ const CLIENTS = [
     }
 
     const todayIso = new Date().toISOString().slice(0, 10);
+    const defaultBirthDate = '2000-01-01';
     const latestPurchase = client ? getLatestPurchase(client) : null;
 
     const fields = {
@@ -888,7 +897,7 @@ const CLIENTS = [
       cpf: client?.cpf ?? '',
       phone: client?.phone ?? '',
       gender: client?.gender ?? '',
-      birthDate: client?.birthDate ?? todayIso,
+      birthDate: client?.birthDate ?? defaultBirthDate,
       acceptsContact: client?.acceptsContact ?? false,
       purchaseDate: latestPurchase?.date ?? todayIso,
       frame: latestPurchase?.frame ?? '',
@@ -921,6 +930,12 @@ const CLIENTS = [
         }
       }
     });
+
+    if (mode === 'edit' && latestPurchase?.id) {
+      clientFormElement.dataset.purchaseId = latestPurchase.id;
+    } else {
+      delete clientFormElement.dataset.purchaseId;
+    }
   }
 
   function collectFormData() {
@@ -978,6 +993,19 @@ const CLIENTS = [
     const birthDateIso = data.birthDate || new Date().toISOString().slice(0, 10);
     const age = calculateAgeFromBirthDate(birthDateIso);
 
+    const purchasePayload = {
+      date: data.purchase.date,
+      frame: data.purchase.frame,
+      frameValue: data.purchase.frameValue,
+      lens: data.purchase.lens,
+      lensValue: data.purchase.lensValue,
+      invoice: data.purchase.invoice,
+      dioptry: {
+        oe: { ...data.purchase.dioptry.oe },
+        od: { ...data.purchase.dioptry.od },
+      },
+    };
+
     if (mode === 'edit' && clientId) {
       const client = findClientById(clientId);
       if (!client) {
@@ -991,34 +1019,51 @@ const CLIENTS = [
       client.acceptsContact = data.acceptsContact;
       client.age = age || client.age;
 
-      const purchase = {
-        id: `${client.id}-purchase-${Date.now()}`,
-        date: data.purchase.date,
-        frame: data.purchase.frame,
-        frameValue: data.purchase.frameValue,
-        lens: data.purchase.lens,
-        lensValue: data.purchase.lensValue,
-        invoice: data.purchase.invoice,
-        dioptry: data.purchase.dioptry,
-      };
+      const purchaseId = clientFormElement?.dataset.purchaseId;
+      const purchases = Array.isArray(client.purchases) ? client.purchases : [];
+      let targetPurchase = null;
 
-      client.purchases = [...(client.purchases || []), purchase].sort(
-        (a, b) => new Date(a.date) - new Date(b.date)
-      );
-      client.lastPurchase = getLatestPurchase(client)?.date || data.purchase.date;
+      if (purchaseId) {
+        targetPurchase = purchases.find((item) => item.id === purchaseId) || null;
+      }
+
+      if (!targetPurchase && purchases.length) {
+        targetPurchase = getLatestPurchase(client);
+      }
+
+      if (targetPurchase) {
+        targetPurchase.date = purchasePayload.date;
+        targetPurchase.frame = purchasePayload.frame;
+        targetPurchase.frameValue = purchasePayload.frameValue;
+        targetPurchase.lens = purchasePayload.lens;
+        targetPurchase.lensValue = purchasePayload.lensValue;
+        targetPurchase.invoice = purchasePayload.invoice;
+        targetPurchase.dioptry = {
+          oe: { ...purchasePayload.dioptry.oe },
+          od: { ...purchasePayload.dioptry.od },
+        };
+        clientFormElement.dataset.purchaseId = targetPurchase.id;
+      } else {
+        const generatedId = `${client.id}-purchase-${Date.now()}`;
+        const newPurchase = {
+          id: purchaseId || generatedId,
+          ...purchasePayload,
+        };
+        purchases.push(newPurchase);
+        clientFormElement.dataset.purchaseId = newPurchase.id;
+      }
+
+      client.purchases = purchases
+        .slice()
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      client.lastPurchase = getLatestPurchase(client)?.date || purchasePayload.date;
       setCurrentClient(client);
       renderClientDetail(client);
     } else {
       const newClientId = generateClientId();
       const purchase = {
         id: `${newClientId}-purchase-${Date.now()}`,
-        date: data.purchase.date,
-        frame: data.purchase.frame,
-        frameValue: data.purchase.frameValue,
-        lens: data.purchase.lens,
-        lensValue: data.purchase.lensValue,
-        invoice: data.purchase.invoice,
-        dioptry: data.purchase.dioptry,
+        ...purchasePayload,
       };
 
       const newClient = {
