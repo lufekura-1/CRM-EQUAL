@@ -4,9 +4,19 @@ sidebarButtons.forEach((button) => {
   });
 });
 
+homeShortcuts.forEach((shortcut) => {
+  shortcut.addEventListener('click', () => {
+    const targetPage = shortcut.dataset.pageTarget;
+    if (!targetPage) {
+      return;
+    }
+    setActivePage(targetPage);
+  });
+});
+
 initializeUserSelector();
 
-setActivePage('calendario');
+setActivePage('home');
 
 if (prevMonthButton && nextMonthButton) {
   prevMonthButton.addEventListener('click', () => changeMonth(-1));
