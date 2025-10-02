@@ -51,6 +51,7 @@ body.modal-open {
   align-items: center;
   gap: 16px;
   width: 100%;
+  flex: 1 1 auto;
 }
 
 .sidebar__footer {
@@ -108,6 +109,10 @@ body.modal-open {
   stroke-linejoin: round;
 }
 
+.icon--settings {
+  stroke-width: 1.6;
+}
+
 .icon-button::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -134,8 +139,12 @@ body.modal-open {
 }
 
 .icon-button.is-active {
-  background-color: #eef1f3;
-  color: #1a1a1a;
+  background-color: #ff9800;
+  color: #0c0c0c;
+}
+
+.icon-button.is-active svg {
+  color: inherit;
 }
 
 .workspace {
@@ -1218,9 +1227,19 @@ body.modal-open {
 .clients-table__filter[data-filter='age-max'],
 .clients-table__filter[data-filter='age-min']:focus,
 .clients-table__filter[data-filter='age-max']:focus {
-  width: 4ch;
+  width: 5ch;
   flex: 0 0 auto;
   text-align: center;
+}
+
+.clients-table__filter[type='number'] {
+  -moz-appearance: textfield;
+}
+
+.clients-table__filter[type='number']::-webkit-outer-spin-button,
+.clients-table__filter[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .clients-table__filter[data-filter='lastPurchase-start'],
@@ -1255,10 +1274,12 @@ body.modal-open {
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+  text-align: center;
 }
 
 .clients-table__cell--name {
   padding-right: 18px;
+  text-align: left;
 }
 
 .clients-table__link {
