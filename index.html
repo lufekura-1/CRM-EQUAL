@@ -93,9 +93,7 @@
         <div class="topbar__title" aria-live="polite">HOME</div>
         <div class="topbar__menus">
           <div class="topbar__menu is-active" data-page="home">
-            <div class="topbar__group topbar__group--left home-topbar__group">
-              <p class="home-topbar__text">Bem-vindo ao seu painel geral.</p>
-            </div>
+            <div class="topbar__group topbar__group--left home-topbar__group"></div>
           </div>
           <div class="topbar__menu" data-page="calendario">
             <div class="topbar__group topbar__group--right">
@@ -159,7 +157,7 @@
                 <div class="home-card" role="group" aria-label="Eventos pendentes">
                   <span class="home-card__label">Eventos pendentes</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">valor</span></span
+                    ><span class="home-card__value-bubble">0</span></span
                   >
                 </div>
                 <button
@@ -192,13 +190,13 @@
                 <div class="home-card" role="group" aria-label="Clientes cadastrados">
                   <span class="home-card__label">Clientes cadastrados</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">valor</span></span
+                    ><span class="home-card__value-bubble">0</span></span
                   >
                 </div>
                 <div class="home-card" role="group" aria-label="Clientes essa semana">
                   <span class="home-card__label">Clientes essa semana</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">valor</span></span
+                    ><span class="home-card__value-bubble">0</span></span
                   >
                 </div>
                 <button
@@ -229,25 +227,25 @@
                 <div class="home-card" role="group" aria-label="Para essa semana">
                   <span class="home-card__label">Para essa semana</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">valor</span></span
+                    ><span class="home-card__value-bubble">0</span></span
                   >
                 </div>
                 <div class="home-card" role="group" aria-label="Para esse mês">
                   <span class="home-card__label">Para esse mês</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">valor</span></span
+                    ><span class="home-card__value-bubble">0</span></span
                   >
                 </div>
                 <div class="home-card" role="group" aria-label="Concluídos esse mês">
                   <span class="home-card__label">Concluídos esse mês</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">valor</span></span
+                    ><span class="home-card__value-bubble">0</span></span
                   >
                 </div>
                 <div class="home-card home-card--delayed" role="group" aria-label="Contatos atrasados">
                   <span class="home-card__label">Contatos atrasados</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">valor</span></span
+                    ><span class="home-card__value-bubble">0</span></span
                   >
                 </div>
               </div>
@@ -329,21 +327,21 @@
                             <span class="clients-table__sort-icon" aria-hidden="true"></span>
                           </button>
                         </div>
-                        <input class="clients-table__filter" type="text" data-filter="name" placeholder="Filtrar por nome" />
+                        <input class="clients-table__filter" type="text" data-filter="name" />
                         <span class="clients-table__resizer" data-resize="name" aria-hidden="true"></span>
                       </th>
                       <th scope="col" class="clients-table__column" data-column-id="cpf">
                         <div class="clients-table__header">
                           <span class="clients-table__label">C.P.F</span>
                         </div>
-                        <input class="clients-table__filter" type="text" data-filter="cpf" placeholder="Filtrar por CPF" />
+                        <input class="clients-table__filter" type="text" data-filter="cpf" />
                         <span class="clients-table__resizer" data-resize="cpf" aria-hidden="true"></span>
                       </th>
                       <th scope="col" class="clients-table__column" data-column-id="phone">
                         <div class="clients-table__header">
                           <span class="clients-table__label">Telefone</span>
                         </div>
-                        <input class="clients-table__filter" type="text" data-filter="phone" placeholder="Filtrar por telefone" />
+                        <input class="clients-table__filter" type="text" data-filter="phone" />
                         <span class="clients-table__resizer" data-resize="phone" aria-hidden="true"></span>
                       </th>
                       <th scope="col" class="clients-table__column" data-column-id="gender">
@@ -353,7 +351,7 @@
                             <span class="clients-table__sort-icon" aria-hidden="true"></span>
                           </button>
                         </div>
-                        <input class="clients-table__filter" type="text" data-filter="gender" placeholder="M ou F" maxlength="1" />
+                        <input class="clients-table__filter" type="text" data-filter="gender" maxlength="1" />
                         <span class="clients-table__resizer" data-resize="gender" aria-hidden="true"></span>
                       </th>
                       <th scope="col" class="clients-table__column" data-column-id="age">
@@ -364,9 +362,9 @@
                           </button>
                         </div>
                         <div class="clients-table__filter-group">
-                          <input class="clients-table__filter" type="number" data-filter="age-min" placeholder="Mín" min="0" />
+                          <input class="clients-table__filter" type="number" data-filter="age-min" min="0" />
                           <span class="clients-table__filter-separator">-</span>
-                          <input class="clients-table__filter" type="number" data-filter="age-max" placeholder="Máx" min="0" />
+                          <input class="clients-table__filter" type="number" data-filter="age-max" min="0" />
                         </div>
                         <span class="clients-table__resizer" data-resize="age" aria-hidden="true"></span>
                       </th>
@@ -378,8 +376,8 @@
                           </button>
                         </div>
                         <div class="clients-table__filter-group">
-                          <input class="clients-table__filter" type="text" data-filter="lastPurchase-start" placeholder="De (dd/mm/aa)" />
-                          <input class="clients-table__filter" type="text" data-filter="lastPurchase-end" placeholder="Até (dd/mm/aa)" />
+                          <input class="clients-table__filter" type="text" data-filter="lastPurchase-start" />
+                          <input class="clients-table__filter" type="text" data-filter="lastPurchase-end" />
                         </div>
                         <span class="clients-table__resizer" data-resize="lastPurchase" aria-hidden="true"></span>
                       </th>
@@ -390,7 +388,7 @@
                             <span class="clients-table__sort-icon" aria-hidden="true"></span>
                           </button>
                         </div>
-                        <input class="clients-table__filter" type="text" data-filter="acceptsContact" placeholder="Sim ou Não" />
+                        <input class="clients-table__filter" type="text" data-filter="acceptsContact" />
                         <span class="clients-table__resizer" data-resize="acceptsContact" aria-hidden="true"></span>
                       </th>
                     </tr>

@@ -234,18 +234,20 @@ body.modal-open {
 .home-shortcut {
   background-color: #141414;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 2px solid currentColor;
   height: 150px;
   width: 100%;
-  padding: 0 28px;
+  padding: 24px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  font-size: 30px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-transform: capitalize;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-align: center;
   transition: transform 0.2s ease;
   cursor: pointer;
   font-family: inherit;
@@ -303,7 +305,7 @@ body.modal-open {
   background-color: #141414;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  height: 100px;
+  height: 70px;
   padding: 0 24px;
   display: flex;
   align-items: center;
@@ -1033,6 +1035,7 @@ body.modal-open {
 
 .clients-table__label {
   white-space: nowrap;
+  font-size: 20px;
 }
 
 .clients-table__sort {
@@ -1094,7 +1097,7 @@ body.modal-open {
 
 .clients-table__filter,
 .clients-table__filter-group .clients-table__filter {
-  width: min(100%, 140px);
+  width: min(100%, 120px);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 10px;
   padding: 6px 10px;
@@ -1114,25 +1117,25 @@ body.modal-open {
   outline: none;
   border-color: #ff9800;
   box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.25);
-  width: min(100%, 220px);
+  width: min(100%, 160px);
 }
 
 .clients-table__filter-group {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .clients-table__filter-group .clients-table__filter {
-  margin-top: 8px;
-  flex: none;
+  margin-top: 0;
+  flex: 1 1 auto;
 }
 
 .clients-table__filter-separator {
   color: rgba(255, 255, 255, 0.35);
   font-size: 12px;
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 .clients-table__body {
