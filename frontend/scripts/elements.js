@@ -1,4 +1,4 @@
-const sidebarButtons = document.querySelectorAll('.icon-button');
+const sidebarButtons = document.querySelectorAll('.icon-button[data-page]');
 const titleElement = document.querySelector('.topbar__title');
 const menus = document.querySelectorAll('.topbar__menu');
 const contentPages = document.querySelectorAll('.content__page');
@@ -18,3 +18,9 @@ const eventDetailsCloseButton = eventDetailsOverlay?.querySelector('[data-action
 const eventDetailsEditButton = eventDetailsOverlay?.querySelector('[data-action="edit"]');
 const eventDetailsDeleteButton = eventDetailsOverlay?.querySelector('[data-action="delete"]');
 const eventDetailsModal = eventDetailsOverlay?.querySelector('.modal');
+const userSelectorButton = document.querySelector('[data-role="user-selector"]');
+const userSelectorOverlay = document.querySelector('[data-modal="user-selector"]');
+const userSelectorForm = userSelectorOverlay?.querySelector('.modal__form--user-selector');
+const userSelectorFieldset = userSelectorOverlay?.querySelector('.user-selector');
+const userSelectorCancelButtons = userSelectorOverlay?.querySelectorAll('[data-action="cancel"]');
+const userSelectorConfirmButton = userSelectorOverlay?.querySelector('[data-action="confirm"]');
