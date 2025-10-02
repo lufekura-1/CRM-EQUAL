@@ -8,6 +8,8 @@ const prevMonthButton = document.querySelector('.calendar__nav-button--prev');
 const nextMonthButton = document.querySelector('.calendar__nav-button--next');
 const todayButton = document.querySelector('.calendar__nav-button--today');
 const datesContainer = document.querySelector('.calendar__dates');
+const calendarElement = document.querySelector('.calendar');
+const calendarViewButtons = document.querySelectorAll('[data-calendar-view]');
 const addEventButton = document.querySelector('.calendar__add-button');
 const addEventOverlay = document.querySelector('[data-modal="add-event"]');
 const addEventForm = addEventOverlay?.querySelector('.modal__form');

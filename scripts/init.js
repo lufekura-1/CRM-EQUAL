@@ -19,17 +19,31 @@ initializeUserSelector();
 setActivePage('home');
 
 if (prevMonthButton && nextMonthButton) {
-  prevMonthButton.addEventListener('click', () => changeMonth(-1));
-  nextMonthButton.addEventListener('click', () => changeMonth(1));
+  prevMonthButton.addEventListener('click', () => changeCalendarPeriod(-1));
+  nextMonthButton.addEventListener('click', () => changeCalendarPeriod(1));
 }
 
 if (todayButton) {
   todayButton.addEventListener('click', () => {
-    currentCalendarDate = new Date();
-    currentCalendarDate.setDate(1);
+    const today = new Date();
+    if (currentCalendarView === 'week') {
+      currentCalendarDate = getStartOfWeek(today);
+    } else {
+      currentCalendarDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    }
     renderCalendar();
   });
 }
+
+calendarViewButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const { calendarView } = button.dataset;
+    if (!calendarView) {
+      return;
+    }
+    setCalendarView(calendarView);
+  });
+});
 
 if (addEventButton) {
   addEventButton.addEventListener('click', () => openAddEventModal());
