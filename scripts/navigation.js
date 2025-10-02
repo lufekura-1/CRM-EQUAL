@@ -20,5 +20,17 @@ function setActivePage(page) {
   );
   if (activeButton) {
     titleElement.textContent = activeButton.dataset.label.toUpperCase();
+  } else {
+    const activeMenu = Array.from(menus).find((menu) => menu.dataset.page === page);
+    if (activeMenu?.dataset.label) {
+      titleElement.textContent = activeMenu.dataset.label.toUpperCase();
+    } else {
+      const activeSection = Array.from(contentPages).find((section) => section.dataset.page === page);
+      if (activeSection?.dataset.label) {
+        titleElement.textContent = activeSection.dataset.label.toUpperCase();
+      } else {
+        titleElement.textContent = page.toUpperCase();
+      }
+    }
   }
 }

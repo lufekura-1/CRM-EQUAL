@@ -65,6 +65,103 @@ const CLIENTS = [
   { id: 'cli-060', name: 'Miguel Cunha', cpf: '674.092.138-70', phone: '(48) 99173-6040', gender: 'M', age: 26, lastPurchase: '2024-03-31', acceptsContact: false },
 ];
 
+(function normalizeClientData() {
+  const now = new Date();
+
+  function pad(value) {
+    return String(value).padStart(2, '0');
+  }
+
+  function toIsoDate(date) {
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    return `${year}-${month}-${day}`;
+  }
+
+  function generateBirthDate(age, index) {
+    const target = new Date(now);
+    target.setFullYear(now.getFullYear() - age);
+    target.setMonth(index % 12);
+    target.setDate((index % 27) + 1);
+    if (target > now) {
+      target.setFullYear(target.getFullYear() - 1);
+    }
+    return toIsoDate(target);
+  }
+
+  function shiftMonths(baseDate, months) {
+    const date = new Date(baseDate);
+    date.setMonth(date.getMonth() + months);
+    return date;
+  }
+
+  function createPurchase(client, index, offset) {
+    const baseDate = client.lastPurchase ? new Date(`${client.lastPurchase}T00:00:00`) : now;
+    const purchaseDate = offset === 0 ? baseDate : shiftMonths(baseDate, offset);
+    const isoDate = toIsoDate(purchaseDate);
+    const valueSeed = index * 7 + Math.abs(offset) * 5;
+    const frameValue = 680 + valueSeed * 4;
+    const lensValue = 420 + valueSeed * 3;
+
+    const dioptryBase = (index % 3) + Math.abs(offset);
+
+    return {
+      id: `${client.id}-purchase-${offset + 3}`,
+      date: isoDate,
+      frame: `Armação Elite ${String.fromCharCode(65 + (index % 26))}`,
+      frameValue,
+      lens: `Lente Vision ${1 + (index % 4)}`,
+      lensValue,
+      invoice: `NF-${client.id.toUpperCase()}-${90 + Math.abs(offset)}`,
+      dioptry: {
+        oe: {
+          spherical: (dioptryBase * -0.25).toFixed(2),
+          cylindrical: (dioptryBase * -0.25).toFixed(2),
+          axis: 45 + dioptryBase * 5,
+          dnp: 30 + dioptryBase,
+          addition: (1 + dioptryBase * 0.25).toFixed(2),
+        },
+        od: {
+          spherical: (dioptryBase * -0.25 + 0.25).toFixed(2),
+          cylindrical: (dioptryBase * -0.25 + 0.25).toFixed(2),
+          axis: 90 + dioptryBase * 4,
+          dnp: 31 + dioptryBase,
+          addition: (1 + dioptryBase * 0.3).toFixed(2),
+        },
+      },
+    };
+  }
+
+  function computeAge(iso) {
+    const date = new Date(`${iso}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return 0;
+    }
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+      age -= 1;
+    }
+    return Math.max(age, 0);
+  }
+
+  CLIENTS.forEach((client, index) => {
+    if (!client.birthDate) {
+      client.birthDate = generateBirthDate(client.age, index);
+    }
+
+    const purchases = [createPurchase(client, index, -6), createPurchase(client, index, -3), createPurchase(client, index, 0)]
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    client.purchases = purchases;
+    const latestPurchase = purchases[purchases.length - 1];
+    client.lastPurchase = latestPurchase?.date || client.lastPurchase;
+    client.age = computeAge(client.birthDate) || client.age;
+  });
+})();
+
 (function initializeClientsPage() {
   const clientsPageElement = document.querySelector('[data-page="clientes"]');
   if (!clientsPageElement) {
@@ -297,6 +394,69 @@ const CLIENTS = [
     return cell;
   }
 
+  function createNameCell(client) {
+    const cell = document.createElement('td');
+    cell.className = 'clients-table__cell clients-table__cell--name';
+    cell.dataset.columnId = 'name';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'clients-table__link';
+    button.dataset.clientId = client.id;
+    button.dataset.action = 'open-client-detail';
+    button.textContent = client.name;
+    cell.appendChild(button);
+    return cell;
+  }
+
+  function calculateAgeFromBirthDate(isoString) {
+    if (!isoString) {
+      return '';
+    }
+    const birthDate = new Date(`${isoString}T00:00:00`);
+    if (Number.isNaN(birthDate.getTime())) {
+      return '';
+    }
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age -= 1;
+    }
+    return Math.max(age, 0);
+  }
+
+  function formatFullDate(isoString) {
+    if (!isoString) {
+      return '';
+    }
+    const date = new Date(`${isoString}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
+  function formatCurrencyBRL(value) {
+    const numberValue = Number(value) || 0;
+    return numberValue.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+    });
+  }
+
+  function getLatestPurchase(client) {
+    if (!client?.purchases?.length) {
+      return null;
+    }
+    return client.purchases.reduce((latest, current) => (
+      new Date(current.date) > new Date(latest.date) ? current : latest
+    ));
+  }
+
   function renderClients() {
     const filtered = getFilteredClients();
     const sorted = sortClients(filtered);
@@ -350,7 +510,7 @@ const CLIENTS = [
       selectCell.appendChild(selectLabel);
       row.appendChild(selectCell);
 
-      row.appendChild(createTextCell('name', client.name));
+      row.appendChild(createNameCell(client));
       row.appendChild(createTextCell('cpf', client.cpf));
       row.appendChild(createTextCell('phone', client.phone));
       row.appendChild(createTextCell('gender', client.gender));
@@ -379,6 +539,138 @@ const CLIENTS = [
     updatePagination(sorted.length);
     updateSelectAllState(sorted);
     applyColumnWidths();
+  }
+
+  function ensureDetailButtonState() {
+    if (!clientsDetailButton) {
+      return;
+    }
+    const hasClient = Boolean(getCurrentClientId());
+    clientsDetailButton.disabled = !hasClient;
+  }
+
+  function findClientById(clientId) {
+    return CLIENTS.find((client) => client.id === clientId) || null;
+  }
+
+  function renderClientDetail(client) {
+    if (!clientDetailFields || !clientPurchasesContainer) {
+      return;
+    }
+
+    const age = calculateAgeFromBirthDate(client.birthDate);
+    const detailMap = {
+      name: client.name,
+      cpf: client.cpf,
+      phone: client.phone,
+      gender: client.gender === 'F' ? 'Feminino' : 'Masculino',
+      birthDate: formatFullDate(client.birthDate),
+      age: age ? `${age} anos` : '-',
+      acceptsContact: client.acceptsContact ? 'Sim' : 'Não',
+    };
+
+    clientDetailFields.forEach((field) => {
+      const key = field.dataset.clientField;
+      field.textContent = detailMap[key] ?? '-';
+    });
+
+    renderPurchaseHistory(client);
+  }
+
+  function createMetaItem(label, value) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'client-purchase__meta-item';
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = label;
+    const valueSpan = document.createElement('span');
+    valueSpan.textContent = value;
+    wrapper.append(labelSpan, valueSpan);
+    return wrapper;
+  }
+
+  function createDioptryTable(dioptry) {
+    const table = document.createElement('table');
+    table.className = 'client-purchase__table';
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    ['', 'Esférico', 'Cilíndrico', 'Eixo', 'DNP', 'Adição'].forEach((label) => {
+      const cell = document.createElement('th');
+      cell.textContent = label;
+      headerRow.appendChild(cell);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+
+    ['oe', 'od'].forEach((eye) => {
+      const row = document.createElement('tr');
+      const eyeLabel = document.createElement('th');
+      eyeLabel.textContent = eye === 'oe' ? 'OE' : 'OD';
+      row.appendChild(eyeLabel);
+      const values = dioptry?.[eye] || {};
+      ['spherical', 'cylindrical', 'axis', 'dnp', 'addition'].forEach((key) => {
+        const valueCell = document.createElement('td');
+        valueCell.textContent = values[key] ?? '-';
+        row.appendChild(valueCell);
+      });
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    return table;
+  }
+
+  function renderPurchaseHistory(client) {
+    clientPurchasesContainer.innerHTML = '';
+    if (!client.purchases?.length) {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'client-card__empty';
+      placeholder.textContent = 'Nenhuma compra cadastrada.';
+      clientPurchasesContainer.appendChild(placeholder);
+      return;
+    }
+
+    const latestPurchase = getLatestPurchase(client);
+
+    client.purchases
+      .slice()
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .forEach((purchase) => {
+        const article = document.createElement('article');
+        article.className = 'client-purchase';
+        if (purchase === latestPurchase) {
+          article.classList.add('is-open');
+        }
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'client-purchase__toggle';
+        toggle.dataset.purchaseId = purchase.id;
+        toggle.innerHTML = `
+          <span>${formatFullDate(purchase.date)}</span>
+          <span>${formatCurrencyBRL((Number(purchase.frameValue) || 0) + (Number(purchase.lensValue) || 0))}</span>
+        `;
+
+        const details = document.createElement('div');
+        details.className = 'client-purchase__details';
+
+        const meta = document.createElement('div');
+        meta.className = 'client-purchase__meta';
+        meta.append(
+          createMetaItem('Armação', purchase.frame),
+          createMetaItem('Valor da armação', formatCurrencyBRL(purchase.frameValue)),
+          createMetaItem('Lente', purchase.lens),
+          createMetaItem('Valor da lente', formatCurrencyBRL(purchase.lensValue)),
+          createMetaItem('Nota Fiscal', purchase.invoice)
+        );
+
+        const dioptryTable = createDioptryTable(purchase.dioptry);
+
+        details.append(meta, dioptryTable);
+        article.append(toggle, details);
+        clientPurchasesContainer.appendChild(article);
+      });
   }
 
   function updatePagination(totalCount) {
@@ -514,6 +806,291 @@ const CLIENTS = [
     }
   }
 
+  function handlePurchaseToggle(event) {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const button = target.closest('.client-purchase__toggle');
+    if (!button) {
+      return;
+    }
+    const article = button.closest('.client-purchase');
+    if (!article) {
+      return;
+    }
+
+    const isOpen = article.classList.contains('is-open');
+    clientPurchasesContainer
+      ?.querySelectorAll('.client-purchase')
+      .forEach((purchase) => {
+        purchase.classList.remove('is-open');
+      });
+
+    if (!isOpen) {
+      article.classList.add('is-open');
+    }
+  }
+
+  function handleTableClick(event) {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const trigger = target.closest('button[data-action="open-client-detail"]');
+    if (!trigger) {
+      return;
+    }
+    const clientId = trigger.dataset.clientId;
+    const client = clientId ? findClientById(clientId) : null;
+    if (!client) {
+      return;
+    }
+    openClientDetail(client);
+  }
+
+  function handleDetailButtonClick() {
+    const client = getCurrentClientData();
+    if (!client) {
+      return;
+    }
+    renderClientDetail(client);
+    setActivePage('cliente-detalhe');
+  }
+
+  function generateClientId() {
+    const maxNumber = CLIENTS.reduce((max, client) => {
+      const numeric = Number(client.id.replace(/\D/g, ''));
+      return Number.isNaN(numeric) ? max : Math.max(max, numeric);
+    }, 0);
+    return `cli-${String(maxNumber + 1).padStart(3, '0')}`;
+  }
+
+  function prepareClientForm(mode = 'create', client = null) {
+    if (!clientFormElement) {
+      return;
+    }
+    clientFormElement.reset();
+    clientFormElement.dataset.mode = mode;
+    if (client?.id) {
+      clientFormElement.dataset.clientId = client.id;
+    } else {
+      delete clientFormElement.dataset.clientId;
+    }
+
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const latestPurchase = client ? getLatestPurchase(client) : null;
+
+    const fields = {
+      name: client?.name ?? '',
+      cpf: client?.cpf ?? '',
+      phone: client?.phone ?? '',
+      gender: client?.gender ?? '',
+      birthDate: client?.birthDate ?? todayIso,
+      acceptsContact: client?.acceptsContact ?? false,
+      purchaseDate: latestPurchase?.date ?? todayIso,
+      frame: latestPurchase?.frame ?? '',
+      frameValue: latestPurchase?.frameValue ?? '',
+      lens: latestPurchase?.lens ?? '',
+      lensValue: latestPurchase?.lensValue ?? '',
+      invoice: latestPurchase?.invoice ?? '',
+      oeSpherical: latestPurchase?.dioptry?.oe?.spherical ?? '',
+      oeCylindrical: latestPurchase?.dioptry?.oe?.cylindrical ?? '',
+      oeAxis: latestPurchase?.dioptry?.oe?.axis ?? '',
+      oeDnp: latestPurchase?.dioptry?.oe?.dnp ?? '',
+      oeAddition: latestPurchase?.dioptry?.oe?.addition ?? '',
+      odSpherical: latestPurchase?.dioptry?.od?.spherical ?? '',
+      odCylindrical: latestPurchase?.dioptry?.od?.cylindrical ?? '',
+      odAxis: latestPurchase?.dioptry?.od?.axis ?? '',
+      odDnp: latestPurchase?.dioptry?.od?.dnp ?? '',
+      odAddition: latestPurchase?.dioptry?.od?.addition ?? '',
+    };
+
+    Object.entries(fields).forEach(([name, value]) => {
+      const input = clientFormElement.elements.namedItem(name);
+      if (!input) {
+        return;
+      }
+      if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) {
+        if (input.type === 'checkbox') {
+          input.checked = Boolean(value);
+        } else {
+          input.value = value ?? '';
+        }
+      }
+    });
+  }
+
+  function collectFormData() {
+    if (!clientFormElement) {
+      return null;
+    }
+    const formData = new FormData(clientFormElement);
+    const acceptsContact = formData.get('acceptsContact') === 'on';
+    const birthDate = formData.get('birthDate');
+    const purchaseDate = formData.get('purchaseDate');
+
+    return {
+      name: formData.get('name')?.toString().trim() ?? '',
+      cpf: formData.get('cpf')?.toString().trim() ?? '',
+      phone: formData.get('phone')?.toString().trim() ?? '',
+      gender: formData.get('gender')?.toString() ?? '',
+      birthDate: birthDate ? birthDate.toString() : '',
+      acceptsContact,
+      purchase: {
+        date: purchaseDate ? purchaseDate.toString() : new Date().toISOString().slice(0, 10),
+        frame: formData.get('frame')?.toString().trim() ?? '',
+        frameValue: Number(formData.get('frameValue')) || 0,
+        lens: formData.get('lens')?.toString().trim() ?? '',
+        lensValue: Number(formData.get('lensValue')) || 0,
+        invoice: formData.get('invoice')?.toString().trim() ?? '',
+        dioptry: {
+          oe: {
+            spherical: formData.get('oeSpherical')?.toString() ?? '',
+            cylindrical: formData.get('oeCylindrical')?.toString() ?? '',
+            axis: formData.get('oeAxis')?.toString() ?? '',
+            dnp: formData.get('oeDnp')?.toString() ?? '',
+            addition: formData.get('oeAddition')?.toString() ?? '',
+          },
+          od: {
+            spherical: formData.get('odSpherical')?.toString() ?? '',
+            cylindrical: formData.get('odCylindrical')?.toString() ?? '',
+            axis: formData.get('odAxis')?.toString() ?? '',
+            dnp: formData.get('odDnp')?.toString() ?? '',
+            addition: formData.get('odAddition')?.toString() ?? '',
+          },
+        },
+      },
+    };
+  }
+
+  function handleClientFormSubmit(event) {
+    event.preventDefault();
+    const data = collectFormData();
+    if (!data) {
+      return;
+    }
+
+    const mode = clientFormElement?.dataset.mode === 'edit' ? 'edit' : 'create';
+    const clientId = clientFormElement?.dataset.clientId;
+    const birthDateIso = data.birthDate || new Date().toISOString().slice(0, 10);
+    const age = calculateAgeFromBirthDate(birthDateIso);
+
+    if (mode === 'edit' && clientId) {
+      const client = findClientById(clientId);
+      if (!client) {
+        return;
+      }
+      client.name = data.name;
+      client.cpf = data.cpf;
+      client.phone = data.phone;
+      client.gender = data.gender;
+      client.birthDate = birthDateIso;
+      client.acceptsContact = data.acceptsContact;
+      client.age = age || client.age;
+
+      const purchase = {
+        id: `${client.id}-purchase-${Date.now()}`,
+        date: data.purchase.date,
+        frame: data.purchase.frame,
+        frameValue: data.purchase.frameValue,
+        lens: data.purchase.lens,
+        lensValue: data.purchase.lensValue,
+        invoice: data.purchase.invoice,
+        dioptry: data.purchase.dioptry,
+      };
+
+      client.purchases = [...(client.purchases || []), purchase].sort(
+        (a, b) => new Date(a.date) - new Date(b.date)
+      );
+      client.lastPurchase = getLatestPurchase(client)?.date || data.purchase.date;
+      setCurrentClient(client);
+      renderClientDetail(client);
+    } else {
+      const newClientId = generateClientId();
+      const purchase = {
+        id: `${newClientId}-purchase-${Date.now()}`,
+        date: data.purchase.date,
+        frame: data.purchase.frame,
+        frameValue: data.purchase.frameValue,
+        lens: data.purchase.lens,
+        lensValue: data.purchase.lensValue,
+        invoice: data.purchase.invoice,
+        dioptry: data.purchase.dioptry,
+      };
+
+      const newClient = {
+        id: newClientId,
+        name: data.name,
+        cpf: data.cpf,
+        phone: data.phone,
+        gender: data.gender,
+        birthDate: birthDateIso,
+        acceptsContact: data.acceptsContact,
+        age: age || 0,
+        purchases: [purchase],
+        lastPurchase: data.purchase.date,
+      };
+
+      CLIENTS.push(newClient);
+      setCurrentClient(newClient);
+      renderClientDetail(newClient);
+    }
+
+    renderClients();
+    ensureDetailButtonState();
+    setActivePage('cliente-detalhe');
+  }
+
+  function handleNewClientClick() {
+    const shouldNavigate = window.confirm('Gostaria de cadastrar um novo cliente?');
+    if (!shouldNavigate) {
+      return;
+    }
+    prepareClientForm('create');
+    setActivePage('cadastro-cliente');
+  }
+
+  function handleClientDetailBack() {
+    setActivePage('clientes');
+  }
+
+  function handleClientDetailEdit() {
+    const client = getCurrentClientData();
+    if (!client) {
+      return;
+    }
+    prepareClientForm('edit', client);
+    setActivePage('cadastro-cliente');
+  }
+
+  function handleClientDetailDelete() {
+    const client = getCurrentClientData();
+    if (!client) {
+      return;
+    }
+    const confirmed = window.confirm(`Deseja realmente excluir ${client.name}?`);
+    if (!confirmed) {
+      return;
+    }
+    const index = CLIENTS.findIndex((item) => item.id === client.id);
+    if (index >= 0) {
+      CLIENTS.splice(index, 1);
+    }
+    state.selectedIds.delete(client.id);
+    setCurrentClient(null);
+    ensureDetailButtonState();
+    renderClients();
+    setActivePage('clientes');
+  }
+
+  function openClientDetail(client) {
+    setCurrentClient(client);
+    ensureDetailButtonState();
+    renderClientDetail(client);
+    setActivePage('cliente-detalhe');
+  }
+
   function initializeColumnResizers() {
     const resizers = clientsPageElement.querySelectorAll('.clients-table__resizer');
     resizers.forEach((resizer) => {
@@ -560,12 +1137,23 @@ const CLIENTS = [
 
   selectAllCheckbox?.addEventListener('change', handleSelectAllChange);
   clientsTableBody.addEventListener('change', handleRowSelectionChange);
+  clientsTableBody.addEventListener('click', handleTableClick);
   paginationButtons.forEach((button) => {
     button.addEventListener('click', handlePaginationClick);
   });
+
+  clientPurchasesContainer?.addEventListener('click', handlePurchaseToggle);
+  clientsDetailButton?.addEventListener('click', handleDetailButtonClick);
+  clientsNewButton?.addEventListener('click', handleNewClientClick);
+  clientFormElement?.addEventListener('submit', handleClientFormSubmit);
+  clientFormCancelButton?.addEventListener('click', handleClientDetailBack);
+  clientDetailBackButton?.addEventListener('click', handleClientDetailBack);
+  clientDetailEditButton?.addEventListener('click', handleClientDetailEdit);
+  clientDetailDeleteButton?.addEventListener('click', handleClientDetailDelete);
 
   applyColumnWidths();
   initializeColumnResizers();
   updateSortIndicators();
   renderClients();
+  ensureDetailButtonState();
 })();

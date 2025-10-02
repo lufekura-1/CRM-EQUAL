@@ -25,3 +25,13 @@ const userSelectorForm = userSelectorOverlay?.querySelector('.modal__form--user-
 const userSelectorFieldset = userSelectorOverlay?.querySelector('.user-selector');
 const userSelectorCancelButtons = userSelectorOverlay?.querySelectorAll('[data-action="cancel"]');
 const userSelectorConfirmButton = userSelectorOverlay?.querySelector('[data-action="confirm"]');
+const clientsNewButton = document.querySelector('[data-role="clients-new-button"]');
+const clientsDetailButton = document.querySelector('[data-role="clients-detail-button"]');
+const clientDetailBackButton = document.querySelector('[data-role="client-detail-back"]');
+const clientDetailEditButton = document.querySelector('[data-role="client-detail-edit"]');
+const clientDetailDeleteButton = document.querySelector('[data-role="client-detail-delete"]');
+const clientDetailElement = document.querySelector('[data-role="client-detail"]');
+const clientDetailFields = clientDetailElement?.querySelectorAll('[data-client-field]');
+const clientPurchasesContainer = clientDetailElement?.querySelector('[data-role="client-purchases"]');
+const clientFormElement = document.querySelector('#client-registration-form');
+const clientFormCancelButton = document.querySelector('[data-role="client-form-cancel"]');
