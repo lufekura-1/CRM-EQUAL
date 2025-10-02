@@ -163,7 +163,9 @@ const CLIENTS = [
 })();
 
 (function initializeClientsPage() {
-  const clientsPageElement = document.querySelector('[data-page="clientes"]');
+  const clientsPageElement = document.querySelector(
+    '.content__page[data-page="clientes"]'
+  );
   if (!clientsPageElement) {
     return;
   }
