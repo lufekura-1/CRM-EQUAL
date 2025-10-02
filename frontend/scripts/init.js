@@ -4,6 +4,8 @@ sidebarButtons.forEach((button) => {
   });
 });
 
+initializeUserSelector();
+
 setActivePage('calendario');
 
 if (prevMonthButton && nextMonthButton) {
@@ -92,6 +94,8 @@ document.addEventListener('keydown', (event) => {
     closeEventDetailsModal();
   } else if (addEventOverlay?.classList.contains('is-visible')) {
     closeAddEventModal();
+  } else if (userSelectorOverlay?.classList.contains('is-visible')) {
+    closeUserSelectorModal();
   }
 });
 

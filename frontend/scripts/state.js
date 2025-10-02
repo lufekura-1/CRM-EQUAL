@@ -6,6 +6,15 @@ let currentDetailEvent = null;
 let detailAutoCloseTimeout = null;
 let isDetailHovered = false;
 
+const USERS = [
+  { id: 'exotica', code: 'E', name: 'EXOTICA', subtitle: 'Usuário 1' },
+  { id: 'jorel-avenida', code: 'A', name: 'JOREL AVENIDA', subtitle: 'Usuário 2' },
+  { id: 'jorel-chicuta', code: 'C', name: 'JOREL CHICUTA', subtitle: 'Usuário 3' },
+  { id: 'administrador', code: 'X', name: 'ADMINISTRADOR', subtitle: 'Usuário 4' },
+];
+
+let currentUserId = USERS[0]?.id || '';
+
 const MONTH_NAMES = [
   'Janeiro',
   'Fevereiro',
