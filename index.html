@@ -168,13 +168,55 @@
             <div class="topbar__group topbar__group--right"></div>
           </div>
           <div class="topbar__menu" data-page="contatos">
-            <div class="topbar__group topbar__group--left">
-              <button class="topbar__button topbar__button--green">
-                Novo Contato
+            <div
+              class="topbar__group topbar__group--full contacts-topbar"
+              role="tablist"
+              aria-label="Seções de contato"
+            >
+              <button
+                class="topbar__button topbar__button--tab is-active"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                id="contacts-tab-button-abertos"
+                aria-controls="contacts-tab-abertos"
+                data-contact-tab="abertos"
+              >
+                Contatos em Aberto
               </button>
-            </div>
-            <div class="topbar__group topbar__group--right">
-              <button class="topbar__button">Histórico</button>
+              <button
+                class="topbar__button topbar__button--tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                id="contacts-tab-button-pos-venda"
+                aria-controls="contacts-tab-pos-venda"
+                data-contact-tab="pos-venda"
+              >
+                Pós-venda
+              </button>
+              <button
+                class="topbar__button topbar__button--tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                id="contacts-tab-button-ofertas"
+                aria-controls="contacts-tab-ofertas"
+                data-contact-tab="ofertas"
+              >
+                Ofertas
+              </button>
+              <button
+                class="topbar__button topbar__button--tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                id="contacts-tab-button-historico"
+                aria-controls="contacts-tab-historico"
+                data-contact-tab="historico"
+              >
+                Histórico de Contatos
+              </button>
             </div>
           </div>
           <div class="topbar__menu" data-page="configuracao">
@@ -528,12 +570,48 @@
                     <dd data-client-field="age">-</dd>
                   </div>
                   <div class="client-card__item">
+                    <dt>Usuário de</dt>
+                    <dd data-client-field="userType">-</dd>
+                  </div>
+                  <div class="client-card__item">
+                    <dt>Estado do cliente</dt>
+                    <dd>
+                      <span class="client-status-badge" data-client-field="state">-</span>
+                    </dd>
+                  </div>
+                  <div class="client-card__item">
                     <dt>Aceita contato</dt>
                     <dd data-client-field="acceptsContact">-</dd>
                   </div>
                 </dl>
               </article>
-              <article class="client-card">
+              <article class="client-card client-card--interests">
+                <header class="client-card__header">
+                  <h2 class="client-card__title">Interesses</h2>
+                  <div class="client-card__actions">
+                    <button
+                      class="client-card__action-button"
+                      type="button"
+                      aria-label="Adicionar interesse"
+                      title="Adicionar interesse"
+                    >
+                      +
+                    </button>
+                    <button
+                      class="client-card__action-button"
+                      type="button"
+                      aria-label="Editar interesses"
+                      title="Editar interesses"
+                    >
+                      ✎
+                    </button>
+                  </div>
+                </header>
+                <div class="client-interests">
+                  <div class="client-interests__list" data-role="client-interests"></div>
+                </div>
+              </article>
+              <article class="client-card client-card--purchases">
                 <header class="client-card__header">
                   <h2 class="client-card__title">Histórico de compras</h2>
                 </header>
@@ -575,8 +653,26 @@
                   </select>
                 </label>
                 <label class="client-form__field">
+                  <span class="client-form__label">Usuário de</span>
+                  <select name="userType" required>
+                    <option value="">Selecione</option>
+                    <option value="MF">M.F</option>
+                    <option value="BF">B.F</option>
+                    <option value="VS">V.S</option>
+                  </select>
+                </label>
+                <label class="client-form__field">
                   <span class="client-form__label">Data de nascimento</span>
                   <input type="date" name="birthDate" required />
+                </label>
+                <label class="client-form__field">
+                  <span class="client-form__label">Estado do cliente</span>
+                  <select name="state" required>
+                    <option value="">Selecione</option>
+                    <option value="pos-venda">Pós-venda</option>
+                    <option value="oferta">Oferta</option>
+                    <option value="nao-contatar">Não contatar</option>
+                  </select>
                 </label>
                 <label class="client-form__field client-form__field--checkbox">
                   <input type="checkbox" name="acceptsContact" />
@@ -595,6 +691,16 @@
                 <label class="client-form__field">
                   <span class="client-form__label">Armação</span>
                   <input type="text" name="frame" required />
+                </label>
+                <label class="client-form__field">
+                  <span class="client-form__label">Material da armação</span>
+                  <select name="frameMaterial" required>
+                    <option value="">Selecione</option>
+                    <option value="METAL">Metal</option>
+                    <option value="ACETATO">Acetato</option>
+                    <option value="TITANIUM">Titanium</option>
+                    <option value="OUTROS">Outros</option>
+                  </select>
                 </label>
                 <label class="client-form__field">
                   <span class="client-form__label">Valor da armação (R$)</span>
@@ -651,8 +757,139 @@
         </section>
 
         <section class="content__page" data-page="contatos">
-          <h1>Contatos</h1>
-          <p>Gerencie o histórico e crie novos contatos através das ações disponíveis no topo.</p>
+          <div class="contacts-page">
+            <section
+              class="contacts-subpage is-active"
+              data-contact-tab-content="abertos"
+              id="contacts-tab-abertos"
+              role="tabpanel"
+              aria-labelledby="contacts-tab-button-abertos"
+            >
+              <header class="contacts-subpage__header">
+                <div>
+                  <h1 class="contacts-subpage__title">Contatos em Aberto</h1>
+                  <p class="contacts-subpage__description">
+                    Acompanhe os contatos pendentes e conclua suas tarefas diárias.
+                  </p>
+                </div>
+                <div
+                  class="contacts-range-toggle"
+                  role="group"
+                  aria-label="Período da visualização"
+                >
+                  <button
+                    class="contacts-range-button is-active"
+                    type="button"
+                    data-range="weekly"
+                    aria-pressed="true"
+                  >
+                    Semanal
+                  </button>
+                  <button
+                    class="contacts-range-button"
+                    type="button"
+                    data-range="monthly"
+                    aria-pressed="false"
+                  >
+                    Mensal
+                  </button>
+                </div>
+              </header>
+              <div class="contacts-kanban" data-role="kanban-board">
+                <div class="contacts-kanban__column" data-status="abertos">
+                  <div class="contacts-kanban__header">
+                    <h2 class="contacts-kanban__title">Abertos</h2>
+                    <span class="contacts-kanban__count" data-column-count="abertos">0</span>
+                  </div>
+                  <div class="contacts-kanban__list" data-column="abertos"></div>
+                </div>
+                <div class="contacts-kanban__column" data-status="atrasados">
+                  <div class="contacts-kanban__header">
+                    <h2 class="contacts-kanban__title">Atrasados</h2>
+                    <span class="contacts-kanban__count" data-column-count="atrasados">0</span>
+                  </div>
+                  <div class="contacts-kanban__list" data-column="atrasados"></div>
+                </div>
+                <div class="contacts-kanban__column" data-status="concluidos">
+                  <div class="contacts-kanban__header">
+                    <h2 class="contacts-kanban__title">Concluídos</h2>
+                    <span class="contacts-kanban__count" data-column-count="concluidos">0</span>
+                  </div>
+                  <div class="contacts-kanban__list" data-column="concluidos"></div>
+                </div>
+              </div>
+            </section>
+
+            <section
+              class="contacts-subpage"
+              data-contact-tab-content="pos-venda"
+              id="contacts-tab-pos-venda"
+              role="tabpanel"
+              aria-labelledby="contacts-tab-button-pos-venda"
+              aria-hidden="true"
+            >
+              <header class="contacts-subpage__header">
+                <div>
+                  <h1 class="contacts-subpage__title">Pós-venda</h1>
+                  <p class="contacts-subpage__description">
+                    Revise entregas recentes, agende ajustes e fortaleça o relacionamento com os clientes.
+                  </p>
+                </div>
+              </header>
+              <ul class="contacts-stack" data-role="post-sale-list"></ul>
+            </section>
+
+            <section
+              class="contacts-subpage"
+              data-contact-tab-content="ofertas"
+              id="contacts-tab-ofertas"
+              role="tabpanel"
+              aria-labelledby="contacts-tab-button-ofertas"
+              aria-hidden="true"
+            >
+              <header class="contacts-subpage__header">
+                <div>
+                  <h1 class="contacts-subpage__title">Ofertas</h1>
+                  <p class="contacts-subpage__description">
+                    Planeje campanhas personalizadas e destaque produtos estratégicos para cada cliente.
+                  </p>
+                </div>
+              </header>
+              <div class="contacts-offers" data-role="offers-list"></div>
+            </section>
+
+            <section
+              class="contacts-subpage"
+              data-contact-tab-content="historico"
+              id="contacts-tab-historico"
+              role="tabpanel"
+              aria-labelledby="contacts-tab-button-historico"
+              aria-hidden="true"
+            >
+              <header class="contacts-subpage__header">
+                <div>
+                  <h1 class="contacts-subpage__title">Histórico de Contatos</h1>
+                  <p class="contacts-subpage__description">
+                    Consulte rapidamente os registros anteriores e acompanhe o status de cada atendimento.
+                  </p>
+                </div>
+              </header>
+              <div class="contacts-history">
+                <table class="contacts-history__table" aria-label="Histórico de contatos">
+                  <thead>
+                    <tr>
+                      <th scope="col">Nome</th>
+                      <th scope="col">NFe</th>
+                      <th scope="col">Data da compra</th>
+                      <th scope="col">Data do contato</th>
+                      <th scope="col">Completo</th>
+                    </tr>
+                  </thead>
+                  <tbody data-role="contacts-history-body"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
         </section>
         <section class="content__page" data-page="configuracao">
           <h1>Configuração</h1>
@@ -798,6 +1035,7 @@
     <script src="scripts/modals.js"></script>
     <script src="scripts/navigation.js"></script>
     <script src="scripts/clients.js"></script>
+    <script src="scripts/contacts.js"></script>
     <script src="scripts/init.js"></script>
   </body>
 </html>
