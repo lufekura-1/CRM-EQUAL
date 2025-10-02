@@ -2,6 +2,7 @@ const sidebarButtons = document.querySelectorAll('.icon-button[data-page]');
 const titleElement = document.querySelector('.topbar__title');
 const menus = document.querySelectorAll('.topbar__menu');
 const contentPages = document.querySelectorAll('.content__page');
+const homeShortcuts = document.querySelectorAll('[data-page-target]');
 const monthLabel = document.querySelector('.calendar__month-label');
 const prevMonthButton = document.querySelector('.calendar__nav-button--prev');
 const nextMonthButton = document.querySelector('.calendar__nav-button--next');
