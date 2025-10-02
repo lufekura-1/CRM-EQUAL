@@ -300,15 +300,37 @@
           </div>
         </section>
         <section class="content__page" data-page="calendario">
-          <div class="calendar" aria-label="Calendário mensal">
+          <div class="calendar" aria-label="Calendário">
             <div class="calendar__menu" role="toolbar">
-              <button
-                class="calendar__add-button"
-                type="button"
-                aria-label="Adicionar evento"
-              >
-                +
-              </button>
+              <div class="calendar__actions">
+                <button
+                  class="calendar__add-button"
+                  type="button"
+                  aria-label="Adicionar evento"
+                >
+                  +
+                </button>
+                <div
+                  class="calendar__view-toggle"
+                  role="group"
+                  aria-label="Alterar visualização do calendário"
+                >
+                  <button
+                    class="calendar__view-button is-active"
+                    type="button"
+                    data-calendar-view="month"
+                  >
+                    Mês
+                  </button>
+                  <button
+                    class="calendar__view-button"
+                    type="button"
+                    data-calendar-view="week"
+                  >
+                    Semana
+                  </button>
+                </div>
+              </div>
               <div class="calendar__month-display" aria-live="polite">
                 <span class="calendar__month-label"></span>
               </div>

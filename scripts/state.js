@@ -51,3 +51,4 @@ const MONTH_NAMES = [
 ];
 
 let currentCalendarDate = new Date();
+let currentCalendarView = 'month';

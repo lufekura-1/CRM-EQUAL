@@ -17,12 +17,42 @@ function ensureEventsArray(dateKey) {
   return events[dateKey];
 }
 
-function createDateCell(content, { isEmpty = false, isToday = false, dateKey = '' } = {}) {
+function getStartOfWeek(date) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const weekday = start.getDay();
+  start.setDate(start.getDate() - weekday);
+  return start;
+}
+
+function formatWeekRangeLabel(startDate, endDate) {
+  const startDay = startDate.getDate();
+  const endDay = endDate.getDate();
+  const startMonth = MONTH_NAMES[startDate.getMonth()];
+  const endMonth = MONTH_NAMES[endDate.getMonth()];
+  const startYear = startDate.getFullYear();
+  const endYear = endDate.getFullYear();
+
+  if (startYear === endYear && startDate.getMonth() === endDate.getMonth()) {
+    return `Semana ${startDay} - ${endDay} de ${startMonth} ${startYear}`;
+  }
+
+  return `Semana ${startDay} de ${startMonth} ${startYear} a ${endDay} de ${endMonth} ${endYear}`;
+}
+
+function createDateCell(
+  content,
+  { isEmpty = false, isToday = false, dateKey = '', variant = 'month' } = {},
+) {
   const cell = document.createElement('div');
   cell.className = 'calendar__date';
   if (isEmpty) {
     cell.classList.add('calendar__date--empty');
     return cell;
+  }
+
+  if (variant === 'week') {
+    cell.classList.add('calendar__date--week');
   }
 
   if (isToday) {
@@ -77,7 +107,7 @@ function renderEventsForCell(cell, dateKey) {
   });
 }
 
-function renderCalendar() {
+function renderMonthlyCalendar() {
   if (!monthLabel || !datesContainer) {
     return;
   }
@@ -121,7 +151,108 @@ function renderCalendar() {
   }
 }
 
-function changeMonth(offset) {
-  currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset, 1);
+function renderWeeklyCalendar() {
+  if (!monthLabel || !datesContainer) {
+    return;
+  }
+
+  const startOfWeek = getStartOfWeek(currentCalendarDate);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+  monthLabel.textContent = formatWeekRangeLabel(startOfWeek, endOfWeek);
+
+  datesContainer.innerHTML = '';
+
+  const today = new Date();
+
+  for (let index = 0; index < 7; index += 1) {
+    const cellDate = new Date(startOfWeek);
+    cellDate.setDate(startOfWeek.getDate() + index);
+
+    const isToday =
+      cellDate.getDate() === today.getDate() &&
+      cellDate.getMonth() === today.getMonth() &&
+      cellDate.getFullYear() === today.getFullYear();
+
+    const dateKey = formatDateKey(cellDate);
+    const cell = createDateCell(cellDate.getDate(), {
+      isToday,
+      dateKey,
+      variant: 'week',
+    });
+
+    renderEventsForCell(cell, dateKey);
+    datesContainer.appendChild(cell);
+  }
+}
+
+function updateCalendarViewButtons() {
+  if (!calendarViewButtons) {
+    return;
+  }
+
+  calendarViewButtons.forEach((button) => {
+    const { calendarView } = button.dataset;
+    if (!calendarView) {
+      return;
+    }
+    button.classList.toggle('is-active', calendarView === currentCalendarView);
+  });
+}
+
+function renderCalendar() {
+  if (!monthLabel || !datesContainer) {
+    return;
+  }
+
+  if (calendarElement) {
+    calendarElement.classList.toggle('calendar--weekly', currentCalendarView === 'week');
+    calendarElement.classList.toggle('calendar--monthly', currentCalendarView === 'month');
+    const ariaLabel = currentCalendarView === 'week' ? 'Calendário semanal' : 'Calendário mensal';
+    calendarElement.setAttribute('aria-label', ariaLabel);
+  }
+
+  if (currentCalendarView === 'week') {
+    renderWeeklyCalendar();
+  } else {
+    renderMonthlyCalendar();
+  }
+
+  updateCalendarViewButtons();
+}
+
+function changeCalendarPeriod(offset) {
+  if (currentCalendarView === 'week') {
+    currentCalendarDate.setDate(currentCalendarDate.getDate() + offset * 7);
+  } else {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset, 1);
+  }
+  renderCalendar();
+}
+
+function setCalendarView(view) {
+  if (view !== 'month' && view !== 'week') {
+    return;
+  }
+
+  if (currentCalendarView === view) {
+    return;
+  }
+
+  currentCalendarView = view;
+
+  if (currentCalendarView === 'week') {
+    currentCalendarDate = getStartOfWeek(currentCalendarDate);
+  } else {
+    const referenceDate = new Date(currentCalendarDate);
+    referenceDate.setDate(referenceDate.getDate() + 3);
+    currentCalendarDate = new Date(
+      referenceDate.getFullYear(),
+      referenceDate.getMonth(),
+      1,
+    );
+  }
+
   renderCalendar();
 }

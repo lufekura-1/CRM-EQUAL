@@ -524,6 +524,12 @@ body.modal-open {
   width: 100%;
 }
 
+.calendar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .calendar__month-display {
   justify-self: center;
   text-align: center;
@@ -531,6 +537,49 @@ body.modal-open {
   font-weight: 700;
   color: #ffffff;
   letter-spacing: 0.04em;
+}
+
+.calendar__view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #1f1f1f;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.calendar__view-button {
+  border: none;
+  border-radius: 8px;
+  background-color: #2c2c2c;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.calendar__view-button:hover,
+.calendar__view-button:focus {
+  background-color: #3a3a3a;
+}
+
+.calendar__view-button:focus-visible {
+  outline: 2px solid #ff9800;
+  outline-offset: 2px;
+}
+
+.calendar__view-button.is-active {
+  background-color: #00e676;
+  color: #141414;
+  transform: translateY(-1px);
+}
+
+.calendar__view-button.is-active:hover,
+.calendar__view-button.is-active:focus {
+  background-color: #00c853;
 }
 
 .calendar__add-button {
@@ -622,6 +671,10 @@ body.modal-open {
   grid-auto-rows: minmax(100px, auto);
 }
 
+.calendar--weekly .calendar__dates {
+  grid-auto-rows: minmax(420px, auto);
+}
+
 .calendar__date {
   background-color: #2a2a2a;
   border-radius: 12px;
@@ -633,6 +686,10 @@ body.modal-open {
   font-weight: 600;
   font-size: 16px;
   min-height: 100%;
+}
+
+.calendar__date--week {
+  min-height: 420px;
 }
 
 .calendar__date-header {
@@ -1013,7 +1070,7 @@ body.modal-open {
   font-size: 15px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.92);
-  vertical-align: bottom;
+  vertical-align: middle;
   background-color: #1a1a1a;
 }
 
@@ -1128,6 +1185,50 @@ body.modal-open {
 .clients-table__filter-group .clients-table__filter {
   margin-top: 0;
   flex: 1 1 auto;
+}
+
+.clients-table__filter[data-filter='name'],
+.clients-table__filter[data-filter='name']:focus {
+  width: min(100%, 15ch);
+}
+
+.clients-table__filter[data-filter='phone'],
+.clients-table__filter[data-filter='phone']:focus {
+  width: min(100%, 13ch);
+}
+
+.clients-table__filter[data-filter='cpf'],
+.clients-table__filter[data-filter='cpf']:focus {
+  width: min(100%, 11ch);
+}
+
+.clients-table__filter[data-filter='gender'],
+.clients-table__filter[data-filter='gender']:focus {
+  width: min(100%, 4ch);
+  text-align: center;
+}
+
+.clients-table__filter[data-filter='acceptsContact'],
+.clients-table__filter[data-filter='acceptsContact']:focus {
+  width: min(100%, 4ch);
+  text-align: center;
+}
+
+.clients-table__filter[data-filter='age-min'],
+.clients-table__filter[data-filter='age-max'],
+.clients-table__filter[data-filter='age-min']:focus,
+.clients-table__filter[data-filter='age-max']:focus {
+  width: 4ch;
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+.clients-table__filter[data-filter='lastPurchase-start'],
+.clients-table__filter[data-filter='lastPurchase-end'],
+.clients-table__filter[data-filter='lastPurchase-start']:focus,
+.clients-table__filter[data-filter='lastPurchase-end']:focus {
+  width: min(100%, 9ch);
+  flex: 0 0 auto;
 }
 
 .clients-table__filter-separator {
