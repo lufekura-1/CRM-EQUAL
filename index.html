@@ -138,56 +138,14 @@
       </header>
       <main class="content">
         <section class="content__page home-page is-active" data-page="home">
-          <div class="home-page__shortcuts" aria-label="Acesso rápido às páginas">
-            <button
-              class="home-shortcut home-shortcut--calendar"
-              type="button"
-              data-page-target="calendario"
-            >
-              <span class="home-shortcut__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" role="img" aria-label="Calendário">
-                  <rect x="3" y="4" width="18" height="17" rx="2"></rect>
-                  <line x1="3" y1="9" x2="21" y2="9"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                </svg>
-              </span>
-              <span class="home-shortcut__label">Calendário</span>
-            </button>
-            <button
-              class="home-shortcut home-shortcut--clients"
-              type="button"
-              data-page-target="clientes"
-            >
-              <span class="home-shortcut__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" role="img" aria-label="Clientes">
-                  <circle cx="8" cy="8" r="3"></circle>
-                  <circle cx="16" cy="11" r="3"></circle>
-                  <path d="M3 19c0-2.7614 2.2386-5 5-5h0.5"></path>
-                  <path d="M12 19c0-2.7614 2.2386-5 5-5h1"></path>
-                </svg>
-              </span>
-              <span class="home-shortcut__label">Clientes</span>
-            </button>
-            <button
-              class="home-shortcut home-shortcut--contacts"
-              type="button"
-              data-page-target="contatos"
-            >
-              <span class="home-shortcut__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" role="img" aria-label="Contatos">
-                  <rect x="3" y="4" width="18" height="14" rx="2"></rect>
-                  <polyline points="7,20 7,16 12,16 12,20"></polyline>
-                </svg>
-              </span>
-              <span class="home-shortcut__label">Contatos</span>
-            </button>
-          </div>
-
-          <div class="home-page__sections">
-            <article class="home-summary home-summary--calendar">
-              <header class="home-summary__header">
-                <span class="home-summary__icon" aria-hidden="true">
+          <div class="home-page__sections" aria-label="Resumo das páginas">
+            <div class="home-section home-section--calendar">
+              <button
+                class="home-shortcut home-shortcut--calendar"
+                type="button"
+                data-page-target="calendario"
+              >
+                <span class="home-shortcut__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" role="img" aria-label="Calendário">
                     <rect x="3" y="4" width="18" height="17" rx="2"></rect>
                     <line x1="3" y1="9" x2="21" y2="9"></line>
@@ -195,22 +153,32 @@
                     <line x1="16" y1="2" x2="16" y2="6"></line>
                   </svg>
                 </span>
-                <h2 class="home-summary__title">Calendário</h2>
-              </header>
-              <ul class="home-summary__metrics">
-                <li class="home-summary__metric">
-                  <span class="home-summary__label">Eventos pendentes</span>
-                  <span class="home-summary__value"><span class="home-summary__value-bubble">valor</span></span>
-                </li>
-              </ul>
-              <button class="home-summary__action home-summary__action--calendar" type="button">
-                Adicionar evento
+                <span class="home-shortcut__label">Calendário</span>
               </button>
-            </article>
+              <div class="home-section__cards">
+                <div class="home-card" role="group" aria-label="Eventos pendentes">
+                  <span class="home-card__label">Eventos pendentes</span>
+                  <span class="home-card__value"
+                    ><span class="home-card__value-bubble">valor</span></span
+                  >
+                </div>
+                <button
+                  class="home-card home-card--action home-card--calendar"
+                  type="button"
+                >
+                  <span class="home-card__icon" aria-hidden="true">+</span>
+                  <span class="home-card__label">Adicionar evento</span>
+                </button>
+              </div>
+            </div>
 
-            <article class="home-summary home-summary--clients">
-              <header class="home-summary__header">
-                <span class="home-summary__icon" aria-hidden="true">
+            <div class="home-section home-section--clients">
+              <button
+                class="home-shortcut home-shortcut--clients"
+                type="button"
+                data-page-target="clientes"
+              >
+                <span class="home-shortcut__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" role="img" aria-label="Clientes">
                     <circle cx="8" cy="8" r="3"></circle>
                     <circle cx="16" cy="11" r="3"></circle>
@@ -218,52 +186,72 @@
                     <path d="M12 19c0-2.7614 2.2386-5 5-5h1"></path>
                   </svg>
                 </span>
-                <h2 class="home-summary__title">Clientes</h2>
-              </header>
-              <ul class="home-summary__metrics">
-                <li class="home-summary__metric">
-                  <span class="home-summary__label">Clientes cadastrados</span>
-                  <span class="home-summary__value"><span class="home-summary__value-bubble">valor</span></span>
-                </li>
-                <li class="home-summary__metric">
-                  <span class="home-summary__label">Clientes essa semana</span>
-                  <span class="home-summary__value"><span class="home-summary__value-bubble">valor</span></span>
-                </li>
-              </ul>
-              <button class="home-summary__action home-summary__action--clients" type="button">
-                Adicionar cliente
+                <span class="home-shortcut__label">Clientes</span>
               </button>
-            </article>
+              <div class="home-section__cards">
+                <div class="home-card" role="group" aria-label="Clientes cadastrados">
+                  <span class="home-card__label">Clientes cadastrados</span>
+                  <span class="home-card__value"
+                    ><span class="home-card__value-bubble">valor</span></span
+                  >
+                </div>
+                <div class="home-card" role="group" aria-label="Clientes essa semana">
+                  <span class="home-card__label">Clientes essa semana</span>
+                  <span class="home-card__value"
+                    ><span class="home-card__value-bubble">valor</span></span
+                  >
+                </div>
+                <button
+                  class="home-card home-card--action home-card--clients"
+                  type="button"
+                >
+                  <span class="home-card__icon" aria-hidden="true">+</span>
+                  <span class="home-card__label">Adicionar cliente</span>
+                </button>
+              </div>
+            </div>
 
-            <article class="home-summary home-summary--contacts">
-              <header class="home-summary__header">
-                <span class="home-summary__icon" aria-hidden="true">
+            <div class="home-section home-section--contacts">
+              <button
+                class="home-shortcut home-shortcut--contacts"
+                type="button"
+                data-page-target="contatos"
+              >
+                <span class="home-shortcut__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" role="img" aria-label="Contatos">
                     <rect x="3" y="4" width="18" height="14" rx="2"></rect>
                     <polyline points="7,20 7,16 12,16 12,20"></polyline>
                   </svg>
                 </span>
-                <h2 class="home-summary__title">Contatos</h2>
-              </header>
-              <ul class="home-summary__metrics">
-                <li class="home-summary__metric">
-                  <span class="home-summary__label">Para essa semana</span>
-                  <span class="home-summary__value"><span class="home-summary__value-bubble">valor</span></span>
-                </li>
-                <li class="home-summary__metric">
-                  <span class="home-summary__label">Para esse mês</span>
-                  <span class="home-summary__value"><span class="home-summary__value-bubble">valor</span></span>
-                </li>
-                <li class="home-summary__metric">
-                  <span class="home-summary__label">Concluídos esse mês</span>
-                  <span class="home-summary__value"><span class="home-summary__value-bubble">valor</span></span>
-                </li>
-                <li class="home-summary__metric home-summary__metric--delayed">
-                  <span class="home-summary__label">Contatos atrasados</span>
-                  <span class="home-summary__value"><span class="home-summary__value-bubble">valor</span></span>
-                </li>
-              </ul>
-            </article>
+                <span class="home-shortcut__label">Contatos</span>
+              </button>
+              <div class="home-section__cards">
+                <div class="home-card" role="group" aria-label="Para essa semana">
+                  <span class="home-card__label">Para essa semana</span>
+                  <span class="home-card__value"
+                    ><span class="home-card__value-bubble">valor</span></span
+                  >
+                </div>
+                <div class="home-card" role="group" aria-label="Para esse mês">
+                  <span class="home-card__label">Para esse mês</span>
+                  <span class="home-card__value"
+                    ><span class="home-card__value-bubble">valor</span></span
+                  >
+                </div>
+                <div class="home-card" role="group" aria-label="Concluídos esse mês">
+                  <span class="home-card__label">Concluídos esse mês</span>
+                  <span class="home-card__value"
+                    ><span class="home-card__value-bubble">valor</span></span
+                  >
+                </div>
+                <div class="home-card home-card--delayed" role="group" aria-label="Contatos atrasados">
+                  <span class="home-card__label">Contatos atrasados</span>
+                  <span class="home-card__value"
+                    ><span class="home-card__value-bubble">valor</span></span
+                  >
+                </div>
+              </div>
+            </div>
           </div>
         </section>
         <section class="content__page" data-page="calendario">
@@ -321,7 +309,6 @@
           <div class="clients-page">
             <header class="clients-page__header">
               <h1 class="clients-page__title">Clientes</h1>
-              <p class="clients-page__subtitle">Cadastre novos clientes e utilize a busca para encontrar informações com rapidez.</p>
             </header>
             <div class="clients-table-card">
               <div class="clients-table-wrapper">

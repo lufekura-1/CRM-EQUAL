@@ -208,28 +208,36 @@ body.modal-open {
   color: rgba(255, 255, 255, 0.75);
 }
 
+
 .content__page.home-page {
-  display: flex;
   flex-direction: column;
   gap: 32px;
   align-items: center;
 }
 
-.home-page__shortcuts {
+.home-page__sections {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 20px;
+  gap: 24px;
   width: 100%;
+}
+
+.home-section {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  width: min(100%, 280px);
 }
 
 .home-shortcut {
   background-color: #141414;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  height: 100px;
-  min-width: 220px;
-  padding: 0 32px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  height: 150px;
+  width: 100%;
+  padding: 0 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -285,135 +293,100 @@ body.modal-open {
   color: #42a5f5;
 }
 
-.home-page__sections {
-  display: grid;
-  gap: 24px;
-  width: 100%;
-  justify-items: center;
-}
-
-.home-summary {
-  background-color: #141414;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 24px 32px;
-  width: min(100%, 720px);
+.home-section__cards {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  font-size: 20px;
-}
-
-.home-summary__header {
-  display: flex;
-  align-items: center;
   gap: 16px;
 }
 
-.home-summary__icon {
-  display: inline-flex;
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-.home-summary__icon svg {
-  width: 28px;
-  height: 28px;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.home-summary__title {
-  font-size: 26px;
-  font-weight: 700;
-}
-
-.home-summary__metrics {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.home-summary__metric {
+.home-card {
+  background-color: #141414;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  height: 100px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 50px;
+  gap: 16px;
+  font-size: 18px;
+  font-weight: 500;
 }
 
-.home-summary__label {
+.home-card__label {
   color: rgba(255, 255, 255, 0.85);
 }
 
-.home-summary__value {
+.home-card__value {
   display: inline-flex;
 }
 
-.home-summary__value-bubble {
+.home-card__value-bubble {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 72px;
-  padding: 6px 16px;
+  padding: 8px 18px;
   border-radius: 999px;
-  background-color: #2c2c2c;
+  background-color: #1f1f1f;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   font-weight: 700;
   color: #ffffff;
 }
 
-.home-summary__action {
-  align-self: flex-start;
-  padding: 10px 22px;
-  border-radius: 999px;
-  border: 1px solid currentColor;
-  background-color: transparent;
-  font-size: 20px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.home-summary__action:hover,
-.home-summary__action:focus-visible {
-  background-color: currentColor;
-  color: #141414;
-}
-
-.home-summary--calendar .home-summary__label {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.home-summary--calendar .home-summary__icon {
-  color: #ff9800;
-}
-
-.home-summary__action--calendar {
-  color: #ff9800;
-}
-
-.home-summary--clients .home-summary__icon {
-  color: #4caf50;
-}
-
-.home-summary__action--clients {
-  color: #4caf50;
-}
-
-.home-summary--contacts .home-summary__icon {
-  color: #42a5f5;
-}
-
-.home-summary__metric--delayed .home-summary__label,
-.home-summary__metric--delayed .home-summary__value-bubble {
+.home-card--delayed .home-card__label,
+.home-card--delayed .home-card__value-bubble {
   color: #ff5f5f;
+  border-color: rgba(255, 95, 95, 0.35);
+}
+
+
+.home-card--action {
+  border-width: 2px;
+  border-style: solid;
+  background-color: #141414;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.home-card--action .home-card__label {
+  color: currentColor;
+}
+
+.home-card--action:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 4px;
+}
+
+.home-card--action:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 18px rgba(0, 0, 0, 0.3);
+}
+
+.home-card__icon {
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 600;
+  color: currentColor;
+}
+
+.home-card--calendar {
+  color: #ff9800;
+  border-color: #ff9800;
+}
+
+.home-card--clients {
+  color: #4caf50;
+  border-color: #4caf50;
+}
+
+.home-card--contacts {
+  color: #42a5f5;
+  border-color: #42a5f5;
 }
 
 .topbar__button {
@@ -1008,11 +981,6 @@ body.modal-open {
   margin-bottom: 2px;
 }
 
-.clients-page__subtitle {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.75);
-}
-
 .clients-table-card {
   background-color: #1a1a1a;
   border-radius: 18px;
@@ -1126,7 +1094,7 @@ body.modal-open {
 
 .clients-table__filter,
 .clients-table__filter-group .clients-table__filter {
-  width: 100%;
+  width: min(100%, 140px);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 10px;
   padding: 6px 10px;
@@ -1134,7 +1102,8 @@ body.modal-open {
   color: #ffffff;
   font-size: 12px;
   font-family: inherit;
-  margin-top: 10px;
+  margin-top: 8px;
+  transition: width 0.25s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .clients-table__filter::placeholder {
@@ -1145,25 +1114,25 @@ body.modal-open {
   outline: none;
   border-color: #ff9800;
   box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.25);
+  width: min(100%, 220px);
 }
 
 .clients-table__filter-group {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .clients-table__filter-group .clients-table__filter {
-  margin-top: 10px;
-  flex: 1;
-  min-width: 0;
-  width: auto;
+  margin-top: 8px;
+  flex: none;
 }
 
 .clients-table__filter-separator {
   color: rgba(255, 255, 255, 0.35);
   font-size: 12px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .clients-table__body {
