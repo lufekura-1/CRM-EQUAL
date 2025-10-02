@@ -1,5 +1,30 @@
 'use strict';
 
+const USER_TYPE_LABELS = {
+  MF: 'Multifocal',
+  BF: 'Bifocal',
+  VS: 'Visão Simples',
+};
+
+const CLIENT_STATE_LABELS = {
+  'pos-venda': 'Pós-venda',
+  oferta: 'Oferta',
+  'nao-contatar': 'Não contatar',
+};
+
+const CLIENT_INTEREST_OPTIONS = ['Visão Simples', 'Multifocal', 'Bifocal', 'Solar', 'Relógios', 'Jóias'];
+
+const FRAME_MATERIAL_LABELS = {
+  METAL: 'Metal',
+  ACETATO: 'Acetato',
+  TITANIUM: 'Titanium',
+  OUTROS: 'Outros',
+};
+
+const FRAME_MATERIAL_VALUES = Object.keys(FRAME_MATERIAL_LABELS);
+const USER_TYPE_VALUES = Object.keys(USER_TYPE_LABELS);
+const CLIENT_STATE_VALUES = Object.keys(CLIENT_STATE_LABELS);
+
 const CLIENTS_PER_PAGE = 25;
 
 const CLIENTS = [
@@ -105,11 +130,14 @@ const CLIENTS = [
     const lensValue = 420 + valueSeed * 3;
 
     const dioptryBase = (index % 3) + Math.abs(offset);
+    const materialIndex = ((index + offset) % FRAME_MATERIAL_VALUES.length + FRAME_MATERIAL_VALUES.length) % FRAME_MATERIAL_VALUES.length;
+    const frameMaterial = FRAME_MATERIAL_VALUES[materialIndex] || FRAME_MATERIAL_VALUES[0];
 
     return {
       id: `${client.id}-purchase-${offset + 3}`,
       date: isoDate,
       frame: `Armação Elite ${String.fromCharCode(65 + (index % 26))}`,
+      frameMaterial,
       frameValue,
       lens: `Lente Vision ${1 + (index % 4)}`,
       lensValue,
@@ -155,10 +183,34 @@ const CLIENTS = [
     const purchases = [createPurchase(client, index, -6), createPurchase(client, index, -3), createPurchase(client, index, 0)]
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    purchases.forEach((purchase, purchaseIndex) => {
+      if (!purchase.frameMaterial) {
+        const materialIndex = (index + purchaseIndex) % FRAME_MATERIAL_VALUES.length;
+        purchase.frameMaterial = FRAME_MATERIAL_VALUES[materialIndex];
+      }
+    });
+
     client.purchases = purchases;
     const latestPurchase = purchases[purchases.length - 1];
     client.lastPurchase = latestPurchase?.date || client.lastPurchase;
     client.age = computeAge(client.birthDate) || client.age;
+
+    if (!client.userType) {
+      client.userType = USER_TYPE_VALUES[index % USER_TYPE_VALUES.length];
+    }
+
+    if (!client.state) {
+      client.state = CLIENT_STATE_VALUES[index % CLIENT_STATE_VALUES.length];
+    }
+
+    if (!Array.isArray(client.interests) || client.interests.length === 0) {
+      const interestCount = (index % 3) + 1;
+      const startIndex = index % CLIENT_INTEREST_OPTIONS.length;
+      client.interests = Array.from({ length: interestCount }, (_, offset) => {
+        const interestIndex = (startIndex + offset) % CLIENT_INTEREST_OPTIONS.length;
+        return CLIENT_INTEREST_OPTIONS[interestIndex];
+      });
+    }
   });
 })();
 
@@ -568,14 +620,27 @@ const CLIENTS = [
       gender: client.gender === 'F' ? 'Feminino' : 'Masculino',
       birthDate: formatFullDate(client.birthDate),
       age: age ? `${age} anos` : '-',
+      userType: USER_TYPE_LABELS[client.userType] ?? '-',
+      state: CLIENT_STATE_LABELS[client.state] ?? '-',
       acceptsContact: client.acceptsContact ? 'Sim' : 'Não',
     };
 
     clientDetailFields.forEach((field) => {
+      if (!(field instanceof HTMLElement)) {
+        return;
+      }
       const key = field.dataset.clientField;
-      field.textContent = detailMap[key] ?? '-';
+      if (!key) {
+        return;
+      }
+      const value = detailMap[key] ?? '-';
+      field.textContent = value;
+      if (key === 'state') {
+        field.dataset.state = client.state || '';
+      }
     });
 
+    renderClientInterests(client);
     renderPurchaseHistory(client);
   }
 
@@ -623,6 +688,44 @@ const CLIENTS = [
     return table;
   }
 
+  function renderClientInterests(client) {
+    if (!clientInterestsContainer) {
+      return;
+    }
+    clientInterestsContainer.innerHTML = '';
+    const interests = Array.isArray(client.interests)
+      ? Array.from(
+          new Set(
+            client.interests
+              .map((interest) => interest?.toString().trim())
+              .filter((interest) => Boolean(interest))
+          )
+        )
+      : [];
+
+    if (!interests.length) {
+      const empty = document.createElement('p');
+      empty.className = 'client-interests__empty';
+      empty.textContent = 'Nenhum interesse cadastrado.';
+      clientInterestsContainer.appendChild(empty);
+      return;
+    }
+
+    interests.forEach((interest) => {
+      const tag = document.createElement('span');
+      tag.className = 'client-interest-tag';
+      tag.textContent = interest;
+      clientInterestsContainer.appendChild(tag);
+    });
+  }
+
+  function formatFrameMaterial(material) {
+    if (!material) {
+      return '-';
+    }
+    return FRAME_MATERIAL_LABELS[material] ?? material;
+  }
+
   function renderPurchaseHistory(client) {
     clientPurchasesContainer.innerHTML = '';
     if (!client.purchases?.length) {
@@ -661,6 +764,7 @@ const CLIENTS = [
         meta.className = 'client-purchase__meta';
         meta.append(
           createMetaItem('Armação', purchase.frame),
+          createMetaItem('Material da armação', formatFrameMaterial(purchase.frameMaterial)),
           createMetaItem('Valor da armação', formatCurrencyBRL(purchase.frameValue)),
           createMetaItem('Lente', purchase.lens),
           createMetaItem('Valor da lente', formatCurrencyBRL(purchase.lensValue)),
@@ -897,10 +1001,13 @@ const CLIENTS = [
       cpf: client?.cpf ?? '',
       phone: client?.phone ?? '',
       gender: client?.gender ?? '',
+      userType: client?.userType ?? USER_TYPE_VALUES[0] ?? 'VS',
       birthDate: client?.birthDate ?? defaultBirthDate,
+      state: client?.state ?? CLIENT_STATE_VALUES[0] ?? 'pos-venda',
       acceptsContact: client?.acceptsContact ?? false,
       purchaseDate: latestPurchase?.date ?? todayIso,
       frame: latestPurchase?.frame ?? '',
+      frameMaterial: latestPurchase?.frameMaterial ?? FRAME_MATERIAL_VALUES[0] ?? 'METAL',
       frameValue: latestPurchase?.frameValue ?? '',
       lens: latestPurchase?.lens ?? '',
       lensValue: latestPurchase?.lensValue ?? '',
@@ -946,17 +1053,23 @@ const CLIENTS = [
     const acceptsContact = formData.get('acceptsContact') === 'on';
     const birthDate = formData.get('birthDate');
     const purchaseDate = formData.get('purchaseDate');
+    const userType = formData.get('userType')?.toString().toUpperCase() ?? '';
+    const state = formData.get('state')?.toString() ?? '';
+    const frameMaterial = formData.get('frameMaterial')?.toString().toUpperCase() ?? '';
 
     return {
       name: formData.get('name')?.toString().trim() ?? '',
       cpf: formData.get('cpf')?.toString().trim() ?? '',
       phone: formData.get('phone')?.toString().trim() ?? '',
       gender: formData.get('gender')?.toString() ?? '',
+      userType,
       birthDate: birthDate ? birthDate.toString() : '',
+      state,
       acceptsContact,
       purchase: {
         date: purchaseDate ? purchaseDate.toString() : new Date().toISOString().slice(0, 10),
         frame: formData.get('frame')?.toString().trim() ?? '',
+        frameMaterial: frameMaterial || FRAME_MATERIAL_VALUES[0] || 'METAL',
         frameValue: Number(formData.get('frameValue')) || 0,
         lens: formData.get('lens')?.toString().trim() ?? '',
         lensValue: Number(formData.get('lensValue')) || 0,
@@ -996,6 +1109,7 @@ const CLIENTS = [
     const purchasePayload = {
       date: data.purchase.date,
       frame: data.purchase.frame,
+      frameMaterial: data.purchase.frameMaterial,
       frameValue: data.purchase.frameValue,
       lens: data.purchase.lens,
       lensValue: data.purchase.lensValue,
@@ -1018,6 +1132,8 @@ const CLIENTS = [
       client.birthDate = birthDateIso;
       client.acceptsContact = data.acceptsContact;
       client.age = age || client.age;
+      client.userType = data.userType || client.userType;
+      client.state = data.state || client.state;
 
       const purchaseId = clientFormElement?.dataset.purchaseId;
       const purchases = Array.isArray(client.purchases) ? client.purchases : [];
@@ -1034,6 +1150,7 @@ const CLIENTS = [
       if (targetPurchase) {
         targetPurchase.date = purchasePayload.date;
         targetPurchase.frame = purchasePayload.frame;
+        targetPurchase.frameMaterial = purchasePayload.frameMaterial;
         targetPurchase.frameValue = purchasePayload.frameValue;
         targetPurchase.lens = purchasePayload.lens;
         targetPurchase.lensValue = purchasePayload.lensValue;
@@ -1075,6 +1192,9 @@ const CLIENTS = [
         birthDate: birthDateIso,
         acceptsContact: data.acceptsContact,
         age: age || 0,
+        userType: data.userType || USER_TYPE_VALUES[0] || 'VS',
+        state: data.state || CLIENT_STATE_VALUES[0] || 'pos-venda',
+        interests: [],
         purchases: [purchase],
         lastPurchase: data.purchase.date,
       };
@@ -1137,6 +1257,17 @@ const CLIENTS = [
     renderClientDetail(client);
     setActivePage('cliente-detalhe');
   }
+
+  window.navigateToClientDetail = (clientId) => {
+    if (!clientId) {
+      return;
+    }
+    const client = findClientById(clientId);
+    if (!client) {
+      return;
+    }
+    openClientDetail(client);
+  };
 
   function initializeColumnResizers() {
     const resizers = clientsPageElement.querySelectorAll('.clients-table__resizer');

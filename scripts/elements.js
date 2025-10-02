@@ -35,5 +35,6 @@ const clientDetailDeleteButton = document.querySelector('[data-role="client-deta
 const clientDetailElement = document.querySelector('[data-role="client-detail"]');
 const clientDetailFields = clientDetailElement?.querySelectorAll('[data-client-field]');
 const clientPurchasesContainer = clientDetailElement?.querySelector('[data-role="client-purchases"]');
+const clientInterestsContainer = clientDetailElement?.querySelector('[data-role="client-interests"]');
 const clientFormElement = document.querySelector('#client-registration-form');
 const clientFormCancelButton = document.querySelector('[data-role="client-form-cancel"]');
