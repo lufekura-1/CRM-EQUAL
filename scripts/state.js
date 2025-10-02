@@ -5,6 +5,26 @@ let editingEventOriginalDateKey = null;
 let currentDetailEvent = null;
 let detailAutoCloseTimeout = null;
 let isDetailHovered = false;
+let currentClientId = '';
+let currentClientData = null;
+
+function setCurrentClient(client) {
+  if (!client) {
+    currentClientId = '';
+    currentClientData = null;
+    return;
+  }
+  currentClientId = client.id;
+  currentClientData = client;
+}
+
+function getCurrentClientId() {
+  return currentClientId;
+}
+
+function getCurrentClientData() {
+  return currentClientData;
+}
 
 const USERS = [
   { id: 'exotica', code: 'E', name: 'EXOTICA', subtitle: 'Usuário 1' },
