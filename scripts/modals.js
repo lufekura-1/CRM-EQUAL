@@ -64,22 +64,10 @@ function closeAddEventModal() {
   editingEvent = null;
   editingEventOriginalDateKey = null;
 }
+let isSavingEvent = false;
+let isDeletingEvent = false;
 
-function removeEventFromDate(eventId, dateKey) {
-  const dateEvents = events[dateKey];
-  if (!dateEvents) {
-    return;
-  }
-  const index = dateEvents.findIndex((item) => item.id === eventId);
-  if (index !== -1) {
-    dateEvents.splice(index, 1);
-    if (dateEvents.length === 0) {
-      delete events[dateKey];
-    }
-  }
-}
-
-function handleSaveEvent() {
+async function handleSaveEvent() {
   if (!addEventForm) {
     return;
   }
@@ -97,30 +85,53 @@ function handleSaveEvent() {
     return;
   }
 
-  if (editingEvent) {
-    if (editingEventOriginalDateKey && editingEventOriginalDateKey !== dateValue) {
-      removeEventFromDate(editingEvent.id, editingEventOriginalDateKey);
-      editingEvent.date = dateValue;
-      ensureEventsArray(dateValue).push(editingEvent);
-    } else {
-      editingEvent.date = dateValue;
-    }
-
-    editingEvent.title = titleValue;
-    editingEvent.description = descriptionValue;
-  } else {
-    eventIdCounter += 1;
-    const newEvent = {
-      id: eventIdCounter,
-      date: dateValue,
-      title: titleValue,
-      description: descriptionValue,
-    };
-    ensureEventsArray(dateValue).push(newEvent);
+  if (isSavingEvent) {
+    return;
   }
 
-  closeAddEventModal();
-  renderCalendar();
+  const payload = {
+    date: dateValue,
+    title: titleValue,
+    description: descriptionValue || null,
+  };
+
+  const isEditing = Boolean(editingEvent);
+  const successMessage = isEditing
+    ? 'Evento atualizado com sucesso.'
+    : 'Evento criado com sucesso.';
+  const errorMessage = isEditing
+    ? 'Erro ao atualizar o evento.'
+    : 'Erro ao criar o evento.';
+
+  try {
+    isSavingEvent = true;
+    if (addEventSaveButton) {
+      addEventSaveButton.disabled = true;
+    }
+
+    if (isEditing) {
+      await window.api.updateEvent(editingEvent.id, payload);
+    } else {
+      await window.api.createEvent(payload);
+    }
+
+    if (typeof window.showToast === 'function') {
+      window.showToast(successMessage, { type: 'success' });
+    }
+
+    closeAddEventModal();
+    await refreshCalendar({ showLoading: false });
+  } catch (error) {
+    const message = window.api?.getErrorMessage(error, errorMessage);
+    if (typeof window.showToast === 'function') {
+      window.showToast(message, { type: 'error' });
+    }
+  } finally {
+    if (addEventSaveButton) {
+      addEventSaveButton.disabled = false;
+    }
+    isSavingEvent = false;
+  }
 }
 
 function clearDetailAutoClose() {
@@ -182,4 +193,38 @@ function openEventDetailsModal(event) {
   openOverlay(eventDetailsOverlay);
   isDetailHovered = false;
   scheduleDetailAutoClose(5000);
+}
+
+async function handleDeleteCurrentEvent() {
+  if (!currentDetailEvent || isDeletingEvent) {
+    return;
+  }
+
+  const errorMessage = 'Erro ao excluir o evento.';
+
+  try {
+    isDeletingEvent = true;
+    if (eventDetailsDeleteButton) {
+      eventDetailsDeleteButton.disabled = true;
+    }
+
+    await window.api.deleteEvent(currentDetailEvent.id);
+
+    if (typeof window.showToast === 'function') {
+      window.showToast('Evento excluído com sucesso.', { type: 'success' });
+    }
+
+    closeEventDetailsModal();
+    await refreshCalendar({ showLoading: false });
+  } catch (error) {
+    const message = window.api?.getErrorMessage(error, errorMessage);
+    if (typeof window.showToast === 'function') {
+      window.showToast(message, { type: 'error' });
+    }
+  } finally {
+    if (eventDetailsDeleteButton) {
+      eventDetailsDeleteButton.disabled = false;
+    }
+    isDeletingEvent = false;
+  }
 }

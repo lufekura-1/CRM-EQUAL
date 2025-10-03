@@ -1,5 +1,4 @@
 const events = {};
-let eventIdCounter = 0;
 let editingEvent = null;
 let editingEventOriginalDateKey = null;
 let currentDetailEvent = null;

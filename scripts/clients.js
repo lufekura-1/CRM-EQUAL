@@ -27,68 +27,7 @@ const CLIENT_STATE_VALUES = Object.keys(CLIENT_STATE_LABELS);
 
 const CLIENTS_PER_PAGE = 25;
 
-const CLIENTS = [
-  { id: 'cli-001', name: 'Ana Souza', cpf: '052.761.984-10', phone: '(11) 91234-5678', gender: 'F', age: 29, lastPurchase: '2024-06-18', acceptsContact: true },
-  { id: 'cli-002', name: 'Bruno Lima', cpf: '834.295.617-42', phone: '(21) 99876-5432', gender: 'M', age: 37, lastPurchase: '2024-04-12', acceptsContact: false },
-  { id: 'cli-003', name: 'Camila Ferreira', cpf: '317.640.258-81', phone: '(31) 91345-7766', gender: 'F', age: 41, lastPurchase: '2024-02-25', acceptsContact: true },
-  { id: 'cli-004', name: 'Diego Andrade', cpf: '468.120.975-63', phone: '(41) 99652-8842', gender: 'M', age: 33, lastPurchase: '2023-12-10', acceptsContact: true },
-  { id: 'cli-005', name: 'Elisa Martins', cpf: '129.583.407-25', phone: '(85) 99123-4415', gender: 'F', age: 26, lastPurchase: '2024-05-30', acceptsContact: true },
-  { id: 'cli-006', name: 'Felipe Santos', cpf: '594.213.876-04', phone: '(51) 99980-4521', gender: 'M', age: 48, lastPurchase: '2024-01-05', acceptsContact: false },
-  { id: 'cli-007', name: 'Gabriela Costa', cpf: '708.642.159-37', phone: '(19) 99741-8890', gender: 'F', age: 31, lastPurchase: '2024-03-15', acceptsContact: true },
-  { id: 'cli-008', name: 'Henrique Barbosa', cpf: '283.975.604-18', phone: '(27) 99119-3302', gender: 'M', age: 52, lastPurchase: '2023-11-22', acceptsContact: true },
-  { id: 'cli-009', name: 'Isabela Rocha', cpf: '635.821.479-06', phone: '(62) 98214-5550', gender: 'F', age: 24, lastPurchase: '2024-06-03', acceptsContact: false },
-  { id: 'cli-010', name: 'João Almeida', cpf: '901.264.738-55', phone: '(13) 98845-6677', gender: 'M', age: 28, lastPurchase: '2024-05-18', acceptsContact: true },
-  { id: 'cli-011', name: 'Karen Ribeiro', cpf: '472.930.681-27', phone: '(71) 99650-7432', gender: 'F', age: 39, lastPurchase: '2023-10-09', acceptsContact: false },
-  { id: 'cli-012', name: 'Leandro Gomes', cpf: '236.894.517-90', phone: '(48) 99777-2143', gender: 'M', age: 45, lastPurchase: '2024-02-04', acceptsContact: true },
-  { id: 'cli-013', name: 'Mariana Azevedo', cpf: '350.781.429-60', phone: '(41) 98431-2586', gender: 'F', age: 35, lastPurchase: '2024-01-27', acceptsContact: true },
-  { id: 'cli-014', name: 'Nicolas Pinto', cpf: '514.209.863-45', phone: '(31) 99520-7854', gender: 'M', age: 30, lastPurchase: '2024-04-28', acceptsContact: false },
-  { id: 'cli-015', name: 'Olivia Figueiredo', cpf: '671.058.492-11', phone: '(21) 98861-9440', gender: 'F', age: 43, lastPurchase: '2024-03-07', acceptsContact: true },
-  { id: 'cli-016', name: 'Paulo Teixeira', cpf: '743.196.820-03', phone: '(11) 98102-3344', gender: 'M', age: 55, lastPurchase: '2023-09-16', acceptsContact: false },
-  { id: 'cli-017', name: 'Queila Nunes', cpf: '812.367.945-22', phone: '(31) 98873-9001', gender: 'F', age: 29, lastPurchase: '2024-05-11', acceptsContact: true },
-  { id: 'cli-018', name: 'Rafael Cardoso', cpf: '924.570.138-09', phone: '(19) 99788-6023', gender: 'M', age: 32, lastPurchase: '2024-06-01', acceptsContact: true },
-  { id: 'cli-019', name: 'Sabrina Campos', cpf: '165.820.493-77', phone: '(85) 99450-3201', gender: 'F', age: 27, lastPurchase: '2023-12-21', acceptsContact: false },
-  { id: 'cli-020', name: 'Tiago Moreira', cpf: '298.451.760-58', phone: '(51) 99961-2845', gender: 'M', age: 41, lastPurchase: '2024-02-19', acceptsContact: true },
-  { id: 'cli-021', name: 'Ursula Duarte', cpf: '437.912.685-16', phone: '(61) 99215-4300', gender: 'F', age: 33, lastPurchase: '2024-04-05', acceptsContact: true },
-  { id: 'cli-022', name: 'Victor Monteiro', cpf: '589.134.702-94', phone: '(48) 99644-7520', gender: 'M', age: 38, lastPurchase: '2024-05-25', acceptsContact: false },
-  { id: 'cli-023', name: 'Wagner Pires', cpf: '630.745.918-21', phone: '(27) 99102-8844', gender: 'M', age: 47, lastPurchase: '2023-11-30', acceptsContact: true },
-  { id: 'cli-024', name: 'Ximena Vasconcelos', cpf: '784.509.632-47', phone: '(41) 98330-2299', gender: 'F', age: 36, lastPurchase: '2024-03-29', acceptsContact: true },
-  { id: 'cli-025', name: 'Yasmin Silveira', cpf: '895.621.473-30', phone: '(31) 99704-6633', gender: 'F', age: 22, lastPurchase: '2024-06-14', acceptsContact: false },
-  { id: 'cli-026', name: 'Zoe Albuquerque', cpf: '906.482.157-02', phone: '(11) 99541-7765', gender: 'F', age: 40, lastPurchase: '2024-05-06', acceptsContact: true },
-  { id: 'cli-027', name: 'Arthur Rezende', cpf: '174.368.920-15', phone: '(62) 98140-5032', gender: 'M', age: 44, lastPurchase: '2023-12-28', acceptsContact: true },
-  { id: 'cli-028', name: 'Bianca Castro', cpf: '285.417.639-88', phone: '(21) 99912-4418', gender: 'F', age: 31, lastPurchase: '2024-04-02', acceptsContact: false },
-  { id: 'cli-029', name: 'Caio Furtado', cpf: '346.598.721-63', phone: '(51) 98422-9087', gender: 'M', age: 27, lastPurchase: '2024-01-18', acceptsContact: true },
-  { id: 'cli-030', name: 'Daniela Freitas', cpf: '452.830.617-49', phone: '(85) 99167-5540', gender: 'F', age: 34, lastPurchase: '2024-03-23', acceptsContact: true },
-  { id: 'cli-031', name: 'Eduardo Neves', cpf: '573.019.468-25', phone: '(41) 98812-7099', gender: 'M', age: 29, lastPurchase: '2024-02-13', acceptsContact: false },
-  { id: 'cli-032', name: 'Fernanda Prado', cpf: '614.782.950-81', phone: '(31) 99678-1204', gender: 'F', age: 37, lastPurchase: '2024-05-31', acceptsContact: true },
-  { id: 'cli-033', name: 'Gustavo Queiroz', cpf: '768.135.240-06', phone: '(11) 98331-4475', gender: 'M', age: 42, lastPurchase: '2024-04-21', acceptsContact: false },
-  { id: 'cli-034', name: 'Helena Sales', cpf: '820.946.315-57', phone: '(19) 99520-6614', gender: 'F', age: 25, lastPurchase: '2024-03-02', acceptsContact: true },
-  { id: 'cli-035', name: 'Igor Luz', cpf: '931.278.540-19', phone: '(21) 98745-3098', gender: 'M', age: 33, lastPurchase: '2024-01-29', acceptsContact: true },
-  { id: 'cli-036', name: 'Julia Couto', cpf: '146.780.392-84', phone: '(31) 99238-7741', gender: 'F', age: 30, lastPurchase: '2023-10-24', acceptsContact: false },
-  { id: 'cli-037', name: 'Kleber Assis', cpf: '257.409.863-72', phone: '(11) 98411-5120', gender: 'M', age: 46, lastPurchase: '2024-02-27', acceptsContact: true },
-  { id: 'cli-038', name: 'Larissa Bittencourt', cpf: '369.548.102-95', phone: '(47) 99934-2860', gender: 'F', age: 28, lastPurchase: '2024-05-19', acceptsContact: true },
-  { id: 'cli-039', name: 'Marcelo Braga', cpf: '480.921.675-08', phone: '(31) 99155-7342', gender: 'M', age: 51, lastPurchase: '2024-06-09', acceptsContact: false },
-  { id: 'cli-040', name: 'Natalia Ribeiro', cpf: '592.310.468-71', phone: '(21) 98703-6250', gender: 'F', age: 35, lastPurchase: '2023-12-14', acceptsContact: true },
-  { id: 'cli-041', name: 'Otavio Paes', cpf: '603.784.219-44', phone: '(48) 99561-2044', gender: 'M', age: 39, lastPurchase: '2024-05-08', acceptsContact: true },
-  { id: 'cli-042', name: 'Priscila Matos', cpf: '745.820.193-56', phone: '(62) 98208-6112', gender: 'F', age: 32, lastPurchase: '2024-02-08', acceptsContact: false },
-  { id: 'cli-043', name: 'Renato Siqueira', cpf: '897.153.604-20', phone: '(11) 98474-9081', gender: 'M', age: 26, lastPurchase: '2024-04-17', acceptsContact: true },
-  { id: 'cli-044', name: 'Silvia Paiva', cpf: '918.265.740-68', phone: '(31) 99902-3374', gender: 'F', age: 45, lastPurchase: '2023-11-03', acceptsContact: true },
-  { id: 'cli-045', name: 'Tales Moura', cpf: '129.476.830-42', phone: '(41) 99205-8831', gender: 'M', age: 28, lastPurchase: '2024-05-02', acceptsContact: false },
-  { id: 'cli-046', name: 'Viviane Lopes', cpf: '230.568.914-37', phone: '(85) 99188-4206', gender: 'F', age: 41, lastPurchase: '2024-01-23', acceptsContact: true },
-  { id: 'cli-047', name: 'William Tavares', cpf: '341.789.205-69', phone: '(21) 99753-2840', gender: 'M', age: 36, lastPurchase: '2024-03-11', acceptsContact: true },
-  { id: 'cli-048', name: 'Yago Martins', cpf: '452.890.316-17', phone: '(11) 98162-9098', gender: 'M', age: 24, lastPurchase: '2024-06-06', acceptsContact: false },
-  { id: 'cli-049', name: 'Zilda Fonseca', cpf: '563.901.427-80', phone: '(31) 99831-6754', gender: 'F', age: 44, lastPurchase: '2023-09-27', acceptsContact: true },
-  { id: 'cli-050', name: 'Adriano Caldas', cpf: '674.012.538-41', phone: '(27) 99206-5580', gender: 'M', age: 37, lastPurchase: '2024-05-27', acceptsContact: true },
-  { id: 'cli-051', name: 'Brenda Melo', cpf: '785.103.249-50', phone: '(11) 99330-4012', gender: 'F', age: 29, lastPurchase: '2024-04-09', acceptsContact: false },
-  { id: 'cli-052', name: 'Cristiano Lopes', cpf: '896.214.350-18', phone: '(61) 99142-8365', gender: 'M', age: 34, lastPurchase: '2024-02-01', acceptsContact: true },
-  { id: 'cli-053', name: 'Denise Goulart', cpf: '907.325.461-80', phone: '(51) 99407-2231', gender: 'F', age: 38, lastPurchase: '2024-03-19', acceptsContact: true },
-  { id: 'cli-054', name: 'Everton Paiva', cpf: '018.436.572-42', phone: '(31) 99840-1258', gender: 'M', age: 31, lastPurchase: '2023-12-05', acceptsContact: false },
-  { id: 'cli-055', name: 'Fabiana Souza', cpf: '129.547.683-19', phone: '(41) 99508-7134', gender: 'F', age: 27, lastPurchase: '2024-06-12', acceptsContact: true },
-  { id: 'cli-056', name: 'Gilberto Reis', cpf: '230.658.794-31', phone: '(21) 99327-5548', gender: 'M', age: 43, lastPurchase: '2024-01-14', acceptsContact: true },
-  { id: 'cli-057', name: 'Heloisa Neri', cpf: '341.769.805-92', phone: '(11) 99615-8876', gender: 'F', age: 33, lastPurchase: '2024-04-25', acceptsContact: false },
-  { id: 'cli-058', name: 'Jonas Mesquita', cpf: '452.870.916-54', phone: '(27) 99287-4403', gender: 'M', age: 30, lastPurchase: '2024-02-22', acceptsContact: true },
-  { id: 'cli-059', name: 'Livia Peixoto', cpf: '563.981.027-36', phone: '(31) 99713-5208', gender: 'F', age: 28, lastPurchase: '2024-05-04', acceptsContact: true },
-  { id: 'cli-060', name: 'Miguel Cunha', cpf: '674.092.138-70', phone: '(48) 99173-6040', gender: 'M', age: 26, lastPurchase: '2024-03-31', acceptsContact: false },
-];
+const CLIENTS = [];
 
 (function normalizeClientData() {
   const now = new Date();
@@ -213,6 +152,13 @@ const CLIENTS = [
     }
   });
 })();
+
+let clientsLoading = false;
+let clientsErrorMessage = '';
+let clientsLoadedOnce = false;
+let clientsFetchPromise = null;
+let isSavingClient = false;
+let isDeletingClient = false;
 
 (function initializeClientsPage() {
   const clientsPageElement = document.querySelector(
@@ -538,7 +484,168 @@ const CLIENTS = [
     ));
   }
 
+  function getApiErrorMessage(error, fallback) {
+    if (window.api?.getErrorMessage) {
+      return window.api.getErrorMessage(error, fallback);
+    }
+
+    if (error?.message) {
+      return error.message;
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    return fallback;
+  }
+
+  function createStatusRow(message, status = 'info') {
+    const row = document.createElement('tr');
+    row.className = 'clients-table__row clients-table__row--empty';
+    row.dataset.status = status;
+    const cell = document.createElement('td');
+    cell.className = 'clients-table__cell';
+    cell.colSpan = 8;
+    cell.textContent = message;
+    row.appendChild(cell);
+    return row;
+  }
+
+  function mapApiClient(apiClient) {
+    if (!apiClient) {
+      return null;
+    }
+
+    const rawId = apiClient.id ?? apiClient.cliente_id ?? '';
+    const id = String(rawId || Date.now());
+    const purchases = Array.isArray(apiClient.purchases)
+      ? apiClient.purchases.slice()
+      : [];
+
+    const client = {
+      id,
+      name: apiClient.nome ?? apiClient.name ?? '',
+      cpf: apiClient.cpf ?? '',
+      phone: apiClient.telefone ?? apiClient.phone ?? '',
+      gender: apiClient.gender ?? '',
+      birthDate: apiClient.birthDate ?? '',
+      acceptsContact: Boolean(apiClient.acceptsContact ?? false),
+      age: apiClient.age ?? '',
+      userType: apiClient.userType ?? USER_TYPE_VALUES[0] ?? 'VS',
+      state: apiClient.state ?? CLIENT_STATE_VALUES[0] ?? 'pos-venda',
+      interests: Array.isArray(apiClient.interests)
+        ? apiClient.interests.slice()
+        : [],
+      purchases,
+      lastPurchase: apiClient.lastPurchase ?? purchases[purchases.length - 1]?.date ?? '',
+      email: apiClient.email ?? '',
+      createdAt: apiClient.created_at ?? apiClient.createdAt ?? '',
+    };
+
+    if (client.birthDate) {
+      const computedAge = calculateAgeFromBirthDate(client.birthDate);
+      client.age = computedAge || client.age || '';
+    }
+
+    return client;
+  }
+
+  async function fetchClientsPage(page = 1) {
+    const response = await window.api.getClients({ page });
+    const clientes = Array.isArray(response?.clientes) ? response.clientes : [];
+    const totalPages = Number(response?.totalPages ?? page);
+    return { clientes, totalPages: Number.isFinite(totalPages) ? totalPages : 1 };
+  }
+
+  async function fetchAllClients() {
+    const aggregated = [];
+    let page = 1;
+    let totalPages = 1;
+
+    do {
+      const { clientes, totalPages: fetchedTotal } = await fetchClientsPage(page);
+      aggregated.push(...clientes);
+      totalPages = fetchedTotal || 1;
+      if (!totalPages || page >= totalPages) {
+        break;
+      }
+      page += 1;
+    } while (true);
+
+    return aggregated;
+  }
+
+  async function loadClientsFromApi({ force = false } = {}) {
+    if (clientsLoading && clientsFetchPromise) {
+      await clientsFetchPromise;
+      return;
+    }
+
+    if (clientsLoadedOnce && !force) {
+      return;
+    }
+
+    clientsLoading = true;
+    clientsErrorMessage = '';
+    renderClients();
+
+    clientsFetchPromise = (async () => {
+      try {
+        const apiClients = await fetchAllClients();
+        const mappedClients = apiClients
+          .map((item) => mapApiClient(item))
+          .filter((item) => Boolean(item));
+
+        CLIENTS.splice(0, CLIENTS.length, ...mappedClients);
+        clientsLoadedOnce = true;
+        clientsErrorMessage = '';
+        state.selectedIds.clear();
+        state.page = 1;
+      } catch (error) {
+        clientsErrorMessage = getApiErrorMessage(error, 'Não foi possível carregar os clientes.');
+        if (typeof window.showToast === 'function') {
+          window.showToast(clientsErrorMessage, { type: 'error' });
+        }
+      } finally {
+        clientsLoading = false;
+        clientsFetchPromise = null;
+        renderClients();
+        ensureDetailButtonState();
+        updateAdvancedButtonState();
+      }
+    })();
+
+    await clientsFetchPromise;
+  }
+
   function renderClients() {
+    if (!clientsTableBody) {
+      return;
+    }
+
+    clientsTableBody.innerHTML = '';
+
+    if (clientsLoading) {
+      clientsTableBody.appendChild(createStatusRow('Carregando clientes...', 'loading'));
+      updatePagination(0, { isLoading: true });
+      updateSelectAllState([]);
+      applyColumnWidths();
+      updateAdvancedButtonState();
+      return;
+    }
+
+    const hasAnyClient = CLIENTS.length > 0;
+
+    if (clientsErrorMessage && !hasAnyClient) {
+      clientsTableBody.appendChild(createStatusRow(clientsErrorMessage, 'error'));
+      updatePagination(0, { hasError: true });
+      updateSelectAllState([]);
+      applyColumnWidths();
+      updateAdvancedButtonState();
+      return;
+    }
+
     const filtered = getFilteredClients();
     const sorted = sortClients(filtered);
     lastFilteredClients = sorted;
@@ -551,16 +658,11 @@ const CLIENTS = [
     const startIndex = (state.page - 1) * CLIENTS_PER_PAGE;
     const pageItems = sorted.slice(startIndex, startIndex + CLIENTS_PER_PAGE);
 
-    clientsTableBody.innerHTML = '';
-
     if (!pageItems.length) {
-      const emptyRow = document.createElement('tr');
-      emptyRow.className = 'clients-table__row clients-table__row--empty';
-      const emptyCell = document.createElement('td');
-      emptyCell.className = 'clients-table__cell';
-      emptyCell.colSpan = 8;
-      emptyCell.textContent = 'Nenhum cliente encontrado com os filtros selecionados.';
-      emptyRow.appendChild(emptyCell);
+      const emptyRow = createStatusRow(
+        'Nenhum cliente encontrado com os filtros selecionados.',
+        'empty',
+      );
       clientsTableBody.appendChild(emptyRow);
       updatePagination(sorted.length);
       updateSelectAllState(sorted);
@@ -642,11 +744,14 @@ const CLIENTS = [
     }
 
     const age = calculateAgeFromBirthDate(client.birthDate);
+    const genderLabel =
+      client.gender === 'F' ? 'Feminino' : client.gender === 'M' ? 'Masculino' : '-';
+
     const detailMap = {
       name: client.name,
       cpf: client.cpf,
       phone: client.phone,
-      gender: client.gender === 'F' ? 'Feminino' : 'Masculino',
+      gender: genderLabel,
       birthDate: formatFullDate(client.birthDate),
       age: age ? `${age} anos` : '-',
       userType: USER_TYPE_LABELS[client.userType] ?? '-',
@@ -912,11 +1017,16 @@ const CLIENTS = [
     clientsAdvancedSearchButton.classList.toggle('is-filter-active', hasActiveAdvancedFilters());
   }
 
-  function updatePagination(totalCount) {
+  function updatePagination(totalCount, { isLoading = false, hasError = false } = {}) {
     const totalPages = Math.max(1, Math.ceil(totalCount / CLIENTS_PER_PAGE));
     const hasResults = totalCount > 0;
+
     if (paginationInfo) {
-      if (!hasResults) {
+      if (isLoading) {
+        paginationInfo.textContent = 'Carregando clientes...';
+      } else if (hasError) {
+        paginationInfo.textContent = 'Não foi possível carregar os clientes.';
+      } else if (!hasResults) {
         paginationInfo.textContent = 'Nenhum cliente encontrado';
       } else {
         const startNumber = (state.page - 1) * CLIENTS_PER_PAGE + 1;
@@ -927,6 +1037,10 @@ const CLIENTS = [
 
     paginationButtons.forEach((button) => {
       const action = button.dataset.action;
+      if (isLoading || hasError) {
+        button.disabled = true;
+        return;
+      }
       if (action === 'prev') {
         button.disabled = state.page <= 1 || !hasResults;
       } else if (action === 'next') {
@@ -1106,14 +1220,6 @@ const CLIENTS = [
     setActivePage('cliente-detalhe');
   }
 
-  function generateClientId() {
-    const maxNumber = CLIENTS.reduce((max, client) => {
-      const numeric = Number(client.id.replace(/\D/g, ''));
-      return Number.isNaN(numeric) ? max : Math.max(max, numeric);
-    }, 0);
-    return `cli-${String(maxNumber + 1).padStart(3, '0')}`;
-  }
-
   function prepareClientForm(mode = 'create', client = null) {
     if (!clientFormElement) {
       return;
@@ -1228,8 +1334,12 @@ const CLIENTS = [
     };
   }
 
-  function handleClientFormSubmit(event) {
+  async function handleClientFormSubmit(event) {
     event.preventDefault();
+    if (isSavingClient) {
+      return;
+    }
+
     const data = collectFormData();
     if (!data) {
       return;
@@ -1254,93 +1364,144 @@ const CLIENTS = [
       },
     };
 
-    if (mode === 'edit' && clientId) {
-      const client = findClientById(clientId);
-      if (!client) {
-        return;
-      }
-      client.name = data.name;
-      client.cpf = data.cpf;
-      client.phone = data.phone;
-      client.gender = data.gender;
-      client.birthDate = birthDateIso;
-      client.acceptsContact = data.acceptsContact;
-      client.age = age || client.age;
-      client.userType = data.userType || client.userType;
-      client.state = data.state || client.state;
+    const apiPayload = {
+      nome: data.name,
+      telefone: data.phone || null,
+      email: null,
+    };
 
-      const purchaseId = clientFormElement?.dataset.purchaseId;
-      const purchases = Array.isArray(client.purchases) ? client.purchases : [];
-      let targetPurchase = null;
+    const successMessage = mode === 'edit'
+      ? 'Cliente atualizado com sucesso.'
+      : 'Cliente cadastrado com sucesso.';
+    const errorMessage = mode === 'edit'
+      ? 'Erro ao atualizar o cliente.'
+      : 'Erro ao cadastrar o cliente.';
 
-      if (purchaseId) {
-        targetPurchase = purchases.find((item) => item.id === purchaseId) || null;
-      }
+    try {
+      isSavingClient = true;
 
-      if (!targetPurchase && purchases.length) {
-        targetPurchase = getLatestPurchase(client);
-      }
+      if (mode === 'edit' && clientId) {
+        await window.api.updateClient(clientId, apiPayload);
+        const client = findClientById(clientId);
+        if (!client) {
+          await loadClientsFromApi({ force: true });
+          return;
+        }
 
-      if (targetPurchase) {
-        targetPurchase.date = purchasePayload.date;
-        targetPurchase.frame = purchasePayload.frame;
-        targetPurchase.frameMaterial = purchasePayload.frameMaterial;
-        targetPurchase.frameValue = purchasePayload.frameValue;
-        targetPurchase.lens = purchasePayload.lens;
-        targetPurchase.lensValue = purchasePayload.lensValue;
-        targetPurchase.invoice = purchasePayload.invoice;
-        targetPurchase.dioptry = {
-          oe: { ...purchasePayload.dioptry.oe },
-          od: { ...purchasePayload.dioptry.od },
-        };
-        clientFormElement.dataset.purchaseId = targetPurchase.id;
+        client.name = data.name;
+        client.cpf = data.cpf;
+        client.phone = data.phone;
+        client.gender = data.gender;
+        client.birthDate = birthDateIso;
+        client.acceptsContact = data.acceptsContact;
+        client.age = age || client.age;
+        client.userType = data.userType || client.userType;
+        client.state = data.state || client.state;
+
+        const purchaseId = clientFormElement?.dataset.purchaseId;
+        const purchases = Array.isArray(client.purchases) ? client.purchases : [];
+        let targetPurchase = null;
+
+        if (purchaseId) {
+          targetPurchase = purchases.find((item) => item.id === purchaseId) || null;
+        }
+
+        if (!targetPurchase && purchases.length) {
+          targetPurchase = getLatestPurchase(client);
+        }
+
+        if (targetPurchase) {
+          targetPurchase.date = purchasePayload.date;
+          targetPurchase.frame = purchasePayload.frame;
+          targetPurchase.frameMaterial = purchasePayload.frameMaterial;
+          targetPurchase.frameValue = purchasePayload.frameValue;
+          targetPurchase.lens = purchasePayload.lens;
+          targetPurchase.lensValue = purchasePayload.lensValue;
+          targetPurchase.invoice = purchasePayload.invoice;
+          targetPurchase.dioptry = {
+            oe: { ...purchasePayload.dioptry.oe },
+            od: { ...purchasePayload.dioptry.od },
+          };
+          clientFormElement.dataset.purchaseId = targetPurchase.id;
+        } else {
+          const generatedId = `${client.id}-purchase-${Date.now()}`;
+          const newPurchase = {
+            id: purchaseId || generatedId,
+            ...purchasePayload,
+          };
+          purchases.push(newPurchase);
+          clientFormElement.dataset.purchaseId = newPurchase.id;
+        }
+
+        client.purchases = purchases
+          .slice()
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+        client.lastPurchase = getLatestPurchase(client)?.date || purchasePayload.date;
+        setCurrentClient(client);
+        renderClientDetail(client);
       } else {
-        const generatedId = `${client.id}-purchase-${Date.now()}`;
-        const newPurchase = {
-          id: purchaseId || generatedId,
+        const response = await window.api.createClient(apiPayload);
+        const apiClient = response?.cliente;
+        if (!apiClient) {
+          throw new Error('Resposta inválida do servidor.');
+        }
+
+        const mappedClient = mapApiClient(apiClient) || {
+          id: String(apiClient.id ?? Date.now()),
+          name: data.name,
+          cpf: '',
+          phone: apiClient.telefone ?? '',
+          gender: '',
+          birthDate: '',
+          acceptsContact: false,
+          age: '',
+          userType: USER_TYPE_VALUES[0] ?? 'VS',
+          state: CLIENT_STATE_VALUES[0] ?? 'pos-venda',
+          interests: [],
+          purchases: [],
+          lastPurchase: '',
+          email: apiClient.email ?? '',
+        };
+
+        mappedClient.name = data.name;
+        mappedClient.cpf = data.cpf;
+        mappedClient.phone = data.phone;
+        mappedClient.gender = data.gender;
+        mappedClient.birthDate = birthDateIso;
+        mappedClient.acceptsContact = data.acceptsContact;
+        mappedClient.age = age || mappedClient.age || 0;
+        mappedClient.userType = data.userType || mappedClient.userType;
+        mappedClient.state = data.state || mappedClient.state;
+        mappedClient.interests = mappedClient.interests || [];
+
+        const purchase = {
+          id: `${mappedClient.id}-purchase-${Date.now()}`,
           ...purchasePayload,
         };
-        purchases.push(newPurchase);
-        clientFormElement.dataset.purchaseId = newPurchase.id;
+
+        mappedClient.purchases = [purchase];
+        mappedClient.lastPurchase = purchase.date;
+
+        CLIENTS.push(mappedClient);
+        setCurrentClient(mappedClient);
+        renderClientDetail(mappedClient);
       }
 
-      client.purchases = purchases
-        .slice()
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
-      client.lastPurchase = getLatestPurchase(client)?.date || purchasePayload.date;
-      setCurrentClient(client);
-      renderClientDetail(client);
-    } else {
-      const newClientId = generateClientId();
-      const purchase = {
-        id: `${newClientId}-purchase-${Date.now()}`,
-        ...purchasePayload,
-      };
+      if (typeof window.showToast === 'function') {
+        window.showToast(successMessage, { type: 'success' });
+      }
 
-      const newClient = {
-        id: newClientId,
-        name: data.name,
-        cpf: data.cpf,
-        phone: data.phone,
-        gender: data.gender,
-        birthDate: birthDateIso,
-        acceptsContact: data.acceptsContact,
-        age: age || 0,
-        userType: data.userType || USER_TYPE_VALUES[0] || 'VS',
-        state: data.state || CLIENT_STATE_VALUES[0] || 'pos-venda',
-        interests: [],
-        purchases: [purchase],
-        lastPurchase: data.purchase.date,
-      };
-
-      CLIENTS.push(newClient);
-      setCurrentClient(newClient);
-      renderClientDetail(newClient);
+      renderClients();
+      ensureDetailButtonState();
+      setActivePage('cliente-detalhe');
+    } catch (error) {
+      const message = getApiErrorMessage(error, errorMessage);
+      if (typeof window.showToast === 'function') {
+        window.showToast(message, { type: 'error' });
+      }
+    } finally {
+      isSavingClient = false;
     }
-
-    renderClients();
-    ensureDetailButtonState();
-    setActivePage('cliente-detalhe');
   }
 
   function handleNewClientClick() {
@@ -1361,24 +1522,47 @@ const CLIENTS = [
     setActivePage('cadastro-cliente');
   }
 
-  function handleClientDetailDelete() {
+  async function handleClientDetailDelete() {
+    if (isDeletingClient) {
+      return;
+    }
+
     const client = getCurrentClientData();
     if (!client) {
       return;
     }
+
     const confirmed = window.confirm(`Deseja realmente excluir ${client.name}?`);
     if (!confirmed) {
       return;
     }
-    const index = CLIENTS.findIndex((item) => item.id === client.id);
-    if (index >= 0) {
-      CLIENTS.splice(index, 1);
+
+    try {
+      isDeletingClient = true;
+      await window.api.deleteClient(client.id);
+
+      const index = CLIENTS.findIndex((item) => item.id === client.id);
+      if (index >= 0) {
+        CLIENTS.splice(index, 1);
+      }
+
+      state.selectedIds.delete(client.id);
+      setCurrentClient(null);
+      ensureDetailButtonState();
+      renderClients();
+      setActivePage('clientes');
+
+      if (typeof window.showToast === 'function') {
+        window.showToast('Cliente excluído com sucesso.', { type: 'success' });
+      }
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Erro ao excluir o cliente.');
+      if (typeof window.showToast === 'function') {
+        window.showToast(message, { type: 'error' });
+      }
+    } finally {
+      isDeletingClient = false;
     }
-    state.selectedIds.delete(client.id);
-    setCurrentClient(null);
-    ensureDetailButtonState();
-    renderClients();
-    setActivePage('clientes');
   }
 
   function openClientDetail(client) {
@@ -1605,6 +1789,16 @@ const CLIENTS = [
   clientDetailBackButton?.addEventListener('click', handleClientDetailBack);
   clientDetailEditButton?.addEventListener('click', handleClientDetailEdit);
   clientDetailDeleteButton?.addEventListener('click', handleClientDetailDelete);
+
+  document.addEventListener('pagechange', (event) => {
+    if (event.detail?.page === 'clientes') {
+      loadClientsFromApi();
+    }
+  });
+
+  if (clientsPageElement?.classList.contains('is-active')) {
+    loadClientsFromApi();
+  }
 
   applyColumnWidths();
   initializeColumnResizers();
