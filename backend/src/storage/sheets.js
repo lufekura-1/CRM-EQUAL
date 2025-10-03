@@ -1,66 +1,160 @@
-const GoogleSheetsService = require('../../services/googleSheetsService');
+const clientes = [];
+const eventos = [];
 
-const sheetsService = new GoogleSheetsService({
-  spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID,
-  worksheetName: process.env.GOOGLE_SHEETS_WORKSHEET_NAME || 'Eventos',
-});
+let nextClienteId = 1;
+let nextEventoId = 1;
 
-function unsupportedClientes() {
-  const error = new Error('Operação não suportada para o adaptador Google Sheets.');
-  error.code = 'NOT_IMPLEMENTED';
-  throw error;
+function clone(record) {
+  return { ...record };
 }
 
-function mapSheetEventToStorage(event) {
-  return {
-    id: event.id,
-    data: event.date,
-    titulo: event.title,
-    descricao: event.description,
-    cor: event.color ?? null,
-    cliente_id: event.userId ?? null,
-    created_at: event.createdAt ?? null,
-  };
+function sortClientesByIdDesc(records) {
+  return records
+    .slice()
+    .sort((a, b) => b.id - a.id)
+    .map(clone);
 }
 
-function mapStorageEventToSheet(event) {
-  return {
-    id: event.id,
-    date: event.data,
-    title: event.titulo,
-    description: event.descricao,
-    userId: event.cliente_id,
-    color: event.cor,
+function sortEventos(records) {
+  return records
+    .slice()
+    .sort((a, b) => {
+      const dataCompare = b.data.localeCompare(a.data);
+      if (dataCompare !== 0) {
+        return dataCompare;
+      }
+      return b.id - a.id;
+    })
+    .map(clone);
+}
+
+function listClientes() {
+  return sortClientesByIdDesc(clientes);
+}
+
+function createCliente({ nome, telefone = null, email = null }) {
+  if (!nome) {
+    throw new Error('Campo "nome" é obrigatório.');
+  }
+
+  const createdAt = new Date().toISOString();
+  const cliente = {
+    id: nextClienteId++,
+    nome,
+    telefone,
+    email,
+    created_at: createdAt,
   };
+
+  clientes.push(cliente);
+  return clone(cliente);
+}
+
+function updateCliente(id, { nome, telefone, email }) {
+  const clienteId = Number(id);
+  if (Number.isNaN(clienteId)) {
+    return null;
+  }
+
+  const cliente = clientes.find((entry) => entry.id === clienteId);
+  if (!cliente) {
+    return null;
+  }
+
+  cliente.nome = nome ?? cliente.nome;
+  cliente.telefone = telefone ?? cliente.telefone;
+  cliente.email = email ?? cliente.email;
+
+  return clone(cliente);
+}
+
+function deleteCliente(id) {
+  const clienteId = Number(id);
+  if (Number.isNaN(clienteId)) {
+    return false;
+  }
+
+  const index = clientes.findIndex((entry) => entry.id === clienteId);
+  if (index === -1) {
+    return false;
+  }
+
+  clientes.splice(index, 1);
+  return true;
+}
+
+function listEventos() {
+  return sortEventos(eventos);
+}
+
+function createEvento({
+  data,
+  titulo,
+  descricao = null,
+  cor = null,
+  cliente_id = null,
+}) {
+  if (!data || !titulo) {
+    throw new Error('Campos "data" e "titulo" são obrigatórios.');
+  }
+
+  const createdAt = new Date().toISOString();
+  const evento = {
+    id: nextEventoId++,
+    data,
+    titulo,
+    descricao,
+    cor,
+    cliente_id,
+    created_at: createdAt,
+  };
+
+  eventos.push(evento);
+  return clone(evento);
+}
+
+function updateEvento(id, { data, titulo, descricao, cor, cliente_id }) {
+  const eventoId = Number(id);
+  if (Number.isNaN(eventoId)) {
+    return null;
+  }
+
+  const evento = eventos.find((entry) => entry.id === eventoId);
+  if (!evento) {
+    return null;
+  }
+
+  evento.data = data ?? evento.data;
+  evento.titulo = titulo ?? evento.titulo;
+  evento.descricao = descricao ?? evento.descricao;
+  evento.cor = cor ?? evento.cor;
+  evento.cliente_id = cliente_id === undefined ? evento.cliente_id : cliente_id;
+
+  return clone(evento);
+}
+
+function deleteEvento(id) {
+  const eventoId = Number(id);
+  if (Number.isNaN(eventoId)) {
+    return false;
+  }
+
+  const index = eventos.findIndex((entry) => entry.id === eventoId);
+  if (index === -1) {
+    return false;
+  }
+
+  eventos.splice(index, 1);
+  return true;
 }
 
 module.exports = {
-  async listClientes() {
-    return unsupportedClientes();
-  },
-  async createCliente() {
-    return unsupportedClientes();
-  },
-  async updateCliente() {
-    return unsupportedClientes();
-  },
-  async deleteCliente() {
-    return unsupportedClientes();
-  },
-  async listEventos() {
-    const events = await sheetsService.listEvents();
-    return events.map(mapSheetEventToStorage);
-  },
-  async createEvento(evento) {
-    const created = await sheetsService.appendEvent(mapStorageEventToSheet(evento));
-    return mapSheetEventToStorage(created);
-  },
-  async updateEvento(id, evento) {
-    const updated = await sheetsService.updateEvent(id, mapStorageEventToSheet(evento));
-    return mapSheetEventToStorage(updated);
-  },
-  async deleteEvento(id) {
-    await sheetsService.deleteEvent(id);
-    return true;
-  },
+  listClientes,
+  createCliente,
+  updateCliente,
+  deleteCliente,
+  listEventos,
+  createEvento,
+  updateEvento,
+  deleteEvento,
 };
