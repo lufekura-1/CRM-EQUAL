@@ -33,4 +33,10 @@ function setActivePage(page) {
       }
     }
   }
+
+  document.dispatchEvent(
+    new CustomEvent('pagechange', {
+      detail: { page },
+    }),
+  );
 }

@@ -40,6 +40,150 @@ function formatWeekRangeLabel(startDate, endDate) {
   return `Semana ${startDay} de ${startMonth} ${startYear} a ${endDay} de ${endMonth} ${endYear}`;
 }
 
+let isCalendarLoading = false;
+
+function resetEvents() {
+  Object.keys(events).forEach((key) => {
+    delete events[key];
+  });
+}
+
+function normalizeEventData(rawEvent) {
+  if (!rawEvent) {
+    return null;
+  }
+
+  const sourceDate = rawEvent.date ?? rawEvent.data ?? '';
+  const dateObject = new Date(sourceDate);
+  const hasValidDate = !Number.isNaN(dateObject.getTime());
+  const dateKey = hasValidDate
+    ? formatDateKey(dateObject)
+    : String(sourceDate).slice(0, 10);
+
+  if (!dateKey) {
+    return null;
+  }
+
+  return {
+    id: String(rawEvent.id ?? rawEvent.evento_id ?? Date.now()),
+    date: dateKey,
+    rawDate: sourceDate,
+    title: rawEvent.title ?? rawEvent.titulo ?? '',
+    description: rawEvent.description ?? rawEvent.descricao ?? '',
+    color: rawEvent.color ?? rawEvent.cor ?? '',
+    clientId: rawEvent.clientId ?? rawEvent.cliente_id ?? null,
+  };
+}
+
+function populateEvents(eventList) {
+  resetEvents();
+
+  if (!Array.isArray(eventList)) {
+    return;
+  }
+
+  eventList.forEach((item) => {
+    const normalized = normalizeEventData(item);
+    if (!normalized) {
+      return;
+    }
+    const dateEvents = ensureEventsArray(normalized.date);
+    dateEvents.push(normalized);
+  });
+
+  Object.keys(events).forEach((dateKey) => {
+    const dateEvents = events[dateKey];
+    dateEvents.sort((a, b) => {
+      const dateA = new Date(a.rawDate || `${a.date}T00:00:00`);
+      const dateB = new Date(b.rawDate || `${b.date}T00:00:00`);
+      const timeA = dateA.getTime();
+      const timeB = dateB.getTime();
+
+      if (!Number.isNaN(timeA) && !Number.isNaN(timeB) && timeA !== timeB) {
+        return timeA - timeB;
+      }
+
+      return a.title.localeCompare(b.title);
+    });
+  });
+}
+
+function getCalendarRange() {
+  const referenceDate = new Date(currentCalendarDate);
+  if (currentCalendarView === 'week') {
+    const start = getStartOfWeek(referenceDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return {
+      from: formatDateKey(start),
+      to: formatDateKey(end),
+    };
+  }
+
+  const start = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+  const end = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
+  return {
+    from: formatDateKey(start),
+    to: formatDateKey(end),
+  };
+}
+
+function showCalendarStatus(message, type = 'info') {
+  if (!datesContainer) {
+    return;
+  }
+  datesContainer.innerHTML = '';
+  const statusElement = document.createElement('div');
+  statusElement.className = 'calendar__status';
+  if (type === 'error') {
+    statusElement.classList.add('calendar__status--error');
+  }
+  statusElement.textContent = message;
+  datesContainer.appendChild(statusElement);
+}
+
+async function refreshCalendar({ showLoading = true } = {}) {
+  if (!datesContainer) {
+    return;
+  }
+
+  if (isCalendarLoading) {
+    return;
+  }
+
+  const { from, to } = getCalendarRange();
+
+  if (showLoading) {
+    showCalendarStatus('Carregando eventos...', 'info');
+  }
+
+  isCalendarLoading = true;
+
+  try {
+    const response = await window.api.getEvents({ from, to });
+    const eventList = Array.isArray(response?.eventos)
+      ? response.eventos
+      : Array.isArray(response)
+        ? response
+        : [];
+    populateEvents(eventList);
+    renderCalendar();
+  } catch (error) {
+    const message = window.api?.getErrorMessage(error, 'Erro ao carregar eventos.');
+    if (typeof window.showToast === 'function') {
+      window.showToast(message, { type: 'error' });
+    }
+    const hasExistingEvents = Object.keys(events).length > 0;
+    if (hasExistingEvents) {
+      renderCalendar();
+    } else {
+      showCalendarStatus(message, 'error');
+    }
+  } finally {
+    isCalendarLoading = false;
+  }
+}
+
 function createDateCell(
   content,
   { isEmpty = false, isToday = false, dateKey = '', variant = 'month' } = {},
@@ -228,7 +372,7 @@ function changeCalendarPeriod(offset) {
   } else {
     currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset, 1);
   }
-  renderCalendar();
+  refreshCalendar();
 }
 
 function setCalendarView(view) {
@@ -254,5 +398,7 @@ function setCalendarView(view) {
     );
   }
 
-  renderCalendar();
+  refreshCalendar();
 }
+
+window.refreshCalendar = refreshCalendar;

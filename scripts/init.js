@@ -31,7 +31,7 @@ if (todayButton) {
     } else {
       currentCalendarDate = new Date(today.getFullYear(), today.getMonth(), 1);
     }
-    renderCalendar();
+    refreshCalendar();
   });
 }
 
@@ -96,12 +96,7 @@ eventDetailsEditButton?.addEventListener('click', () => {
 });
 
 eventDetailsDeleteButton?.addEventListener('click', () => {
-  if (!currentDetailEvent) {
-    return;
-  }
-  removeEventFromDate(currentDetailEvent.id, currentDetailEvent.date);
-  closeEventDetailsModal();
-  renderCalendar();
+  handleDeleteCurrentEvent();
 });
 
 eventDetailsModal?.addEventListener('mouseenter', () => {
@@ -131,4 +126,4 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-renderCalendar();
+refreshCalendar();
