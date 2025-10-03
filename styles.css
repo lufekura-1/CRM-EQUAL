@@ -218,6 +218,10 @@ body.modal-open {
   margin-left: auto;
 }
 
+.clients-topbar__actions {
+  gap: 14px;
+}
+
 .home-topbar__group {
   justify-content: flex-start;
 }
@@ -435,6 +439,27 @@ body.modal-open {
   background-color: #3a3a3a;
 }
 
+.topbar__button--advanced {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: none;
+}
+
+.topbar__button--advanced:hover,
+.topbar__button--advanced:focus {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.26);
+  color: #ffffff;
+}
+
+.topbar__button--advanced.is-filter-active {
+  background-color: rgba(255, 152, 0, 0.16);
+  border-color: #ff9800;
+  color: #ffcc80;
+  box-shadow: 0 0 0 1px rgba(255, 152, 0, 0.24);
+}
+
 .topbar__button.is-active {
   background-color: #eef1f3;
   color: #1a1a1a;
@@ -497,6 +522,20 @@ body.modal-open {
 .topbar__button--green:hover,
 .topbar__button--green:focus {
   color: #81c784;
+}
+
+.topbar__button--green-filled {
+  background: linear-gradient(135deg, #00c853, #00e676);
+  border: 1px solid #00e676;
+  color: #052910;
+  box-shadow: 0 6px 16px rgba(0, 230, 118, 0.24);
+}
+
+.topbar__button--green-filled:hover,
+.topbar__button--green-filled:focus {
+  background: linear-gradient(135deg, #00e676, #69f0ae);
+  border-color: #69f0ae;
+  color: #02180b;
 }
 
 .topbar__helper-text {
@@ -830,6 +869,10 @@ body.modal-open {
   gap: 16px;
 }
 
+.modal--large {
+  width: min(560px, 100%);
+}
+
 .modal__header {
   display: flex;
   justify-content: space-between;
@@ -863,6 +906,15 @@ body.modal-open {
   gap: 16px;
 }
 
+.modal__fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .modal__field {
   display: flex;
   flex-direction: column;
@@ -893,9 +945,55 @@ body.modal-open {
   border-color: #ff9800;
 }
 
+.modal__helper-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1.4;
+}
+
 .modal__textarea {
   min-height: 100px;
   resize: vertical;
+}
+
+.modal__checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.modal__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background-color: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.modal__checkbox:hover,
+.modal__checkbox:focus-within {
+  border-color: rgba(255, 152, 0, 0.45);
+  background-color: rgba(255, 152, 0, 0.14);
+}
+
+.modal__checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: #ff9800;
+}
+
+.modal__checkbox span {
+  pointer-events: none;
+}
+
+.modal__checkbox input:checked + span {
+  color: #ffcc80;
+  font-weight: 600;
 }
 
 .modal__footer {
@@ -1715,6 +1813,9 @@ body.modal-open {
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .client-card__action-button:hover,
@@ -1722,6 +1823,25 @@ body.modal-open {
   background-color: rgba(255, 255, 255, 0.12);
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.22);
+}
+
+.client-card__action-button--edit {
+  background-color: rgba(255, 152, 0, 0.12);
+  border-color: rgba(255, 152, 0, 0.32);
+  color: #ffb74d;
+}
+
+.client-card__action-button--edit:hover,
+.client-card__action-button--edit:focus {
+  background-color: rgba(255, 152, 0, 0.24);
+  border-color: #ff9800;
+  color: #ffcc80;
+}
+
+.client-card__action-button--edit svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 
 .client-card__title {

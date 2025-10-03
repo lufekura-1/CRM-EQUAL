@@ -246,6 +246,9 @@ const CLIENTS = [
       lastPurchaseStart: '',
       lastPurchaseEnd: '',
       acceptsContact: '',
+      userType: '',
+      clientState: '',
+      interestIncludes: [],
     },
     page: 1,
     selectedIds: new Set(),
@@ -332,6 +335,13 @@ const CLIENTS = [
     const acceptsFilter = acceptsFilterRaw
       ? acceptsFilterRaw.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       : '';
+    const userTypeFilter = state.filters.userType;
+    const clientStateFilter = state.filters.clientState;
+    const interestFilters = Array.isArray(state.filters.interestIncludes)
+      ? state.filters.interestIncludes
+          .map((interest) => interest?.toString().trim().toLowerCase())
+          .filter(Boolean)
+      : [];
 
     return CLIENTS.filter((client) => {
       if (nameFilter && !normalizeText(client.name).includes(nameFilter)) {
@@ -379,6 +389,23 @@ const CLIENTS = [
           return false;
         }
         if (!expectsYes && !expectsNo) {
+          return false;
+        }
+      }
+      if (userTypeFilter && client.userType !== userTypeFilter) {
+        return false;
+      }
+      if (clientStateFilter && client.state !== clientStateFilter) {
+        return false;
+      }
+      if (interestFilters.length) {
+        const normalizedInterests = Array.isArray(client.interests)
+          ? client.interests
+              .map((interest) => interest?.toString().trim().toLowerCase())
+              .filter(Boolean)
+          : [];
+        const hasMatch = interestFilters.some((interest) => normalizedInterests.includes(interest));
+        if (!hasMatch) {
           return false;
         }
       }
@@ -538,6 +565,7 @@ const CLIENTS = [
       updatePagination(sorted.length);
       updateSelectAllState(sorted);
       applyColumnWidths();
+      updateAdvancedButtonState();
       return;
     }
 
@@ -593,6 +621,7 @@ const CLIENTS = [
     updatePagination(sorted.length);
     updateSelectAllState(sorted);
     applyColumnWidths();
+    updateAdvancedButtonState();
   }
 
   function ensureDetailButtonState() {
@@ -779,6 +808,110 @@ const CLIENTS = [
       });
   }
 
+  function ensureAdvancedSelectOptions() {
+    if (!clientsAdvancedSelects) {
+      return;
+    }
+    clientsAdvancedSelects.forEach((select) => {
+      if (!(select instanceof HTMLSelectElement)) {
+        return;
+      }
+      const { advancedSelect } = select.dataset;
+      if (advancedSelect === 'userType') {
+        if (select.options.length > USER_TYPE_VALUES.length) {
+          return;
+        }
+        select.innerHTML = '';
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Todos';
+        select.appendChild(defaultOption);
+        USER_TYPE_VALUES.forEach((value) => {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = USER_TYPE_LABELS[value] ?? value;
+          select.appendChild(option);
+        });
+      } else if (advancedSelect === 'clientState') {
+        if (select.options.length > CLIENT_STATE_VALUES.length) {
+          return;
+        }
+        select.innerHTML = '';
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Todos';
+        select.appendChild(defaultOption);
+        CLIENT_STATE_VALUES.forEach((value) => {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = CLIENT_STATE_LABELS[value] ?? value;
+          select.appendChild(option);
+        });
+      }
+    });
+  }
+
+  function ensureInterestCheckboxes(container, fieldName) {
+    if (!container) {
+      return;
+    }
+    const existing = container.querySelectorAll('input[type="checkbox"]').length;
+    if (existing >= CLIENT_INTEREST_OPTIONS.length) {
+      return;
+    }
+    container.innerHTML = '';
+    CLIENT_INTEREST_OPTIONS.forEach((interest) => {
+      const label = document.createElement('label');
+      label.className = 'modal__checkbox';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.name = fieldName;
+      input.value = interest;
+      const text = document.createElement('span');
+      text.textContent = interest;
+      label.append(input, text);
+      container.appendChild(label);
+    });
+  }
+
+  function setCheckboxSelections(container, values) {
+    if (!container) {
+      return;
+    }
+    const selected = new Set(
+      Array.isArray(values) ? values.map((value) => value?.toString()) : []
+    );
+    container.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+      checkbox.checked = selected.has(checkbox.value);
+    });
+  }
+
+  function setFilterInputValue(filterName, value) {
+    if (!clientsPageElement) {
+      return;
+    }
+    const input = clientsPageElement.querySelector(`[data-filter="${filterName}"]`);
+    if (input instanceof HTMLInputElement) {
+      input.value = value ?? '';
+    }
+  }
+
+  function hasActiveAdvancedFilters() {
+    const hasUserType = Boolean(state.filters.userType);
+    const hasClientState = Boolean(state.filters.clientState);
+    const hasInterests = Array.isArray(state.filters.interestIncludes)
+      ? state.filters.interestIncludes.length > 0
+      : false;
+    return hasUserType || hasClientState || hasInterests;
+  }
+
+  function updateAdvancedButtonState() {
+    if (!clientsAdvancedSearchButton) {
+      return;
+    }
+    clientsAdvancedSearchButton.classList.toggle('is-filter-active', hasActiveAdvancedFilters());
+  }
+
   function updatePagination(totalCount) {
     const totalPages = Math.max(1, Math.ceil(totalCount / CLIENTS_PER_PAGE));
     const hasResults = totalCount > 0;
@@ -855,6 +988,7 @@ const CLIENTS = [
     }
     state.page = 1;
     renderClients();
+    updateAdvancedButtonState();
   }
 
   function handleSortClick(button) {
@@ -1210,10 +1344,6 @@ const CLIENTS = [
   }
 
   function handleNewClientClick() {
-    const shouldNavigate = window.confirm('Gostaria de cadastrar um novo cliente?');
-    if (!shouldNavigate) {
-      return;
-    }
     prepareClientForm('create');
     setActivePage('cadastro-cliente');
   }
@@ -1256,6 +1386,117 @@ const CLIENTS = [
     ensureDetailButtonState();
     renderClientDetail(client);
     setActivePage('cliente-detalhe');
+  }
+
+  function closeAdvancedSearchModalInternal() {
+    closeOverlay(clientsAdvancedOverlay);
+  }
+
+  function openAdvancedSearchModal() {
+    ensureAdvancedSelectOptions();
+    ensureInterestCheckboxes(clientsAdvancedInterestsContainer, 'advancedInterests');
+    if (!clientsAdvancedOverlay) {
+      return;
+    }
+    if (clientsAdvancedForm) {
+      const userTypeField = clientsAdvancedForm.elements.namedItem('userType');
+      if (userTypeField instanceof HTMLSelectElement) {
+        userTypeField.value = state.filters.userType ?? '';
+      }
+      const clientStateField = clientsAdvancedForm.elements.namedItem('clientState');
+      if (clientStateField instanceof HTMLSelectElement) {
+        clientStateField.value = state.filters.clientState ?? '';
+      }
+      const acceptsField = clientsAdvancedForm.elements.namedItem('acceptsContact');
+      if (acceptsField instanceof HTMLSelectElement) {
+        const acceptsValue = state.filters.acceptsContact;
+        if (acceptsValue === 'sim' || acceptsValue === 'nao') {
+          acceptsField.value = acceptsValue;
+        } else {
+          acceptsField.value = '';
+        }
+      }
+    }
+    setCheckboxSelections(clientsAdvancedInterestsContainer, state.filters.interestIncludes);
+    openOverlay(clientsAdvancedOverlay);
+  }
+
+  function handleAdvancedFormSubmit(event) {
+    event.preventDefault();
+    if (!clientsAdvancedForm) {
+      return;
+    }
+    const formData = new FormData(clientsAdvancedForm);
+    const userTypeValue = formData.get('userType');
+    const clientStateValue = formData.get('clientState');
+    const acceptsValueRaw = formData.get('acceptsContact');
+    const selectedInterests = formData
+      .getAll('advancedInterests')
+      .map((value) => value?.toString().trim())
+      .filter((value) => Boolean(value));
+
+    state.filters.userType = userTypeValue ? userTypeValue.toString() : '';
+    state.filters.clientState = clientStateValue ? clientStateValue.toString() : '';
+    const acceptsValue = acceptsValueRaw ? acceptsValueRaw.toString() : '';
+    state.filters.acceptsContact = acceptsValue;
+    state.filters.interestIncludes = selectedInterests;
+
+    const acceptsDisplay = acceptsValue === 'sim' ? 'Sim' : acceptsValue === 'nao' ? 'Não' : '';
+    setFilterInputValue('acceptsContact', acceptsDisplay);
+
+    state.page = 1;
+    renderClients();
+    updateAdvancedButtonState();
+    closeAdvancedSearchModalInternal();
+  }
+
+  function handleAdvancedReset() {
+    if (!clientsAdvancedForm) {
+      return;
+    }
+    state.filters.userType = '';
+    state.filters.clientState = '';
+    state.filters.acceptsContact = '';
+    state.filters.interestIncludes = [];
+    clientsAdvancedForm.reset();
+    setCheckboxSelections(clientsAdvancedInterestsContainer, []);
+    setFilterInputValue('acceptsContact', '');
+    state.page = 1;
+    renderClients();
+    updateAdvancedButtonState();
+  }
+
+  function closeClientInterestsModalInternal() {
+    closeOverlay(clientInterestsOverlay);
+  }
+
+  function openClientInterestsModal() {
+    const client = getCurrentClientData();
+    if (!client) {
+      return;
+    }
+    ensureInterestCheckboxes(clientInterestsOptionsContainer, 'interests');
+    setCheckboxSelections(clientInterestsOptionsContainer, client.interests);
+    openOverlay(clientInterestsOverlay);
+  }
+
+  function handleClientInterestsSubmit(event) {
+    event.preventDefault();
+    const client = getCurrentClientData();
+    if (!client || !clientInterestsForm) {
+      closeClientInterestsModalInternal();
+      return;
+    }
+    const formData = new FormData(clientInterestsForm);
+    const selected = formData
+      .getAll('interests')
+      .map((value) => value?.toString().trim())
+      .filter((value) => Boolean(value));
+    client.interests = selected;
+    renderClientInterests(client);
+    renderClients();
+    updateAdvancedButtonState();
+    closeClientInterestsModalInternal();
   }
 
   window.navigateToClientDetail = (clientId) => {
@@ -1323,6 +1564,42 @@ const CLIENTS = [
   clientPurchasesContainer?.addEventListener('click', handlePurchaseToggle);
   clientsDetailButton?.addEventListener('click', handleDetailButtonClick);
   clientsNewButton?.addEventListener('click', handleNewClientClick);
+  clientsAdvancedSearchButton?.addEventListener('click', openAdvancedSearchModal);
+  clientsAdvancedCloseButton?.addEventListener('click', () => {
+    closeAdvancedSearchModalInternal();
+  });
+  clientsAdvancedResetButton?.addEventListener('click', handleAdvancedReset);
+  clientsAdvancedApplyButton?.addEventListener('click', () => {
+    if (!clientsAdvancedForm) {
+      return;
+    }
+    clientsAdvancedForm.requestSubmit();
+  });
+  clientsAdvancedOverlay?.addEventListener('click', (event) => {
+    if (event.target === clientsAdvancedOverlay) {
+      closeAdvancedSearchModalInternal();
+    }
+  });
+  clientsAdvancedForm?.addEventListener('submit', handleAdvancedFormSubmit);
+  clientInterestsEditButton?.addEventListener('click', openClientInterestsModal);
+  clientInterestsCancelButtons?.forEach((button) => {
+    button.addEventListener('click', () => {
+      closeClientInterestsModalInternal();
+    });
+  });
+  clientInterestsOverlay?.addEventListener('click', (event) => {
+    if (event.target === clientInterestsOverlay) {
+      closeClientInterestsModalInternal();
+    }
+  });
+  clientInterestsForm?.addEventListener('submit', handleClientInterestsSubmit);
+  clientInterestsSaveButton?.addEventListener('click', () => {
+    clientInterestsForm?.requestSubmit();
+  });
+  homeAddClientCardButton?.addEventListener('click', () => {
+    prepareClientForm('create');
+    setActivePage('cadastro-cliente');
+  });
   clientFormElement?.addEventListener('submit', handleClientFormSubmit);
   clientFormCancelButton?.addEventListener('click', handleClientDetailBack);
   clientDetailBackButton?.addEventListener('click', handleClientDetailBack);
@@ -1334,4 +1611,8 @@ const CLIENTS = [
   updateSortIndicators();
   renderClients();
   ensureDetailButtonState();
+  updateAdvancedButtonState();
+
+  window.closeClientsAdvancedSearchModal = closeAdvancedSearchModalInternal;
+  window.closeClientInterestsModal = closeClientInterestsModalInternal;
 })();
