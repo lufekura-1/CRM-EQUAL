@@ -109,27 +109,20 @@
             </div>
           </div>
           <div class="topbar__menu" data-page="clientes" data-label="Clientes">
-            <div class="topbar__group topbar__group--left">
+            <div class="topbar__group topbar__group--right clients-topbar__actions">
               <button
-                class="topbar__button topbar__button--green"
+                class="topbar__button topbar__button--advanced"
+                type="button"
+                data-role="clients-advanced-search"
+              >
+                Pesquisa Avançada
+              </button>
+              <button
+                class="topbar__button topbar__button--green topbar__button--green-filled"
                 type="button"
                 data-role="clients-new-button"
               >
                 Novo Cliente
-              </button>
-              <label class="topbar__search">
-                <span class="visually-hidden">Encontre o cliente</span>
-                <input type="search" placeholder="Encontre o cliente..." />
-              </label>
-            </div>
-            <div class="topbar__group topbar__group--right">
-              <button
-                class="topbar__button"
-                type="button"
-                data-role="clients-detail-button"
-                disabled
-              >
-                Página do cliente
               </button>
             </div>
           </div>
@@ -258,6 +251,7 @@
                 <button
                   class="home-card home-card--action home-card--calendar"
                   type="button"
+                  data-role="home-add-event"
                 >
                   <span class="home-card__icon" aria-hidden="true">+</span>
                   <span class="home-card__label">Adicionar evento</span>
@@ -297,6 +291,7 @@
                 <button
                   class="home-card home-card--action home-card--clients"
                   type="button"
+                  data-role="home-add-client"
                 >
                   <span class="home-card__icon" aria-hidden="true">+</span>
                   <span class="home-card__label">Adicionar cliente</span>
@@ -590,20 +585,16 @@
                   <h2 class="client-card__title">Interesses</h2>
                   <div class="client-card__actions">
                     <button
-                      class="client-card__action-button"
-                      type="button"
-                      aria-label="Adicionar interesse"
-                      title="Adicionar interesse"
-                    >
-                      +
-                    </button>
-                    <button
-                      class="client-card__action-button"
+                      class="client-card__action-button client-card__action-button--edit"
                       type="button"
                       aria-label="Editar interesses"
                       title="Editar interesses"
+                      data-role="client-interests-edit"
                     >
-                      ✎
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"></path>
+                        <path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0L15.13 5.1l3.75 3.75 1.83-1.83z"></path>
+                      </svg>
                     </button>
                   </div>
                 </header>
@@ -903,6 +894,96 @@
           </ul>
         </section>
       </main>
+    </div>
+    <div class="modal-overlay" data-modal="clients-advanced-search" aria-hidden="true">
+      <div
+        class="modal modal--large"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="clients-advanced-search-title"
+      >
+        <div class="modal__header">
+          <h2 class="modal__title" id="clients-advanced-search-title">Pesquisa avançada</h2>
+          <button
+            class="modal__close"
+            type="button"
+            data-action="close"
+            aria-label="Fechar modal"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal__content">
+          <form class="modal__form modal__form--advanced-search" data-role="clients-advanced-form" autocomplete="off">
+            <label class="modal__field">
+              <span class="modal__label">Tipo de usuário</span>
+              <select class="modal__input" name="userType" data-advanced-select="userType"></select>
+            </label>
+            <label class="modal__field">
+              <span class="modal__label">Estado do cliente</span>
+              <select class="modal__input" name="clientState" data-advanced-select="clientState"></select>
+            </label>
+            <label class="modal__field">
+              <span class="modal__label">Aceita contato</span>
+              <select class="modal__input" name="acceptsContact" data-advanced-select="acceptsContact">
+                <option value="">Todos</option>
+                <option value="sim">Sim</option>
+                <option value="nao">Não</option>
+              </select>
+            </label>
+            <fieldset class="modal__fieldset">
+              <legend class="modal__label">Interesses</legend>
+              <p class="modal__helper-text">Selecione um ou mais interesses para filtrar a tabela.</p>
+              <div class="modal__checkbox-grid" data-role="clients-advanced-interests"></div>
+            </fieldset>
+            <div class="modal__footer modal__footer--split">
+              <button class="modal__cancel-button" type="button" data-action="reset">
+                Limpar filtros
+              </button>
+              <button class="modal__save-button" type="submit" data-action="apply">
+                Aplicar filtros
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" data-modal="client-interests" aria-hidden="true">
+      <div
+        class="modal modal--large"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="client-interests-title"
+      >
+        <div class="modal__header">
+          <h2 class="modal__title" id="client-interests-title">Editar interesses</h2>
+          <button
+            class="modal__close"
+            type="button"
+            data-action="cancel"
+            aria-label="Fechar modal"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal__content">
+          <form class="modal__form modal__form--interests" data-role="client-interests-form" autocomplete="off">
+            <p class="modal__helper-text">Escolha as etiquetas que representam melhor este cliente.</p>
+            <fieldset class="modal__fieldset">
+              <legend class="visually-hidden">Etiquetas disponíveis</legend>
+              <div class="modal__checkbox-grid" data-role="client-interests-options"></div>
+            </fieldset>
+            <div class="modal__footer modal__footer--split">
+              <button class="modal__cancel-button" type="button" data-action="cancel">
+                Cancelar
+              </button>
+              <button class="modal__save-button" type="submit" data-action="save">
+                Salvar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
     <div class="modal-overlay" data-modal="add-event" aria-hidden="true">
       <div

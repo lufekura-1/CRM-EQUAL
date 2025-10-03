@@ -49,6 +49,10 @@ if (addEventButton) {
   addEventButton.addEventListener('click', () => openAddEventModal());
 }
 
+homeAddEventCardButton?.addEventListener('click', () => {
+  openAddEventModal();
+});
+
 if (addEventOverlay) {
   addEventOverlay.addEventListener('click', (event) => {
     if (event.target === addEventOverlay) {
@@ -118,6 +122,10 @@ document.addEventListener('keydown', (event) => {
     closeEventDetailsModal();
   } else if (addEventOverlay?.classList.contains('is-visible')) {
     closeAddEventModal();
+  } else if (clientsAdvancedOverlay?.classList.contains('is-visible')) {
+    closeClientsAdvancedSearchModal();
+  } else if (clientInterestsOverlay?.classList.contains('is-visible')) {
+    closeClientInterestsModal();
   } else if (userSelectorOverlay?.classList.contains('is-visible')) {
     closeUserSelectorModal();
   }
