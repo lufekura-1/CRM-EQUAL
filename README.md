@@ -30,7 +30,7 @@ Para visualizar a interface basta servir a pasta `frontend` em um servidor está
 
 ## Backend
 
-O backend expõe endpoints REST para listar, criar, atualizar e remover eventos armazenados em uma planilha do Google Sheets.
+O backend expõe endpoints REST para gerenciar clientes e eventos. Os dados podem ser persistidos tanto em SQLite (padrão) quanto no Google Sheets, dependendo da configuração aplicada.
 
 ### Configuração
 
@@ -59,10 +59,51 @@ npm run dev
 A API ficará disponível em `http://localhost:4000`. Os endpoints principais são:
 
 - `GET /api/health` — verificação simples da integração.
-- `GET /api/events` — lista eventos existentes.
-- `POST /api/events` — adiciona um evento.
-- `PUT /api/events/:id` — atualiza um evento.
-- `DELETE /api/events/:id` — remove um evento.
+- `GET /api/clientes` — lista clientes cadastrados, com suporte a `?q=` (busca) e `?page=` (paginação).
+- `POST /api/clientes` — adiciona um novo cliente.
+- `PUT /api/clientes/:id` — atualiza os dados de um cliente existente.
+- `DELETE /api/clientes/:id` — remove um cliente.
+- `GET /api/eventos` — lista eventos existentes, permitindo filtrar por intervalo de datas com `?from=YYYY-MM-DD&to=YYYY-MM-DD`.
+- `POST /api/eventos` — adiciona um evento.
+- `PUT /api/eventos/:id` — atualiza um evento.
+- `DELETE /api/eventos/:id` — remove um evento.
+
+### Exemplos com `curl`
+
+```bash
+# Lista a segunda página de clientes contendo "ana" no nome, telefone ou e-mail.
+curl "http://localhost:4000/api/clientes?q=ana&page=2"
+
+# Cria um cliente
+curl -X POST "http://localhost:4000/api/clientes" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nome": "Ana Souza",
+    "telefone": "+55 11 99999-9999",
+    "email": "ana@example.com"
+  }'
+
+# Atualiza apenas o telefone de um cliente
+curl -X PUT "http://localhost:4000/api/clientes/1" \
+  -H "Content-Type: application/json" \
+  -d '{ "telefone": "+55 11 98888-8888" }'
+
+# Busca eventos entre duas datas (intervalo inclusivo)
+curl "http://localhost:4000/api/eventos?from=2024-01-01&to=2024-12-31"
+
+# Cria um evento associado a um cliente
+curl -X POST "http://localhost:4000/api/eventos" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date": "2024-06-15",
+    "title": "Reunião com Ana",
+    "description": "Apresentação do produto",
+    "clientId": 1
+  }'
+
+# Remove um evento
+curl -X DELETE "http://localhost:4000/api/eventos/3"
+```
 
 ## Integração futura
 
