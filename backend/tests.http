@@ -1,0 +1,66 @@
+@host = http://localhost:4000
+@json = application/json
+
+### Health check
+GET {{host}}/api/health
+Accept: application/json
+
+### Lista de clientes
+GET {{host}}/api/clientes?q=joao&page=1
+Accept: application/json
+
+### Criação de cliente
+POST {{host}}/api/clientes
+Content-Type: {{json}}
+Accept: application/json
+
+{
+  "nome": "João da Silva",
+  "telefone": "+55 11 91234-5678",
+  "email": "joao.silva@example.com"
+}
+
+### Atualização de cliente
+PUT {{host}}/api/clientes/1
+Content-Type: {{json}}
+Accept: application/json
+
+{
+  "nome": "João da Silva",
+  "telefone": "+55 11 98765-4321"
+}
+
+### Remoção de cliente
+DELETE {{host}}/api/clientes/1
+Accept: application/json
+
+### Lista de eventos
+GET {{host}}/api/eventos?from=2024-01-01&to=2024-12-31
+Accept: application/json
+
+### Criação de evento
+POST {{host}}/api/eventos
+Content-Type: {{json}}
+Accept: application/json
+
+{
+  "date": "2024-08-01T10:30:00.000Z",
+  "title": "Reunião de Planejamento",
+  "description": "Reunião inicial com o cliente para discutir escopo",
+  "color": "#FF5733",
+  "clientId": 1
+}
+
+### Atualização de evento
+PUT {{host}}/api/eventos/1
+Content-Type: {{json}}
+Accept: application/json
+
+{
+  "title": "Reunião de Planejamento - Atualizada",
+  "description": "Reunião reprogramada com pauta revisada"
+}
+
+### Remoção de evento
+DELETE {{host}}/api/eventos/1
+Accept: application/json
