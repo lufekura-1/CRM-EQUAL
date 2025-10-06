@@ -241,11 +241,146 @@
     if (!payload) {
       return null;
     }
-    return {
-      nome: payload.nome,
-      telefone: payload.telefone ?? null,
-      email: payload.email ?? null,
-    };
+    function normalizeNullable(value) {
+      if (value === undefined) {
+        return undefined;
+      }
+      if (value === null) {
+        return null;
+      }
+      const stringValue = String(value).trim();
+      return stringValue.length === 0 ? null : stringValue;
+    }
+
+    function normalizePurchase(purchase) {
+      if (!purchase || !purchase.date) {
+        return null;
+      }
+
+      const normalizedMaterial = normalizeNullable(purchase.frameMaterial);
+      const frameValue =
+        purchase.frameValue === undefined || purchase.frameValue === null
+          ? null
+          : Number(purchase.frameValue);
+      const lensValue =
+        purchase.lensValue === undefined || purchase.lensValue === null
+          ? null
+          : Number(purchase.lensValue);
+
+      return {
+        id: purchase.id ?? purchase.purchaseId ?? null,
+        date: purchase.date,
+        frame: normalizeNullable(purchase.frame),
+        frameMaterial: normalizedMaterial ? normalizedMaterial.toUpperCase() : null,
+        frameValue: Number.isNaN(frameValue) ? null : frameValue,
+        lens: normalizeNullable(purchase.lens),
+        lensValue: Number.isNaN(lensValue) ? null : lensValue,
+        invoice: normalizeNullable(purchase.invoice),
+        dioptry: {
+          oe: {
+            spherical: normalizeNullable(purchase.dioptry?.oe?.spherical),
+            cylindrical: normalizeNullable(purchase.dioptry?.oe?.cylindrical),
+            axis: normalizeNullable(purchase.dioptry?.oe?.axis),
+            dnp: normalizeNullable(purchase.dioptry?.oe?.dnp),
+            addition: normalizeNullable(purchase.dioptry?.oe?.addition),
+          },
+          od: {
+            spherical: normalizeNullable(purchase.dioptry?.od?.spherical),
+            cylindrical: normalizeNullable(purchase.dioptry?.od?.cylindrical),
+            axis: normalizeNullable(purchase.dioptry?.od?.axis),
+            dnp: normalizeNullable(purchase.dioptry?.od?.dnp),
+            addition: normalizeNullable(purchase.dioptry?.od?.addition),
+          },
+        },
+      };
+    }
+
+    const result = {};
+
+    if (payload.nome !== undefined) {
+      result.nome = String(payload.nome).trim();
+    }
+
+    if (payload.telefone !== undefined) {
+      result.telefone = normalizeNullable(payload.telefone);
+    }
+
+    if (payload.email !== undefined) {
+      result.email = normalizeNullable(payload.email);
+    }
+
+    if (payload.cpf !== undefined) {
+      result.cpf = normalizeNullable(payload.cpf);
+    }
+
+    const genderValue =
+      payload.gender !== undefined ? payload.gender : payload.genero;
+    if (genderValue !== undefined) {
+      const normalizedGender = normalizeNullable(genderValue);
+      result.gender = normalizedGender ? normalizedGender.toUpperCase() : normalizedGender;
+    }
+
+    const birthDateValue =
+      payload.birthDate !== undefined
+        ? payload.birthDate
+        : payload.dataNascimento !== undefined
+        ? payload.dataNascimento
+        : payload['data_nascimento'];
+    if (birthDateValue !== undefined) {
+      result.birthDate = normalizeNullable(birthDateValue);
+    }
+
+    if (payload.acceptsContact !== undefined) {
+      result.acceptsContact = Boolean(payload.acceptsContact);
+    } else if (payload.aceitaContato !== undefined) {
+      result.acceptsContact = Boolean(payload.aceitaContato);
+    } else if (payload['aceita_contato'] !== undefined) {
+      result.acceptsContact = Boolean(payload['aceita_contato']);
+    }
+
+    const userTypeValue =
+      payload.userType !== undefined ? payload.userType : payload.tipoUsuario ?? payload['tipo_usuario'];
+    if (userTypeValue !== undefined) {
+      const normalizedUserType = normalizeNullable(userTypeValue);
+      result.userType = normalizedUserType ? normalizedUserType.toUpperCase() : normalizedUserType;
+    }
+
+    const stateValue =
+      payload.state !== undefined ? payload.state : payload.estadoCliente ?? payload['estado_cliente'];
+    if (stateValue !== undefined) {
+      const normalizedState = normalizeNullable(stateValue);
+      result.state = normalizedState ? normalizedState.toLowerCase() : normalizedState;
+    }
+
+    if (Array.isArray(payload.interests)) {
+      const normalizedInterests = payload.interests
+        .map((item) => normalizeNullable(item))
+        .filter((item) => item);
+      result.interests = normalizedInterests;
+    } else if (payload.interesses === null) {
+      result.interests = [];
+    } else if (Array.isArray(payload.interesses)) {
+      const normalizedInteresses = payload.interesses
+        .map((item) => normalizeNullable(item))
+        .filter((item) => item);
+      result.interests = normalizedInteresses;
+    }
+
+    const purchasePayload = payload.purchase ?? payload.compra;
+    const normalizedPurchase = normalizePurchase(purchasePayload);
+    if (normalizedPurchase) {
+      result.purchase = normalizedPurchase;
+    }
+
+    const purchasesPayload = payload.purchases ?? payload.compras;
+    if (Array.isArray(purchasesPayload)) {
+      const normalizedPurchases = purchasesPayload
+        .map((item) => normalizePurchase(item))
+        .filter((item) => item);
+      result.purchases = normalizedPurchases;
+    }
+
+    return result;
   }
 
   const api = {

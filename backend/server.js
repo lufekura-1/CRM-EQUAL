@@ -107,6 +107,188 @@ const optionalEmailSchema = z
     }
   );
 
+const optionalBooleanSchema = z
+  .union([z.boolean(), z.number(), z.string(), z.literal(null)])
+  .optional()
+  .transform((value) => {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (value === null) {
+      return null;
+    }
+
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'number') {
+      return value !== 0;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'sim'].includes(normalized)) {
+      return true;
+    }
+    if (['false', '0', 'no', 'nao', 'não'].includes(normalized)) {
+      return false;
+    }
+
+    throw new Error('Campo "acceptsContact" deve ser um booleano válido.');
+  });
+
+const optionalBirthDateSchema = z
+  .union([z.string(), z.literal(null)])
+  .optional()
+  .transform((value) => {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (value === null) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return null;
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      throw new Error('Campo "birthDate" deve estar no formato YYYY-MM-DD.');
+    }
+
+    return trimmed;
+  });
+
+const optionalNumberSchema = z
+  .union([z.number(), z.string(), z.literal(null)])
+  .optional()
+  .transform((value) => {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (value === null) {
+      return null;
+    }
+
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) {
+        throw new Error('Valor numérico inválido.');
+      }
+      return value;
+    }
+
+    const normalized = Number(value.replace(',', '.'));
+    if (Number.isNaN(normalized)) {
+      throw new Error('Valor numérico inválido.');
+    }
+
+    return normalized;
+  });
+
+const dioptryEyeSchema = z
+  .union([
+    z
+      .object({
+        spherical: normalizeNullableStringSchema,
+        cylindrical: normalizeNullableStringSchema,
+        axis: normalizeNullableStringSchema,
+        dnp: normalizeNullableStringSchema,
+        addition: normalizeNullableStringSchema,
+      })
+      .partial(),
+    z.literal(null),
+  ])
+  .optional()
+  .transform((value) => {
+    const source = value && typeof value === 'object' ? value : {};
+    return {
+      spherical: source.spherical ?? null,
+      cylindrical: source.cylindrical ?? null,
+      axis: source.axis ?? null,
+      dnp: source.dnp ?? null,
+      addition: source.addition ?? null,
+    };
+  });
+
+const dioptrySchema = z
+  .object({
+    oe: dioptryEyeSchema,
+    od: dioptryEyeSchema,
+  })
+  .optional()
+  .transform((value) => {
+    const oe = value?.oe ?? {};
+    const od = value?.od ?? {};
+    return {
+      oe: {
+        spherical: oe.spherical ?? null,
+        cylindrical: oe.cylindrical ?? null,
+        axis: oe.axis ?? null,
+        dnp: oe.dnp ?? null,
+        addition: oe.addition ?? null,
+      },
+      od: {
+        spherical: od.spherical ?? null,
+        cylindrical: od.cylindrical ?? null,
+        axis: od.axis ?? null,
+        dnp: od.dnp ?? null,
+        addition: od.addition ?? null,
+      },
+    };
+  });
+
+const purchaseSchema = z.object({
+  id: normalizeNullableStringSchema,
+  date: z
+    .string({ required_error: 'Campo "purchase.date" é obrigatório.' })
+    .trim()
+    .min(1, 'Campo "purchase.date" é obrigatório.')
+    .refine((value) => /^\d{4}-\d{2}-\d{2}$/.test(value), {
+      message: 'Campo "purchase.date" deve estar no formato YYYY-MM-DD.',
+    }),
+  frame: normalizeNullableStringSchema,
+  frameMaterial: normalizeNullableStringSchema,
+  frameValue: optionalNumberSchema,
+  lens: normalizeNullableStringSchema,
+  lensValue: optionalNumberSchema,
+  invoice: normalizeNullableStringSchema,
+  dioptry: dioptrySchema,
+});
+
+const optionalInterestsSchema = z
+  .array(z.union([z.string(), z.number()]))
+  .optional()
+  .transform((value) => {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    const seen = new Set();
+    const normalized = [];
+
+    value.forEach((item) => {
+      if (item === null || item === undefined) {
+        return;
+      }
+      const trimmed = String(item).trim();
+      if (!trimmed) {
+        return;
+      }
+      const key = trimmed.toLowerCase();
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      normalized.push(trimmed);
+    });
+
+    return normalized;
+  });
+
 const clienteCreateSchema = z.object({
   nome: z
     .string({ required_error: 'Campo "nome" é obrigatório.' })
@@ -114,13 +296,183 @@ const clienteCreateSchema = z.object({
     .min(1, 'Campo "nome" é obrigatório.'),
   telefone: normalizeNullableStringSchema,
   email: optionalEmailSchema,
+  cpf: normalizeNullableStringSchema,
+  gender: normalizeNullableStringSchema,
+  birthDate: optionalBirthDateSchema,
+  acceptsContact: optionalBooleanSchema,
+  userType: normalizeNullableStringSchema,
+  state: normalizeNullableStringSchema,
+  interests: optionalInterestsSchema,
+  purchase: purchaseSchema.optional(),
+  purchases: z.array(purchaseSchema).optional(),
 });
 
 const clienteUpdateSchema = clienteCreateSchema
   .partial()
-  .refine((value) => value.nome || value.telefone !== undefined || value.email !== undefined, {
-    message: 'Informe ao menos um campo para atualizar.',
-  });
+  .refine(
+    (value) =>
+      value.nome !== undefined ||
+      value.telefone !== undefined ||
+      value.email !== undefined ||
+      value.cpf !== undefined ||
+      value.gender !== undefined ||
+      value.birthDate !== undefined ||
+      value.acceptsContact !== undefined ||
+      value.userType !== undefined ||
+      value.state !== undefined ||
+      value.interests !== undefined ||
+      value.purchase !== undefined ||
+      value.purchases !== undefined,
+    {
+      message: 'Informe ao menos um campo para atualizar.',
+    }
+  );
+
+function normalizeClientRequestBody(body) {
+  if (!body || typeof body !== 'object') {
+    return body;
+  }
+
+  const normalized = { ...body };
+
+  if (normalized.dataNascimento !== undefined && normalized.birthDate === undefined) {
+    normalized.birthDate = normalized.dataNascimento;
+  }
+  if (normalized['data_nascimento'] !== undefined && normalized.birthDate === undefined) {
+    normalized.birthDate = normalized['data_nascimento'];
+  }
+  if (normalized.genero !== undefined && normalized.gender === undefined) {
+    normalized.gender = normalized.genero;
+  }
+  if (normalized.aceitaContato !== undefined && normalized.acceptsContact === undefined) {
+    normalized.acceptsContact = normalized.aceitaContato;
+  }
+  if (normalized['aceita_contato'] !== undefined && normalized.acceptsContact === undefined) {
+    normalized.acceptsContact = normalized['aceita_contato'];
+  }
+  if (normalized.tipoUsuario !== undefined && normalized.userType === undefined) {
+    normalized.userType = normalized.tipoUsuario;
+  }
+  if (normalized['tipo_usuario'] !== undefined && normalized.userType === undefined) {
+    normalized.userType = normalized['tipo_usuario'];
+  }
+  if (normalized.estadoCliente !== undefined && normalized.state === undefined) {
+    normalized.state = normalized.estadoCliente;
+  }
+  if (normalized['estado_cliente'] !== undefined && normalized.state === undefined) {
+    normalized.state = normalized['estado_cliente'];
+  }
+  if (normalized.interesses !== undefined && normalized.interests === undefined) {
+    normalized.interests = normalized.interesses;
+  }
+  if (normalized.compra !== undefined && normalized.purchase === undefined) {
+    normalized.purchase = normalized.compra;
+  }
+  if (normalized.compras !== undefined && normalized.purchases === undefined) {
+    normalized.purchases = normalized.compras;
+  }
+
+  return normalized;
+}
+
+function normalizeAcceptsContactInput(value, { allowUndefined = false } = {}) {
+  if (value === undefined) {
+    return allowUndefined ? undefined : false;
+  }
+
+  if (value === null) {
+    return false;
+  }
+
+  return Boolean(value);
+}
+
+function cloneDioptry(dioptry = {}) {
+  const oe = dioptry?.oe || {};
+  const od = dioptry?.od || {};
+  return {
+    oe: {
+      spherical: oe.spherical ?? null,
+      cylindrical: oe.cylindrical ?? null,
+      axis: oe.axis ?? null,
+      dnp: oe.dnp ?? null,
+      addition: oe.addition ?? null,
+    },
+    od: {
+      spherical: od.spherical ?? null,
+      cylindrical: od.cylindrical ?? null,
+      axis: od.axis ?? null,
+      dnp: od.dnp ?? null,
+      addition: od.addition ?? null,
+    },
+  };
+}
+
+function decoratePurchaseResponse(purchase) {
+  if (!purchase) {
+    return null;
+  }
+
+  const dioptry = cloneDioptry(purchase.dioptry);
+
+  return {
+    ...purchase,
+    dioptry,
+    armacao: purchase.frame ?? '',
+    materialArmacao: purchase.frameMaterial ?? '',
+    material_armacao: purchase.frameMaterial ?? '',
+    valorArmacao: purchase.frameValue ?? null,
+    valor_armacao: purchase.frameValue ?? null,
+    lente: purchase.lens ?? '',
+    valorLente: purchase.lensValue ?? null,
+    valor_lente: purchase.lensValue ?? null,
+    notaFiscal: purchase.invoice ?? '',
+    nota_fiscal: purchase.invoice ?? '',
+  };
+}
+
+function decorateClientResponse(cliente) {
+  if (!cliente) {
+    return null;
+  }
+
+  const interests = Array.isArray(cliente.interests)
+    ? cliente.interests.map((item) => (item === undefined || item === null ? null : String(item).trim()))
+    : [];
+  const filteredInterests = interests.filter((item) => item && item.length > 0);
+
+  const purchases = Array.isArray(cliente.purchases)
+    ? cliente.purchases
+        .map((purchase) => decoratePurchaseResponse(purchase))
+        .filter((purchase) => Boolean(purchase))
+    : [];
+
+  const lastPurchase = cliente.lastPurchase ?? purchases[purchases.length - 1]?.date ?? null;
+
+  return {
+    ...cliente,
+    gender: cliente.gender ?? null,
+    birthDate: cliente.birthDate ?? null,
+    acceptsContact: Boolean(cliente.acceptsContact),
+    userType: cliente.userType ?? null,
+    state: cliente.state ?? null,
+    interests: filteredInterests,
+    purchases,
+    lastPurchase,
+    genero: cliente.gender ?? null,
+    dataNascimento: cliente.birthDate ?? null,
+    data_nascimento: cliente.birthDate ?? null,
+    aceitaContato: Boolean(cliente.acceptsContact),
+    aceita_contato: Boolean(cliente.acceptsContact),
+    tipoUsuario: cliente.userType ?? null,
+    tipo_usuario: cliente.userType ?? null,
+    estadoCliente: cliente.state ?? null,
+    estado_cliente: cliente.state ?? null,
+    interesses: filteredInterests,
+    compras: purchases,
+    compra: purchases[purchases.length - 1] || null,
+  };
+}
 
 const clientesQuerySchema = z.object({
   q: z
@@ -253,9 +605,12 @@ app.get('/api/clientes', async (req, res) => {
     const start = (page - 1) * CLIENTES_PAGE_SIZE;
     const end = start + CLIENTES_PAGE_SIZE;
     const paginatedClientes = filteredClientes.slice(start, end);
+    const decoratedClientes = paginatedClientes.map((cliente) =>
+      decorateClientResponse(cliente)
+    );
 
     res.json({
-      clientes: paginatedClientes,
+      clientes: decoratedClientes,
       page,
       pageSize: CLIENTES_PAGE_SIZE,
       total,
@@ -268,21 +623,43 @@ app.get('/api/clientes', async (req, res) => {
 
 app.post('/api/clientes', async (req, res) => {
   try {
-    const parsedBody = clienteCreateSchema.safeParse(req.body);
+    const parsedBody = clienteCreateSchema.safeParse(normalizeClientRequestBody(req.body));
     if (!parsedBody.success) {
       return res.status(400).json({ error: extractValidationError(parsedBody.error) });
     }
 
-    const { nome, telefone, email } = parsedBody.data;
+    const {
+      nome,
+      telefone,
+      email,
+      cpf,
+      gender,
+      birthDate,
+      acceptsContact,
+      userType,
+      state,
+      interests,
+      purchase,
+      purchases,
+    } = parsedBody.data;
     const cliente = await Promise.resolve(
       storage.createCliente({
         nome,
         telefone: telefone ?? null,
         email: email ?? null,
+        cpf: cpf ?? null,
+        gender: gender ?? null,
+        birthDate: birthDate ?? null,
+        acceptsContact: normalizeAcceptsContactInput(acceptsContact),
+        userType: userType ?? null,
+        state: state ?? null,
+        interests: Array.isArray(interests) ? interests : [],
+        purchase: purchase ?? null,
+        purchases: purchases ?? undefined,
       })
     );
 
-    res.status(201).json({ cliente });
+    res.status(201).json({ cliente: decorateClientResponse(cliente) });
   } catch (error) {
     handleError(res, error);
   }
@@ -291,17 +668,39 @@ app.post('/api/clientes', async (req, res) => {
 app.put('/api/clientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const parsedBody = clienteUpdateSchema.safeParse(req.body);
+    const parsedBody = clienteUpdateSchema.safeParse(normalizeClientRequestBody(req.body));
     if (!parsedBody.success) {
       return res.status(400).json({ error: extractValidationError(parsedBody.error) });
     }
 
-    const { nome, telefone, email } = parsedBody.data;
+    const {
+      nome,
+      telefone,
+      email,
+      cpf,
+      gender,
+      birthDate,
+      acceptsContact,
+      userType,
+      state,
+      interests,
+      purchase,
+      purchases,
+    } = parsedBody.data;
     const updated = await Promise.resolve(
       storage.updateCliente(id, {
         nome,
-        telefone: telefone === undefined ? undefined : telefone,
-        email: email === undefined ? undefined : email,
+        telefone: telefone === undefined ? undefined : telefone ?? null,
+        email: email === undefined ? undefined : email ?? null,
+        cpf: cpf === undefined ? undefined : cpf ?? null,
+        gender: gender === undefined ? undefined : gender ?? null,
+        birthDate: birthDate === undefined ? undefined : birthDate ?? null,
+        acceptsContact: normalizeAcceptsContactInput(acceptsContact, { allowUndefined: true }),
+        userType: userType === undefined ? undefined : userType ?? null,
+        state: state === undefined ? undefined : state ?? null,
+        interests,
+        purchase,
+        purchases,
       })
     );
 
@@ -309,7 +708,7 @@ app.put('/api/clientes/:id', async (req, res) => {
       return res.status(404).json({ error: 'Cliente não encontrado.' });
     }
 
-    res.json({ cliente: updated });
+    res.json({ cliente: decorateClientResponse(updated) });
   } catch (error) {
     handleError(res, error);
   }
