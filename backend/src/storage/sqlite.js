@@ -36,6 +36,33 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS compras (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL,
+    data TEXT NOT NULL,
+    armacao TEXT,
+    material_armacao TEXT,
+    valor_armacao REAL,
+    lente TEXT,
+    valor_lente REAL,
+    nota_fiscal TEXT,
+    oe_esferico TEXT,
+    oe_cilindrico TEXT,
+    oe_eixo TEXT,
+    oe_dnp TEXT,
+    oe_adicao TEXT,
+    od_esferico TEXT,
+    od_cilindrico TEXT,
+    od_eixo TEXT,
+    od_dnp TEXT,
+    od_adicao TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
+  );
+`);
+
 function ensureColumn(table, column, definition) {
   const info = db.pragma(`table_info(${table})`);
   const hasColumn = info.some((entry) => entry.name === column);
@@ -80,33 +107,6 @@ const purchaseColumns = [
 purchaseColumns.forEach(([column, definition]) => {
   ensureColumn('compras', column, definition);
 });
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS compras (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    cliente_id INTEGER NOT NULL,
-    data TEXT NOT NULL,
-    armacao TEXT,
-    material_armacao TEXT,
-    valor_armacao REAL,
-    lente TEXT,
-    valor_lente REAL,
-    nota_fiscal TEXT,
-    oe_esferico TEXT,
-    oe_cilindrico TEXT,
-    oe_eixo TEXT,
-    oe_dnp TEXT,
-    oe_adicao TEXT,
-    od_esferico TEXT,
-    od_cilindrico TEXT,
-    od_eixo TEXT,
-    od_dnp TEXT,
-    od_adicao TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
-  );
-`);
 
 const listClientesStmt = db.prepare(`
   SELECT
