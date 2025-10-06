@@ -20,7 +20,19 @@ backend/
 
 ## Frontend
 
-Para visualizar a interface basta servir a pasta `frontend` em um servidor estático (por exemplo, com a extensão "Live Server" do VS Code) ou abrir `frontend/index.html` diretamente no navegador.
+Para visualizar a interface basta servir os arquivos estáticos (por exemplo, com a extensão "Live Server" do VS Code) ou abrir `index.html` diretamente no navegador.
+
+> **Importante:** execute o backend antes de abrir o Live Server. Sem a API em execução as requisições retornarão erro de conexão.
+
+### Configuração do frontend
+
+O arquivo `env.front` define a URL base utilizada nas chamadas à API. Para ambientes locais o valor padrão é `http://localhost:4000`:
+
+```
+API_BASE_URL=http://localhost:4000
+```
+
+Você pode ajustar esse valor se expuser a API em outra porta/host. O frontend aceita as chaves `API_BASE_URL`, `VITE_API_BASE_URL`, `REACT_APP_API_BASE_URL` e `API_URL` para compatibilidade com diferentes setups.
 
 ### Novidades
 
