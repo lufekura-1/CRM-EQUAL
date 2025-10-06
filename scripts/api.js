@@ -46,6 +46,43 @@
     return trimmed.replace(/\/?$/, '');
   }
 
+  function createNetworkError(baseUrl, cause) {
+    const hint =
+      'Verifique se o backend está em execução (npm run dev dentro de backend/) e se a porta configurada está acessível.';
+    const baseMessage = `Não foi possível conectar ao servidor em ${baseUrl}.`;
+    const message = `${baseMessage} ${hint}`.trim();
+    const error = new Error(message);
+    error.cause = cause;
+    error.code = 'NETWORK_ERROR';
+    error.hint = hint;
+    error.baseUrl = baseUrl;
+    return error;
+  }
+
+  function getFallbackBaseUrl(url) {
+    if (!url) {
+      return null;
+    }
+
+    try {
+      const parsed = new URL(url);
+
+      if (parsed.hostname === 'localhost') {
+        parsed.hostname = '127.0.0.1';
+        return normalizeBaseUrl(parsed.toString());
+      }
+
+      if (parsed.hostname === '127.0.0.1') {
+        parsed.hostname = 'localhost';
+        return normalizeBaseUrl(parsed.toString());
+      }
+    } catch (error) {
+      return null;
+    }
+
+    return null;
+  }
+
   async function ensureBaseUrl() {
     if (envLoaded) {
       return apiBaseUrl;
@@ -73,9 +110,9 @@
     return apiBaseUrl;
   }
 
-  function buildUrl(path) {
+  function buildUrl(path, baseUrl = apiBaseUrl) {
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-    return `${apiBaseUrl}${normalizedPath}`;
+    return `${baseUrl}${normalizedPath}`;
   }
 
   function extractErrorMessage(error, fallback = 'Ocorreu um erro inesperado.') {
@@ -115,37 +152,76 @@
       requestHeaders.set('Content-Type', 'application/json');
     }
 
-    let response;
-    try {
-      response = await fetch(buildUrl(path), {
-        method,
-        headers: requestHeaders,
-        body: hasBody ? body : undefined,
-      });
-    } catch (networkError) {
-      const message = `Não foi possível conectar ao servidor em ${apiBaseUrl}.`;
-      const hint =
-        'Verifique se o backend está em execução (npm run dev dentro de backend/) e se a porta configurada está acessível.';
-      const error = new Error(`${message} ${hint}`);
-      error.cause = networkError;
-      error.code = 'NETWORK_ERROR';
-      error.hint = hint;
-      throw error;
+    const fetchOptions = {
+      method,
+      headers: requestHeaders,
+      body: hasBody ? body : undefined,
+    };
+
+    async function tryRequest(baseUrl) {
+      let response;
+      try {
+        response = await fetch(buildUrl(path, baseUrl), fetchOptions);
+      } catch (networkError) {
+        throw createNetworkError(baseUrl, networkError);
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
+      const data = isJson ? await response.json().catch(() => null) : null;
+
+      if (!response.ok) {
+        const message = data?.error || data?.message || `Erro ao comunicar com o servidor (${response.status}).`;
+        const error = new Error(message);
+        error.status = response.status;
+        error.data = data;
+        throw error;
+      }
+
+      return data;
     }
 
-    const contentType = response.headers.get('content-type') || '';
-    const isJson = contentType.includes('application/json');
-    const data = isJson ? await response.json().catch(() => null) : null;
-
-    if (!response.ok) {
-      const message = data?.error || data?.message || `Erro ao comunicar com o servidor (${response.status}).`;
-      const error = new Error(message);
-      error.status = response.status;
-      error.data = data;
-      throw error;
+    const baseUrlsToTry = [apiBaseUrl];
+    const fallbackBaseUrl = getFallbackBaseUrl(apiBaseUrl);
+    if (fallbackBaseUrl) {
+      baseUrlsToTry.push(fallbackBaseUrl);
     }
 
-    return data;
+    const uniqueBaseUrls = [...new Set(baseUrlsToTry)];
+    const networkErrors = [];
+
+    for (const baseUrl of uniqueBaseUrls) {
+      try {
+        const result = await tryRequest(baseUrl);
+        if (baseUrl !== apiBaseUrl) {
+          apiBaseUrl = baseUrl;
+        }
+        return result;
+      } catch (error) {
+        if (error.code === 'NETWORK_ERROR') {
+          networkErrors.push(error);
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    if (networkErrors.length > 0) {
+      const attemptedUrls = networkErrors.map((errorItem) => errorItem.baseUrl);
+      const hint = networkErrors[0]?.hint || '';
+      const joinedUrls = attemptedUrls.join(', ');
+      const combinedMessage = `Não foi possível conectar ao servidor nas URLs testadas (${joinedUrls}).${
+        hint ? ` ${hint}` : ''
+      }`;
+      const lastError = networkErrors[networkErrors.length - 1];
+      const combinedError = createNetworkError(attemptedUrls[attemptedUrls.length - 1], lastError?.cause);
+      combinedError.message = combinedMessage;
+      combinedError.attemptedUrls = attemptedUrls;
+      throw combinedError;
+    }
+
+    throw createNetworkError(apiBaseUrl, new Error('Falha desconhecida ao tentar comunicar com o servidor.'));
   }
 
   function normalizeEventPayload(payload) {
