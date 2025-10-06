@@ -33,7 +33,6 @@ API_BASE_URL=http://localhost:4000
 ```
 
 Você pode ajustar esse valor se expuser a API em outra porta/host. O frontend aceita as chaves `API_BASE_URL`, `VITE_API_BASE_URL`, `REACT_APP_API_BASE_URL` e `API_URL` para compatibilidade com diferentes setups.
-
 #### Solução de problemas ao abrir o Live Server
 
 Se a aplicação exibir o aviso **"Não foi possível conectar ao servidor"**, confira os pontos abaixo:
@@ -42,6 +41,7 @@ Se a aplicação exibir o aviso **"Não foi possível conectar ao servidor"**, c
 2. **Porta correta:** por padrão o backend responde em `http://localhost:4000`. Caso utilize outra porta/host, ajuste o valor correspondente em `env.front`.
 3. **Teste rápido:** abra `http://localhost:4000/api/health` no navegador ou execute `curl http://localhost:4000/api/health` para confirmar que a API está acessível.
 4. **Firewall/VPN:** se estiver utilizando VPN, proxies ou regras de firewall, garanta que a porta do backend esteja liberada para conexões locais.
+
 
 ### Novidades
 
