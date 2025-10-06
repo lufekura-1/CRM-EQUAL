@@ -63,6 +63,10 @@ function handleError(res, error) {
     return res.status(404).json({ error: error.message });
   }
 
+  if (error?.code === 'CONFLICT') {
+    return res.status(409).json({ error: error.message || 'Conflito ao processar a requisição.' });
+  }
+
   return res.status(500).json({ error: error?.message || 'Erro interno do servidor.' });
 }
 

@@ -605,6 +605,18 @@
               <article class="client-card client-card--purchases">
                 <header class="client-card__header">
                   <h2 class="client-card__title">Histórico de compras</h2>
+                  <div class="client-card__actions">
+                    <button
+                      class="client-card__action-button client-card__action-button--add"
+                      type="button"
+                      data-role="client-add-sale"
+                      aria-label="Registrar nova venda"
+                      title="Registrar nova venda"
+                      disabled
+                    >
+                      <span aria-hidden="true">+</span>
+                    </button>
+                  </div>
                 </header>
                 <div class="client-purchases" data-role="client-purchases"></div>
               </article>
@@ -894,6 +906,72 @@
           </ul>
         </section>
       </main>
+    </div>
+    <div class="modal-overlay" data-modal="client-quick-sale" aria-hidden="true">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="client-quick-sale-title"
+      >
+        <div class="modal__header">
+          <h2 class="modal__title" id="client-quick-sale-title">Registrar venda</h2>
+          <button
+            class="modal__close"
+            type="button"
+            data-action="close-quick-sale"
+            aria-label="Fechar modal"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal__content">
+          <form class="modal__form modal__form--quick-sale" data-role="client-quick-sale-form" autocomplete="off">
+            <label class="modal__field">
+              <span class="modal__label">Data da compra</span>
+              <input class="modal__input" type="date" name="saleDate" required />
+            </label>
+            <label class="modal__field">
+              <span class="modal__label">Armação</span>
+              <input class="modal__input" type="text" name="saleFrame" />
+            </label>
+            <label class="modal__field">
+              <span class="modal__label">Material da armação</span>
+              <select class="modal__input" name="saleFrameMaterial">
+                <option value="">Selecione</option>
+                <option value="METAL">Metal</option>
+                <option value="ACETATO">Acetato</option>
+                <option value="TITANIUM">Titanium</option>
+                <option value="OUTROS">Outros</option>
+              </select>
+            </label>
+            <label class="modal__field">
+              <span class="modal__label">Valor da armação (R$)</span>
+              <input class="modal__input" type="number" name="saleFrameValue" min="0" step="0.01" />
+            </label>
+            <label class="modal__field">
+              <span class="modal__label">Lente</span>
+              <input class="modal__input" type="text" name="saleLens" />
+            </label>
+            <label class="modal__field">
+              <span class="modal__label">Valor da lente (R$)</span>
+              <input class="modal__input" type="number" name="saleLensValue" min="0" step="0.01" />
+            </label>
+            <label class="modal__field">
+              <span class="modal__label">Nota Fiscal</span>
+              <input class="modal__input" type="text" name="saleInvoice" />
+            </label>
+            <div class="modal__footer modal__footer--split">
+              <button class="modal__cancel-button" type="button" data-action="cancel-quick-sale">
+                Cancelar
+              </button>
+              <button class="modal__save-button" type="submit" data-action="save-quick-sale">
+                Salvar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
     <div class="modal-overlay" data-modal="clients-advanced-search" aria-hidden="true">
       <div

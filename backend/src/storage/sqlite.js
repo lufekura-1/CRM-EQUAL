@@ -72,6 +72,7 @@ function ensureColumn(table, column, definition) {
 }
 
 ensureColumn('clientes', 'cpf', 'TEXT');
+ensureColumn('clientes', 'cpf_normalizado', 'TEXT');
 ensureColumn('clientes', 'genero', 'TEXT');
 ensureColumn('clientes', 'data_nascimento', 'TEXT');
 ensureColumn('clientes', 'aceita_contato', 'INTEGER DEFAULT 0');
@@ -115,6 +116,7 @@ const listClientesStmt = db.prepare(`
     telefone,
     email,
     cpf,
+    cpf_normalizado,
     genero,
     data_nascimento,
     aceita_contato,
@@ -189,6 +191,7 @@ const getClienteStmt = db.prepare(`
     telefone,
     email,
     cpf,
+    cpf_normalizado,
     genero,
     data_nascimento,
     aceita_contato,
@@ -207,6 +210,7 @@ const insertClienteStmt = db.prepare(`
     telefone,
     email,
     cpf,
+    cpf_normalizado,
     genero,
     data_nascimento,
     aceita_contato,
@@ -216,7 +220,7 @@ const insertClienteStmt = db.prepare(`
     created_at,
     updated_at
   )
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const updateClienteStmt = db.prepare(`
@@ -226,6 +230,7 @@ const updateClienteStmt = db.prepare(`
     telefone = ?,
     email = ?,
     cpf = ?,
+    cpf_normalizado = ?,
     genero = ?,
     data_nascimento = ?,
     aceita_contato = ?,
@@ -235,6 +240,32 @@ const updateClienteStmt = db.prepare(`
     updated_at = ?
   WHERE id = ?
 `);
+
+const listClientCpfStmt = db.prepare(`
+  SELECT id, cpf
+  FROM clientes
+  WHERE cpf IS NOT NULL
+`);
+
+const updateClientCpfNormalizedStmt = db.prepare(`
+  UPDATE clientes
+  SET cpf_normalizado = ?
+  WHERE id = ?
+`);
+
+const findClienteByCpfStmt = db.prepare(`
+  SELECT id
+  FROM clientes
+  WHERE cpf_normalizado = ?
+  LIMIT 1
+`);
+
+listClientCpfStmt
+  .all()
+  .forEach(({ id, cpf }) => {
+    const normalized = normalizeCpfKey(cpf);
+    updateClientCpfNormalizedStmt.run(normalized, id);
+  });
 
 const deleteClienteStmt = db.prepare('DELETE FROM clientes WHERE id = ?');
 
@@ -359,6 +390,16 @@ function toNumberOrNull(value) {
   return numberValue;
 }
 
+function normalizeCpfKey(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  const digits = String(value)
+    .trim()
+    .replace(/\D/g, '');
+  return digits.length > 0 ? digits : null;
+}
+
 function normalizeBirthDate(value) {
   const text = toNullableText(value);
   if (!text) {
@@ -376,6 +417,20 @@ function normalizeGender(value) {
 function normalizeUserType(value) {
   const text = toNullableText(value);
   return text ? text.toUpperCase() : null;
+}
+
+function assertCpfAvailable(cpfValue, { ignoreId } = {}) {
+  const normalized = normalizeCpfKey(cpfValue);
+  if (!normalized) {
+    return;
+  }
+
+  const existing = findClienteByCpfStmt.get(normalized);
+  if (existing && Number(existing.id) !== Number(ignoreId)) {
+    const error = new Error('Já existe um cliente cadastrado com este CPF.');
+    error.code = 'CONFLICT';
+    throw error;
+  }
 }
 
 function normalizeClientState(value) {
@@ -627,6 +682,8 @@ const createClienteTransaction = db.transaction((payload) => {
   const telefone = toNullableText(payload.telefone);
   const email = toNullableText(payload.email);
   const cpf = toNullableText(payload.cpf);
+  assertCpfAvailable(cpf);
+  const cpfNormalized = normalizeCpfKey(cpf);
   const gender = normalizeGender(payload.gender);
   const birthDate = normalizeBirthDate(payload.birthDate);
   const userType = normalizeUserType(payload.userType);
@@ -638,6 +695,7 @@ const createClienteTransaction = db.transaction((payload) => {
     telefone,
     email,
     cpf,
+    cpfNormalized,
     gender,
     birthDate,
     acceptsContact ? 1 : 0,
@@ -722,13 +780,19 @@ const updateClienteTransaction = db.transaction((id, payload) => {
       payload.state === undefined ? current.state : normalizeClientState(payload.state),
   };
 
+  if (payload.cpf !== undefined) {
+    assertCpfAvailable(updatedFields.cpf, { ignoreId: clienteId });
+  }
+
   const normalizedName = String(updatedFields.nome).trim();
+  const cpfNormalized = normalizeCpfKey(updatedFields.cpf);
 
   updateClienteStmt.run(
     normalizedName,
     toNullableText(updatedFields.telefone),
     toNullableText(updatedFields.email),
     toNullableText(updatedFields.cpf),
+    cpfNormalized,
     toNullableText(updatedFields.gender),
     toNullableText(updatedFields.birthDate),
     updatedFields.acceptsContact ? 1 : 0,

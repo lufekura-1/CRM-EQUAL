@@ -5,6 +5,36 @@ let nextClienteId = 1;
 let nextEventoId = 1;
 let nextPurchaseId = 1;
 
+function normalizeCpfKey(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  const digits = String(value)
+    .trim()
+    .replace(/\D/g, '');
+  return digits.length > 0 ? digits : null;
+}
+
+function assertCpfAvailable(cpfValue, { ignoreId } = {}) {
+  const normalized = normalizeCpfKey(cpfValue);
+  if (!normalized) {
+    return;
+  }
+
+  const conflict = clientes.find(
+    (client) => client.cpfNormalized === normalized && client.id !== ignoreId
+  );
+  if (conflict) {
+    const error = new Error('Já existe um cliente cadastrado com este CPF.');
+    error.code = 'CONFLICT';
+    throw error;
+  }
+}
+
+clientes.forEach((client) => {
+  client.cpfNormalized = normalizeCpfKey(client.cpf);
+});
+
 function cloneDioptry(dioptry = {}) {
   const oe = dioptry.oe || {};
   const od = dioptry.od || {};
@@ -250,13 +280,17 @@ function createCliente(payload) {
     throw new Error('Campo "nome" é obrigatório.');
   }
 
+  assertCpfAvailable(payload.cpf);
+
   const timestamp = new Date().toISOString();
+  const cpfNormalized = normalizeCpfKey(payload.cpf);
   const client = {
     id: nextClienteId++,
     nome: String(payload.nome).trim(),
     telefone: payload.telefone ?? null,
     email: payload.email ?? null,
     cpf: payload.cpf ?? null,
+    cpfNormalized,
     gender: payload.gender ? String(payload.gender).toUpperCase() : null,
     birthDate: payload.birthDate ?? null,
     acceptsContact: Boolean(payload.acceptsContact),
@@ -295,7 +329,9 @@ function updateCliente(id, payload) {
     client.email = payload.email ?? null;
   }
   if (payload.cpf !== undefined) {
+    assertCpfAvailable(payload.cpf, { ignoreId: client.id });
     client.cpf = payload.cpf ?? null;
+    client.cpfNormalized = normalizeCpfKey(payload.cpf);
   }
   if (payload.gender !== undefined) {
     client.gender = payload.gender ? String(payload.gender).toUpperCase() : null;
@@ -317,6 +353,9 @@ function updateCliente(id, payload) {
   }
 
   updateClientPurchases(client, payload);
+  if (client.cpfNormalized === undefined) {
+    client.cpfNormalized = normalizeCpfKey(client.cpf);
+  }
   client.updatedAt = new Date().toISOString();
   return cloneClient(client);
 }
