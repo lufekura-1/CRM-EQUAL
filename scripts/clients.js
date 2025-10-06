@@ -512,6 +512,73 @@ let isDeletingClient = false;
     return row;
   }
 
+  function mapApiPurchase(purchase) {
+    if (!purchase) {
+      return null;
+    }
+
+    const rawDate = purchase.date ?? purchase.data;
+    if (!rawDate) {
+      return null;
+    }
+
+    const rawFrameMaterial =
+      purchase.frameMaterial ?? purchase.materialArmacao ?? purchase.material_armacao ?? '';
+
+    function toNumber(value) {
+      if (value === undefined || value === null || value === '') {
+        return null;
+      }
+      const numeric = Number(value);
+      return Number.isNaN(numeric) ? null : numeric;
+    }
+
+    function normalizeEyeField(value) {
+      if (value === undefined || value === null) {
+        return null;
+      }
+      const text = String(value).trim();
+      return text.length === 0 ? null : text;
+    }
+
+    function normalizeEye(source) {
+      return {
+        spherical: normalizeEyeField(
+          source?.spherical ?? source?.esferico ?? source?.esférico ?? source?.sphere
+        ),
+        cylindrical: normalizeEyeField(
+          source?.cylindrical ?? source?.cilindrico ?? source?.cilíndrico ?? source?.cylinder
+        ),
+        axis: normalizeEyeField(source?.axis ?? source?.eixo),
+        dnp: normalizeEyeField(source?.dnp),
+        addition: normalizeEyeField(source?.addition ?? source?.adicao ?? source?.adição),
+      };
+    }
+
+    const dioptrySource = purchase.dioptry ?? purchase.dioptria ?? {};
+    const oeSource = dioptrySource.oe || {};
+    const odSource = dioptrySource.od || {};
+
+    const id = purchase.id ?? purchase.purchaseId ?? purchase.compra_id ?? rawDate;
+
+    return {
+      id: String(id),
+      date: String(rawDate).slice(0, 10),
+      frame: purchase.frame ?? purchase.armacao ?? '',
+      frameMaterial: rawFrameMaterial ? String(rawFrameMaterial).toUpperCase() : '',
+      frameValue:
+        toNumber(purchase.frameValue ?? purchase.valorArmacao ?? purchase.valor_armacao) ?? 0,
+      lens: purchase.lens ?? purchase.lente ?? '',
+      lensValue:
+        toNumber(purchase.lensValue ?? purchase.valorLente ?? purchase.valor_lente) ?? 0,
+      invoice: purchase.invoice ?? purchase.notaFiscal ?? purchase.nota_fiscal ?? '',
+      dioptry: {
+        oe: normalizeEye(oeSource),
+        od: normalizeEye(odSource),
+      },
+    };
+  }
+
   function mapApiClient(apiClient) {
     if (!apiClient) {
       return null;
@@ -519,29 +586,72 @@ let isDeletingClient = false;
 
     const rawId = apiClient.id ?? apiClient.cliente_id ?? '';
     const id = String(rawId || Date.now());
-    const purchases = Array.isArray(apiClient.purchases)
-      ? apiClient.purchases.slice()
-      : [];
+    const purchasesSource = Array.isArray(apiClient.purchases)
+      ? apiClient.purchases
+      : Array.isArray(apiClient.compras)
+        ? apiClient.compras
+        : [];
+    const purchases = purchasesSource
+      .map((item) => mapApiPurchase(item))
+      .filter((item) => Boolean(item));
+
+    if (!purchases.length && apiClient.compra) {
+      const singlePurchase = mapApiPurchase(apiClient.compra);
+      if (singlePurchase) {
+        purchases.push(singlePurchase);
+      }
+    }
 
     const client = {
       id,
       name: apiClient.nome ?? apiClient.name ?? '',
-      cpf: apiClient.cpf ?? '',
+      cpf: apiClient.cpf ?? apiClient.documento ?? '',
       phone: apiClient.telefone ?? apiClient.phone ?? '',
-      gender: apiClient.gender ?? '',
-      birthDate: apiClient.birthDate ?? '',
-      acceptsContact: Boolean(apiClient.acceptsContact ?? false),
+      gender: apiClient.gender ?? apiClient.genero ?? '',
+      birthDate:
+        apiClient.birthDate ?? apiClient.dataNascimento ?? apiClient.data_nascimento ?? '',
+      acceptsContact: Boolean(
+        apiClient.acceptsContact ?? apiClient.aceitaContato ?? apiClient['aceita_contato'] ?? false
+      ),
       age: apiClient.age ?? '',
-      userType: apiClient.userType ?? USER_TYPE_VALUES[0] ?? 'VS',
-      state: apiClient.state ?? CLIENT_STATE_VALUES[0] ?? 'pos-venda',
+      userType:
+        apiClient.userType ??
+        apiClient.tipoUsuario ??
+        apiClient['tipo_usuario'] ??
+        USER_TYPE_VALUES[0] ??
+        'VS',
+      state:
+        apiClient.state ??
+        apiClient.estadoCliente ??
+        apiClient['estado_cliente'] ??
+        CLIENT_STATE_VALUES[0] ??
+        'pos-venda',
       interests: Array.isArray(apiClient.interests)
         ? apiClient.interests.slice()
-        : [],
+        : Array.isArray(apiClient.interesses)
+          ? apiClient.interesses.slice()
+          : [],
       purchases,
-      lastPurchase: apiClient.lastPurchase ?? purchases[purchases.length - 1]?.date ?? '',
+      lastPurchase:
+        apiClient.lastPurchase ??
+        apiClient.ultimaCompra ??
+        apiClient['ultima_compra'] ??
+        purchases[purchases.length - 1]?.date ??
+        '',
       email: apiClient.email ?? '',
       createdAt: apiClient.created_at ?? apiClient.createdAt ?? '',
     };
+
+    client.gender = client.gender ? client.gender.toUpperCase() : '';
+    client.userType = client.userType ? client.userType.toUpperCase() : USER_TYPE_VALUES[0] ?? 'VS';
+    client.state = client.state ? client.state.toLowerCase() : CLIENT_STATE_VALUES[0] ?? 'pos-venda';
+    client.interests = Array.from(
+      new Set(
+        (client.interests || [])
+          .map((interest) => (interest === undefined || interest === null ? null : String(interest).trim()))
+          .filter((interest) => interest && interest.length > 0)
+      )
+    );
 
     if (client.birthDate) {
       const computedAge = calculateAgeFromBirthDate(client.birthDate);
@@ -549,6 +659,24 @@ let isDeletingClient = false;
     }
 
     return client;
+  }
+
+  function upsertClientFromApi(apiClient, { preferPrepend = false } = {}) {
+    const mappedClient = mapApiClient(apiClient);
+    if (!mappedClient) {
+      throw new Error('Resposta de cliente inválida.');
+    }
+
+    const existingIndex = CLIENTS.findIndex((item) => item.id === mappedClient.id);
+    if (existingIndex >= 0) {
+      CLIENTS.splice(existingIndex, 1, mappedClient);
+    } else if (preferPrepend) {
+      CLIENTS.unshift(mappedClient);
+    } else {
+      CLIENTS.push(mappedClient);
+    }
+
+    return mappedClient;
   }
 
   async function fetchClientsPage(page = 1) {
@@ -1348,8 +1476,6 @@ let isDeletingClient = false;
     const mode = clientFormElement?.dataset.mode === 'edit' ? 'edit' : 'create';
     const clientId = clientFormElement?.dataset.clientId;
     const birthDateIso = data.birthDate || new Date().toISOString().slice(0, 10);
-    const age = calculateAgeFromBirthDate(birthDateIso);
-
     const purchasePayload = {
       date: data.purchase.date,
       frame: data.purchase.frame,
@@ -1364,10 +1490,20 @@ let isDeletingClient = false;
       },
     };
 
+    const purchaseId = clientFormElement?.dataset.purchaseId || null;
     const apiPayload = {
       nome: data.name,
       telefone: data.phone || null,
-      email: null,
+      cpf: data.cpf || null,
+      gender: data.gender || null,
+      birthDate: birthDateIso,
+      acceptsContact: data.acceptsContact,
+      userType: data.userType,
+      state: data.state,
+      purchase: {
+        ...purchasePayload,
+        id: purchaseId,
+      },
     };
 
     const successMessage = mode === 'edit'
@@ -1381,64 +1517,15 @@ let isDeletingClient = false;
       isSavingClient = true;
 
       if (mode === 'edit' && clientId) {
-        await window.api.updateClient(clientId, apiPayload);
-        const client = findClientById(clientId);
-        if (!client) {
-          await loadClientsFromApi({ force: true });
-          return;
+        const response = await window.api.updateClient(clientId, apiPayload);
+        const apiClient = response?.cliente;
+        if (!apiClient) {
+          throw new Error('Resposta inválida do servidor.');
         }
 
-        client.name = data.name;
-        client.cpf = data.cpf;
-        client.phone = data.phone;
-        client.gender = data.gender;
-        client.birthDate = birthDateIso;
-        client.acceptsContact = data.acceptsContact;
-        client.age = age || client.age;
-        client.userType = data.userType || client.userType;
-        client.state = data.state || client.state;
-
-        const purchaseId = clientFormElement?.dataset.purchaseId;
-        const purchases = Array.isArray(client.purchases) ? client.purchases : [];
-        let targetPurchase = null;
-
-        if (purchaseId) {
-          targetPurchase = purchases.find((item) => item.id === purchaseId) || null;
-        }
-
-        if (!targetPurchase && purchases.length) {
-          targetPurchase = getLatestPurchase(client);
-        }
-
-        if (targetPurchase) {
-          targetPurchase.date = purchasePayload.date;
-          targetPurchase.frame = purchasePayload.frame;
-          targetPurchase.frameMaterial = purchasePayload.frameMaterial;
-          targetPurchase.frameValue = purchasePayload.frameValue;
-          targetPurchase.lens = purchasePayload.lens;
-          targetPurchase.lensValue = purchasePayload.lensValue;
-          targetPurchase.invoice = purchasePayload.invoice;
-          targetPurchase.dioptry = {
-            oe: { ...purchasePayload.dioptry.oe },
-            od: { ...purchasePayload.dioptry.od },
-          };
-          clientFormElement.dataset.purchaseId = targetPurchase.id;
-        } else {
-          const generatedId = `${client.id}-purchase-${Date.now()}`;
-          const newPurchase = {
-            id: purchaseId || generatedId,
-            ...purchasePayload,
-          };
-          purchases.push(newPurchase);
-          clientFormElement.dataset.purchaseId = newPurchase.id;
-        }
-
-        client.purchases = purchases
-          .slice()
-          .sort((a, b) => new Date(a.date) - new Date(b.date));
-        client.lastPurchase = getLatestPurchase(client)?.date || purchasePayload.date;
-        setCurrentClient(client);
-        renderClientDetail(client);
+        const updatedClient = upsertClientFromApi(apiClient);
+        setCurrentClient(updatedClient);
+        renderClientDetail(updatedClient);
       } else {
         const response = await window.api.createClient(apiPayload);
         const apiClient = response?.cliente;
@@ -1446,45 +1533,9 @@ let isDeletingClient = false;
           throw new Error('Resposta inválida do servidor.');
         }
 
-        const mappedClient = mapApiClient(apiClient) || {
-          id: String(apiClient.id ?? Date.now()),
-          name: data.name,
-          cpf: '',
-          phone: apiClient.telefone ?? '',
-          gender: '',
-          birthDate: '',
-          acceptsContact: false,
-          age: '',
-          userType: USER_TYPE_VALUES[0] ?? 'VS',
-          state: CLIENT_STATE_VALUES[0] ?? 'pos-venda',
-          interests: [],
-          purchases: [],
-          lastPurchase: '',
-          email: apiClient.email ?? '',
-        };
-
-        mappedClient.name = data.name;
-        mappedClient.cpf = data.cpf;
-        mappedClient.phone = data.phone;
-        mappedClient.gender = data.gender;
-        mappedClient.birthDate = birthDateIso;
-        mappedClient.acceptsContact = data.acceptsContact;
-        mappedClient.age = age || mappedClient.age || 0;
-        mappedClient.userType = data.userType || mappedClient.userType;
-        mappedClient.state = data.state || mappedClient.state;
-        mappedClient.interests = mappedClient.interests || [];
-
-        const purchase = {
-          id: `${mappedClient.id}-purchase-${Date.now()}`,
-          ...purchasePayload,
-        };
-
-        mappedClient.purchases = [purchase];
-        mappedClient.lastPurchase = purchase.date;
-
-        CLIENTS.push(mappedClient);
-        setCurrentClient(mappedClient);
-        renderClientDetail(mappedClient);
+        const createdClient = upsertClientFromApi(apiClient, { preferPrepend: true });
+        setCurrentClient(createdClient);
+        renderClientDetail(createdClient);
       }
 
       if (typeof window.showToast === 'function') {

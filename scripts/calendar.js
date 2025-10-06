@@ -386,16 +386,11 @@ function setCalendarView(view) {
 
   currentCalendarView = view;
 
+  const today = new Date();
   if (currentCalendarView === 'week') {
-    currentCalendarDate = getStartOfWeek(currentCalendarDate);
+    currentCalendarDate = getStartOfWeek(today);
   } else {
-    const referenceDate = new Date(currentCalendarDate);
-    referenceDate.setDate(referenceDate.getDate() + 3);
-    currentCalendarDate = new Date(
-      referenceDate.getFullYear(),
-      referenceDate.getMonth(),
-      1,
-    );
+    currentCalendarDate = new Date(today.getFullYear(), today.getMonth(), 1);
   }
 
   refreshCalendar();
