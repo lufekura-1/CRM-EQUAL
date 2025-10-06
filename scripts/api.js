@@ -1,7 +1,12 @@
 (function () {
   const DEFAULT_BASE_URL = 'http://localhost:4000';
   const ENV_FILE_PATH = './env.front';
-  const ENV_KEYS = ['VITE_API_BASE_URL', 'API_BASE_URL', 'REACT_APP_API_BASE_URL'];
+  const ENV_KEYS = [
+    'VITE_API_BASE_URL',
+    'API_BASE_URL',
+    'REACT_APP_API_BASE_URL',
+    'API_URL',
+  ];
 
   let apiBaseUrl = DEFAULT_BASE_URL;
   let envLoaded = false;
@@ -118,8 +123,13 @@
         body: hasBody ? body : undefined,
       });
     } catch (networkError) {
-      const error = new Error('Não foi possível conectar ao servidor.');
+      const message = `Não foi possível conectar ao servidor em ${apiBaseUrl}.`;
+      const hint =
+        'Verifique se o backend está em execução (npm run dev dentro de backend/) e se a porta configurada está acessível.';
+      const error = new Error(`${message} ${hint}`);
       error.cause = networkError;
+      error.code = 'NETWORK_ERROR';
+      error.hint = hint;
       throw error;
     }
 
