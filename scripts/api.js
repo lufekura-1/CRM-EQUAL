@@ -1,6 +1,6 @@
 (function () {
   const DEFAULT_BASE_URL = 'http://localhost:4000';
-  const ENV_FILE_PATH = '.env.front';
+  const ENV_FILE_PATH = './env.front';
   const ENV_KEYS = ['VITE_API_BASE_URL', 'API_BASE_URL', 'REACT_APP_API_BASE_URL'];
 
   let apiBaseUrl = DEFAULT_BASE_URL;

@@ -7,18 +7,10 @@ const { PORT, STORAGE } = require('./src/config/env');
 const app = express();
 
 const corsOptions = {
-  origin(origin, callback) {
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    if (/^http:\/\/localhost(?::\d+)?$/.test(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error('Not allowed by CORS'));
-  },
+  origin: ["http://localhost:5500", "http://127.0.0.1:5500"],
+  optionsSuccessStatus: 200,
 };
+
 
 app.use(cors(corsOptions));
 app.use(express.json());
