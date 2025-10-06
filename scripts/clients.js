@@ -159,6 +159,7 @@ let clientsLoadedOnce = false;
 let clientsFetchPromise = null;
 let isSavingClient = false;
 let isDeletingClient = false;
+let isSavingQuickSale = false;
 
 (function initializeClientsPage() {
   const clientsPageElement = document.querySelector(
@@ -871,6 +872,8 @@ let isDeletingClient = false;
       return;
     }
 
+    updateQuickSaleButtonState(client);
+
     const age = calculateAgeFromBirthDate(client.birthDate);
     const genderLabel =
       client.gender === 'F' ? 'Feminino' : client.gender === 'M' ? 'Masculino' : '-';
@@ -1039,6 +1042,202 @@ let isDeletingClient = false;
         article.append(toggle, details);
         clientPurchasesContainer.appendChild(article);
       });
+  }
+
+  function updateQuickSaleButtonState(client) {
+    if (!clientQuickSaleButton) {
+      return;
+    }
+    const hasClient = Boolean(client?.id);
+    clientQuickSaleButton.disabled = !hasClient;
+  }
+
+  function prepareQuickSaleForm(client) {
+    if (!clientQuickSaleForm) {
+      return;
+    }
+
+    clientQuickSaleForm.reset();
+
+    const latestPurchase = client ? getLatestPurchase(client) : null;
+    const todayIso = new Date().toISOString().slice(0, 10);
+
+    const dateField = clientQuickSaleForm.elements.namedItem('saleDate');
+    if (dateField instanceof HTMLInputElement) {
+      dateField.value = todayIso;
+    }
+
+    const frameField = clientQuickSaleForm.elements.namedItem('saleFrame');
+    if (frameField instanceof HTMLInputElement) {
+      frameField.value = '';
+    }
+
+    const lensField = clientQuickSaleForm.elements.namedItem('saleLens');
+    if (lensField instanceof HTMLInputElement) {
+      lensField.value = '';
+    }
+
+    const frameValueField = clientQuickSaleForm.elements.namedItem('saleFrameValue');
+    if (frameValueField instanceof HTMLInputElement) {
+      frameValueField.value = '';
+    }
+
+    const lensValueField = clientQuickSaleForm.elements.namedItem('saleLensValue');
+    if (lensValueField instanceof HTMLInputElement) {
+      lensValueField.value = '';
+    }
+
+    const invoiceField = clientQuickSaleForm.elements.namedItem('saleInvoice');
+    if (invoiceField instanceof HTMLInputElement) {
+      invoiceField.value = '';
+    }
+
+    const materialField = clientQuickSaleForm.elements.namedItem('saleFrameMaterial');
+    if (materialField instanceof HTMLSelectElement) {
+      const preferred = latestPurchase?.frameMaterial || '';
+      const hasOption = Array.from(materialField.options).some(
+        (option) => option.value === preferred
+      );
+      if (preferred && hasOption) {
+        materialField.value = preferred;
+      } else {
+        materialField.value = '';
+      }
+    }
+  }
+
+  function collectQuickSaleFormData() {
+    if (!clientQuickSaleForm) {
+      return null;
+    }
+
+    const formData = new FormData(clientQuickSaleForm);
+    const dateRaw = formData.get('saleDate');
+    const dateValue = dateRaw ? dateRaw.toString() : '';
+    if (!dateValue) {
+      return null;
+    }
+
+    function toTrimmed(value) {
+      return value === undefined || value === null ? '' : value.toString().trim();
+    }
+
+    function toNumberValue(value) {
+      const text = toTrimmed(value);
+      if (!text) {
+        return null;
+      }
+      const normalized = Number(text.replace(',', '.'));
+      return Number.isFinite(normalized) ? normalized : null;
+    }
+
+    const frameMaterialRaw = toTrimmed(formData.get('saleFrameMaterial'));
+
+    return {
+      date: dateValue,
+      frame: toTrimmed(formData.get('saleFrame')),
+      frameMaterial: frameMaterialRaw ? frameMaterialRaw.toUpperCase() : '',
+      frameValue: toNumberValue(formData.get('saleFrameValue')),
+      lens: toTrimmed(formData.get('saleLens')),
+      lensValue: toNumberValue(formData.get('saleLensValue')),
+      invoice: toTrimmed(formData.get('saleInvoice')),
+    };
+  }
+
+  function closeQuickSaleModal() {
+    if (clientQuickSaleForm) {
+      clientQuickSaleForm.reset();
+    }
+    if (clientQuickSaleSaveButton) {
+      clientQuickSaleSaveButton.disabled = false;
+    }
+    isSavingQuickSale = false;
+    closeOverlay(clientQuickSaleOverlay);
+  }
+
+  function openQuickSaleModal() {
+    const client = getCurrentClientData();
+    if (!client || !clientQuickSaleOverlay) {
+      return;
+    }
+    prepareQuickSaleForm(client);
+    openOverlay(clientQuickSaleOverlay);
+  }
+
+  function handleQuickSaleOverlayClick(event) {
+    if (event.target === clientQuickSaleOverlay) {
+      closeQuickSaleModal();
+    }
+  }
+
+  async function handleQuickSaleSubmit(event) {
+    event.preventDefault();
+    if (isSavingQuickSale) {
+      return;
+    }
+    if (!clientQuickSaleForm?.reportValidity()) {
+      return;
+    }
+
+    const client = getCurrentClientData();
+    if (!client) {
+      return;
+    }
+
+    const data = collectQuickSaleFormData();
+    if (!data) {
+      return;
+    }
+
+    const purchasePayload = {
+      date: data.date,
+      frame: data.frame,
+      frameMaterial: data.frameMaterial || null,
+      frameValue: data.frameValue,
+      lens: data.lens,
+      lensValue: data.lensValue,
+      invoice: data.invoice,
+    };
+
+    const successMessage = 'Venda registrada com sucesso.';
+    const errorMessage = 'Erro ao registrar a venda.';
+
+    try {
+      isSavingQuickSale = true;
+      if (clientQuickSaleSaveButton) {
+        clientQuickSaleSaveButton.disabled = true;
+      }
+
+      const response = await window.api.updateClient(client.id, { purchase: purchasePayload });
+      const apiClient = response?.cliente;
+      if (!apiClient) {
+        throw new Error('Resposta inválida do servidor.');
+      }
+
+      const updatedClient = upsertClientFromApi(apiClient);
+      setCurrentClient(updatedClient);
+      renderClientDetail(updatedClient);
+      renderClients();
+      ensureDetailButtonState();
+      updateQuickSaleButtonState(updatedClient);
+
+      if (typeof window.showToast === 'function') {
+        window.showToast(successMessage, { type: 'success' });
+      }
+
+      closeQuickSaleModal();
+      setActivePage('cliente-detalhe');
+    } catch (error) {
+      const message = getApiErrorMessage(error, errorMessage);
+      if (typeof window.showToast === 'function') {
+        window.showToast(message, { type: 'error' });
+      }
+    } finally {
+      if (clientQuickSaleSaveButton) {
+        clientQuickSaleSaveButton.disabled = false;
+      }
+      isSavingQuickSale = false;
+    }
   }
 
   function ensureAdvancedSelectOptions() {
@@ -1372,7 +1571,7 @@ let isDeletingClient = false;
       userType: client?.userType ?? USER_TYPE_VALUES[0] ?? 'VS',
       birthDate: client?.birthDate ?? defaultBirthDate,
       state: client?.state ?? CLIENT_STATE_VALUES[0] ?? 'pos-venda',
-      acceptsContact: client?.acceptsContact ?? false,
+      acceptsContact: client?.acceptsContact ?? true,
       purchaseDate: latestPurchase?.date ?? todayIso,
       frame: latestPurchase?.frame ?? '',
       frameMaterial: latestPurchase?.frameMaterial ?? FRAME_MATERIAL_VALUES[0] ?? 'METAL',
@@ -1544,7 +1743,8 @@ let isDeletingClient = false;
 
       renderClients();
       ensureDetailButtonState();
-      setActivePage('cliente-detalhe');
+      updateQuickSaleButtonState(getCurrentClientData());
+      setActivePage('clientes');
     } catch (error) {
       const message = getApiErrorMessage(error, errorMessage);
       if (typeof window.showToast === 'function') {
@@ -1599,6 +1799,7 @@ let isDeletingClient = false;
 
       state.selectedIds.delete(client.id);
       setCurrentClient(null);
+      updateQuickSaleButtonState(null);
       ensureDetailButtonState();
       renderClients();
       setActivePage('clientes');
@@ -1797,6 +1998,11 @@ let isDeletingClient = false;
   });
 
   clientPurchasesContainer?.addEventListener('click', handlePurchaseToggle);
+  clientQuickSaleButton?.addEventListener('click', openQuickSaleModal);
+  clientQuickSaleCloseButton?.addEventListener('click', closeQuickSaleModal);
+  clientQuickSaleCancelButton?.addEventListener('click', closeQuickSaleModal);
+  clientQuickSaleOverlay?.addEventListener('click', handleQuickSaleOverlayClick);
+  clientQuickSaleForm?.addEventListener('submit', handleQuickSaleSubmit);
   clientsDetailButton?.addEventListener('click', handleDetailButtonClick);
   clientsNewButton?.addEventListener('click', handleNewClientClick);
   clientsAdvancedSearchButton?.addEventListener('click', openAdvancedSearchModal);
@@ -1857,6 +2063,7 @@ let isDeletingClient = false;
   renderClients();
   ensureDetailButtonState();
   updateAdvancedButtonState();
+  updateQuickSaleButtonState(getCurrentClientData());
 
   window.closeClientsAdvancedSearchModal = closeAdvancedSearchModalInternal;
   window.closeClientInterestsModal = closeClientInterestsModalInternal;

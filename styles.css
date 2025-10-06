@@ -1818,11 +1818,30 @@ body.modal-open {
   justify-content: center;
 }
 
+.client-card__action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .client-card__action-button:hover,
 .client-card__action-button:focus {
   background-color: rgba(255, 255, 255, 0.12);
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.22);
+}
+
+.client-card__action-button--add {
+  background-color: rgba(76, 175, 80, 0.12);
+  border-color: rgba(76, 175, 80, 0.32);
+  color: #81c784;
+}
+
+.client-card__action-button--add:hover,
+.client-card__action-button--add:focus {
+  background-color: rgba(76, 175, 80, 0.24);
+  border-color: #4caf50;
+  color: #a5d6a7;
 }
 
 .client-card__action-button--edit {

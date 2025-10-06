@@ -54,3 +54,9 @@ const clientInterestsSaveButton = clientInterestsOverlay?.querySelector('[data-a
 const clientInterestsOptionsContainer = clientInterestsOverlay?.querySelector('[data-role="client-interests-options"]');
 const homeAddEventCardButton = document.querySelector('[data-role="home-add-event"]');
 const homeAddClientCardButton = document.querySelector('[data-role="home-add-client"]');
+const clientQuickSaleButton = document.querySelector('[data-role="client-add-sale"]');
+const clientQuickSaleOverlay = document.querySelector('[data-modal="client-quick-sale"]');
+const clientQuickSaleForm = clientQuickSaleOverlay?.querySelector('[data-role="client-quick-sale-form"]');
+const clientQuickSaleCloseButton = clientQuickSaleOverlay?.querySelector('[data-action="close-quick-sale"]');
+const clientQuickSaleCancelButton = clientQuickSaleOverlay?.querySelector('[data-action="cancel-quick-sale"]');
+const clientQuickSaleSaveButton = clientQuickSaleOverlay?.querySelector('[data-action="save-quick-sale"]');
