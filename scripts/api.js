@@ -123,8 +123,13 @@
         body: hasBody ? body : undefined,
       });
     } catch (networkError) {
-      const error = new Error('Não foi possível conectar ao servidor.');
+      const message = `Não foi possível conectar ao servidor em ${apiBaseUrl}.`;
+      const hint =
+        'Verifique se o backend está em execução (npm run dev dentro de backend/) e se a porta configurada está acessível.';
+      const error = new Error(`${message} ${hint}`);
       error.cause = networkError;
+      error.code = 'NETWORK_ERROR';
+      error.hint = hint;
       throw error;
     }
 
