@@ -20,6 +20,7 @@ const eventDetailsBody = eventDetailsOverlay?.querySelector('[data-details="body
 const eventDetailsCloseButton = eventDetailsOverlay?.querySelector('[data-action="close"]');
 const eventDetailsEditButton = eventDetailsOverlay?.querySelector('[data-action="edit"]');
 const eventDetailsDeleteButton = eventDetailsOverlay?.querySelector('[data-action="delete"]');
+const eventDetailsToggleContactButton = eventDetailsOverlay?.querySelector('[data-action="toggle-contact"]');
 const eventDetailsModal = eventDetailsOverlay?.querySelector('.modal');
 const userSelectorButton = document.querySelector('[data-role="user-selector"]');
 const userSelectorOverlay = document.querySelector('[data-modal="user-selector"]');
@@ -35,6 +36,7 @@ const clientDetailDeleteButton = document.querySelector('[data-role="client-deta
 const clientDetailElement = document.querySelector('[data-role="client-detail"]');
 const clientDetailFields = clientDetailElement?.querySelectorAll('[data-client-field]');
 const clientPurchasesContainer = clientDetailElement?.querySelector('[data-role="client-purchases"]');
+const clientContactHistoryContainer = clientDetailElement?.querySelector('[data-role="client-contact-history"]');
 const clientInterestsContainer = clientDetailElement?.querySelector('[data-role="client-interests"]');
 const clientInterestsEditButton = document.querySelector('[data-role="client-interests-edit"]');
 const clientFormElement = document.querySelector('#client-registration-form');

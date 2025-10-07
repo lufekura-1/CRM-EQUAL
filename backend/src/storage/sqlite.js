@@ -63,6 +63,23 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS contatos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL,
+    compra_id INTEGER NOT NULL,
+    data_compra TEXT NOT NULL,
+    data_contato TEXT NOT NULL,
+    prazo_meses INTEGER NOT NULL,
+    efetuado INTEGER NOT NULL DEFAULT 0,
+    efetuado_em TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE,
+    FOREIGN KEY (compra_id) REFERENCES compras(id) ON DELETE CASCADE
+  );
+`);
+
 function ensureColumn(table, column, definition) {
   const info = db.pragma(`table_info(${table})`);
   const hasColumn = info.some((entry) => entry.name === column);
@@ -108,6 +125,8 @@ const purchaseColumns = [
 purchaseColumns.forEach(([column, definition]) => {
   ensureColumn('compras', column, definition);
 });
+
+const CONTACT_SCHEDULE_OFFSETS = [1, 3, 6, 12];
 
 const listClientesStmt = db.prepare(`
   SELECT
@@ -241,6 +260,12 @@ const updateClienteStmt = db.prepare(`
   WHERE id = ?
 `);
 
+const updateClientStateValueStmt = db.prepare(`
+  UPDATE clientes
+  SET estado_cliente = ?, updated_at = ?
+  WHERE id = ?
+`);
+
 const listClientCpfStmt = db.prepare(`
   SELECT id, cpf
   FROM clientes
@@ -343,6 +368,116 @@ const updatePurchaseStmt = db.prepare(`
     od_dnp = ?,
     od_adicao = ?,
     updated_at = ?
+  WHERE id = ?
+`);
+
+const listContactsStmt = db.prepare(`
+  SELECT
+    id,
+    cliente_id,
+    compra_id,
+    data_compra,
+    data_contato,
+    prazo_meses,
+    efetuado,
+    efetuado_em,
+    created_at,
+    updated_at
+  FROM contatos
+  ORDER BY data_contato ASC, id ASC
+`);
+
+const listContactsByClienteStmt = db.prepare(`
+  SELECT
+    id,
+    cliente_id,
+    compra_id,
+    data_compra,
+    data_contato,
+    prazo_meses,
+    efetuado,
+    efetuado_em,
+    created_at,
+    updated_at
+  FROM contatos
+  WHERE cliente_id = ?
+  ORDER BY data_contato ASC, id ASC
+`);
+
+const listContactsByPurchaseStmt = db.prepare(`
+  SELECT
+    id,
+    cliente_id,
+    compra_id,
+    data_compra,
+    data_contato,
+    prazo_meses,
+    efetuado,
+    efetuado_em,
+    created_at,
+    updated_at
+  FROM contatos
+  WHERE compra_id = ?
+  ORDER BY data_contato ASC, id ASC
+`);
+
+const getContactStmt = db.prepare(`
+  SELECT
+    id,
+    cliente_id,
+    compra_id,
+    data_compra,
+    data_contato,
+    prazo_meses,
+    efetuado,
+    efetuado_em,
+    created_at,
+    updated_at
+  FROM contatos
+  WHERE id = ?
+`);
+
+const getContactByPurchaseAndMonthsStmt = db.prepare(`
+  SELECT
+    id,
+    cliente_id,
+    compra_id,
+    data_compra,
+    data_contato,
+    prazo_meses,
+    efetuado,
+    efetuado_em,
+    created_at,
+    updated_at
+  FROM contatos
+  WHERE compra_id = ? AND prazo_meses = ?
+  LIMIT 1
+`);
+
+const insertContactStmt = db.prepare(`
+  INSERT INTO contatos (
+    cliente_id,
+    compra_id,
+    data_compra,
+    data_contato,
+    prazo_meses,
+    efetuado,
+    efetuado_em,
+    created_at,
+    updated_at
+  )
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+`);
+
+const updateContactScheduleStmt = db.prepare(`
+  UPDATE contatos
+  SET data_compra = ?, data_contato = ?, updated_at = ?
+  WHERE id = ?
+`);
+
+const updateContactCompletionStmt = db.prepare(`
+  UPDATE contatos
+  SET efetuado = ?, efetuado_em = ?, updated_at = ?
   WHERE id = ?
 `);
 
@@ -537,6 +672,22 @@ function mapPurchaseRow(row) {
     },
     createdAt: row.created_at ?? null,
     updatedAt: row.updated_at ?? null,
+    contacts: [],
+  };
+}
+
+function mapContactRow(row) {
+  return {
+    id: row.id,
+    clientId: row.cliente_id,
+    purchaseId: row.compra_id,
+    purchaseDate: row.data_compra ?? null,
+    contactDate: row.data_contato ?? null,
+    monthsOffset: row.prazo_meses ?? null,
+    completed: Boolean(row.efetuado),
+    completedAt: row.efetuado_em ?? null,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
   };
 }
 
@@ -552,6 +703,114 @@ function groupPurchasesByClient(rows) {
   });
   return grouped;
 }
+
+function groupContactsByPurchase(rows) {
+  const grouped = new Map();
+  rows.forEach((row) => {
+    const contact = mapContactRow(row);
+    const key = row.compra_id;
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+    }
+    grouped.get(key).push(contact);
+  });
+  return grouped;
+}
+
+function attachContactsToPurchases(purchases, contactsByPurchase) {
+  if (!Array.isArray(purchases)) {
+    return;
+  }
+  purchases.forEach((purchase) => {
+    const purchaseContacts = contactsByPurchase.get(purchase.id) || [];
+    purchase.contacts = purchaseContacts
+      .slice()
+      .sort((a, b) => {
+        const monthsA = Number.isFinite(a.monthsOffset) ? a.monthsOffset : Number.MAX_SAFE_INTEGER;
+        const monthsB = Number.isFinite(b.monthsOffset) ? b.monthsOffset : Number.MAX_SAFE_INTEGER;
+        if (monthsA !== monthsB) {
+          return monthsA - monthsB;
+        }
+        return (a.contactDate || '').localeCompare(b.contactDate || '');
+      });
+  });
+}
+
+function determineClientState(purchases) {
+  if (!Array.isArray(purchases) || purchases.length === 0) {
+    return 'oferta';
+  }
+
+  const sorted = purchases
+    .slice()
+    .sort((a, b) => {
+      const dateA = a.date ? new Date(`${a.date}T00:00:00`).getTime() : 0;
+      const dateB = b.date ? new Date(`${b.date}T00:00:00`).getTime() : 0;
+      return dateB - dateA;
+    });
+
+  const latest = sorted[0];
+  const contacts = Array.isArray(latest.contacts) ? latest.contacts : [];
+  const hasPending = contacts.some((contact) => !contact.completed);
+  return hasPending ? 'pos-venda' : 'oferta';
+}
+
+function recomputeClientState(clienteId) {
+  const purchases = listPurchasesByClienteStmt.all(clienteId).map(mapPurchaseRow);
+  const contacts = listContactsByClienteStmt.all(clienteId).map(mapContactRow);
+  const contactsByPurchase = groupContactsByPurchase(contacts);
+  attachContactsToPurchases(purchases, contactsByPurchase);
+  const state = determineClientState(purchases);
+  const now = new Date().toISOString();
+  updateClientStateValueStmt.run(state, now, clienteId);
+  return state;
+}
+
+const updateContactStatusTransaction = db.transaction((contactId, completed) => {
+  const contactIdNumber = Number(contactId);
+  if (Number.isNaN(contactIdNumber)) {
+    return null;
+  }
+
+  const existing = getContactStmt.get(contactIdNumber);
+  if (!existing) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  updateContactCompletionStmt.run(completed ? 1 : 0, completed ? now : null, now, contactIdNumber);
+
+  const updated = getContactStmt.get(contactIdNumber);
+  if (!updated) {
+    return null;
+  }
+
+  recomputeClientState(updated.cliente_id);
+  const mappedContact = mapContactRow(updated);
+  const cliente = getClienteWithPurchases(updated.cliente_id);
+  return { contact: mappedContact, cliente };
+});
+
+function updateContactStatus(contactId, completed) {
+  return updateContactStatusTransaction(contactId, completed);
+}
+
+function listContacts() {
+  return listContactsStmt.all().map(mapContactRow);
+}
+
+(function bootstrapContactsAndStates() {
+  const now = new Date().toISOString();
+  const allPurchases = listPurchasesStmt.all();
+  allPurchases.forEach((purchase) => {
+    ensureContactsForPurchase(purchase.cliente_id, purchase.id, purchase.data, now);
+  });
+
+  const clients = listClientesStmt.all();
+  clients.forEach((clientRow) => {
+    recomputeClientState(clientRow.id);
+  });
+})();
 
 function normalizeEye(eye) {
   return {
@@ -589,8 +848,68 @@ function normalizePurchaseInput(purchase) {
   };
 }
 
+function addMonthsToIsoDate(dateString, monthsToAdd) {
+  if (!dateString || typeof dateString !== 'string') {
+    return null;
+  }
+  const [yearStr, monthStr, dayStr] = dateString.slice(0, 10).split('-');
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  date.setUTCMonth(date.getUTCMonth() + Number(monthsToAdd || 0));
+  const resultYear = date.getUTCFullYear();
+  const resultMonth = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const resultDay = String(date.getUTCDate()).padStart(2, '0');
+  return `${resultYear}-${resultMonth}-${resultDay}`;
+}
+
+function ensureContactsForPurchase(clienteId, purchaseId, purchaseDate, timestamp) {
+  if (!clienteId || !purchaseId || !purchaseDate) {
+    return;
+  }
+
+  const normalizedDate = String(purchaseDate).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) {
+    return;
+  }
+
+  const effectiveTimestamp = timestamp || new Date().toISOString();
+
+  CONTACT_SCHEDULE_OFFSETS.forEach((months) => {
+    const contactDate = addMonthsToIsoDate(normalizedDate, months);
+    if (!contactDate) {
+      return;
+    }
+
+    const existing = getContactByPurchaseAndMonthsStmt.get(purchaseId, months);
+    if (existing) {
+      updateContactScheduleStmt.run(normalizedDate, contactDate, effectiveTimestamp, existing.id);
+      return;
+    }
+
+    insertContactStmt.run(
+      clienteId,
+      purchaseId,
+      normalizedDate,
+      contactDate,
+      months,
+      0,
+      null,
+      effectiveTimestamp,
+      effectiveTimestamp
+    );
+  });
+}
+
 function insertPurchaseRecord(clienteId, purchase, timestamp) {
-  insertPurchaseStmt.run(
+  const result = insertPurchaseStmt.run(
     clienteId,
     purchase.date,
     purchase.frame,
@@ -612,9 +931,13 @@ function insertPurchaseRecord(clienteId, purchase, timestamp) {
     timestamp,
     timestamp
   );
+
+  const purchaseId = result.lastInsertRowid;
+  ensureContactsForPurchase(clienteId, purchaseId, purchase.date, timestamp);
+  return purchaseId;
 }
 
-function updatePurchaseRecord(purchaseId, purchase, timestamp) {
+function updatePurchaseRecord(clienteId, purchaseId, purchase, timestamp) {
   updatePurchaseStmt.run(
     purchase.date,
     purchase.frame,
@@ -636,6 +959,8 @@ function updatePurchaseRecord(purchaseId, purchase, timestamp) {
     timestamp,
     purchaseId
   );
+
+  ensureContactsForPurchase(clienteId, purchaseId, purchase.date, timestamp);
 }
 
 function getClienteWithPurchases(clienteId) {
@@ -645,8 +970,13 @@ function getClienteWithPurchases(clienteId) {
   }
   const cliente = mapClienteRow(row);
   const purchases = listPurchasesByClienteStmt.all(clienteId).map(mapPurchaseRow);
+  const contacts = listContactsByClienteStmt.all(clienteId).map(mapContactRow);
+  const contactsByPurchase = groupContactsByPurchase(contacts);
+  attachContactsToPurchases(purchases, contactsByPurchase);
   cliente.purchases = purchases;
+  cliente.contacts = purchases.flatMap((purchase) => purchase.contacts || []);
   cliente.lastPurchase = purchases.length ? purchases[purchases.length - 1].date : null;
+  cliente.state = determineClientState(purchases);
   return cliente;
 }
 
@@ -656,14 +986,19 @@ function listClientes() {
     return [];
   }
   const purchases = listPurchasesStmt.all();
+  const contacts = listContactsStmt.all();
   const groupedPurchases = groupPurchasesByClient(purchases);
+  const contactsByPurchase = groupContactsByPurchase(contacts);
   return rows.map((row) => {
     const cliente = mapClienteRow(row);
     const clientPurchases = groupedPurchases.get(cliente.id) || [];
+    attachContactsToPurchases(clientPurchases, contactsByPurchase);
     cliente.purchases = clientPurchases;
+    cliente.contacts = clientPurchases.flatMap((purchase) => purchase.contacts || []);
     cliente.lastPurchase = clientPurchases.length
       ? clientPurchases[clientPurchases.length - 1].date
       : null;
+    cliente.state = determineClientState(clientPurchases);
     return cliente;
   });
 }
@@ -687,7 +1022,7 @@ const createClienteTransaction = db.transaction((payload) => {
   const gender = normalizeGender(payload.gender);
   const birthDate = normalizeBirthDate(payload.birthDate);
   const userType = normalizeUserType(payload.userType);
-  const state = normalizeClientState(payload.state);
+  const state = 'pos-venda';
   const acceptsContact = Boolean(payload.acceptsContact);
 
   const result = insertClienteStmt.run(
@@ -727,6 +1062,8 @@ const createClienteTransaction = db.transaction((payload) => {
   purchasesInput.forEach((purchase) => {
     insertPurchaseRecord(clienteId, purchase, now);
   });
+
+  recomputeClientState(clienteId);
 
   return getClienteWithPurchases(clienteId);
 });
@@ -776,8 +1113,7 @@ const updateClienteTransaction = db.transaction((id, payload) => {
       payload.userType === undefined
         ? current.userType
         : normalizeUserType(payload.userType),
-    state:
-      payload.state === undefined ? current.state : normalizeClientState(payload.state),
+    state: current.state,
   };
 
   if (payload.cpf !== undefined) {
@@ -825,7 +1161,7 @@ const updateClienteTransaction = db.transaction((id, payload) => {
       if (!Number.isNaN(purchaseId)) {
         const existingPurchase = getPurchaseStmt.get(purchaseId);
         if (existingPurchase && existingPurchase.cliente_id === clienteId) {
-          updatePurchaseRecord(purchaseId, purchase, now);
+          updatePurchaseRecord(clienteId, purchaseId, purchase, now);
           return;
         }
       }
@@ -833,6 +1169,8 @@ const updateClienteTransaction = db.transaction((id, payload) => {
 
     insertPurchaseRecord(clienteId, purchase, now);
   });
+
+  recomputeClientState(clienteId);
 
   return getClienteWithPurchases(clienteId);
 });
@@ -931,4 +1269,6 @@ module.exports = {
   createEvento,
   updateEvento,
   deleteEvento,
+  listContacts,
+  updateContactStatus,
 };

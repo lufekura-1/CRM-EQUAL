@@ -467,6 +467,16 @@ let isSavingQuickSale = false;
     return `${day}/${month}/${year}`;
   }
 
+  function formatContactTitle(months) {
+    if (!Number.isFinite(months)) {
+      return 'Contato';
+    }
+    if (months === 1) {
+      return 'Contato de 1 mês';
+    }
+    return `Contato de ${months} meses`;
+  }
+
   function formatCurrencyBRL(value) {
     const numberValue = Number(value) || 0;
     return numberValue.toLocaleString('pt-BR', {
@@ -511,6 +521,40 @@ let isSavingQuickSale = false;
     cell.textContent = message;
     row.appendChild(cell);
     return row;
+  }
+
+  function mapApiContact(contact) {
+    if (!contact) {
+      return null;
+    }
+
+    const rawId = contact.id ?? contact.contactId ?? contact.contato_id ?? contact.contatoId;
+    if (!rawId && rawId !== 0) {
+      return null;
+    }
+
+    const rawPurchaseId = contact.purchaseId ?? contact.compraId ?? contact.compra_id ?? null;
+    const rawContactDate =
+      contact.contactDate ?? contact.dataContato ?? contact.data_contato ?? contact.date ?? contact.data ?? '';
+    const rawPurchaseDate = contact.purchaseDate ?? contact.dataCompra ?? contact.data_compra ?? null;
+    const monthsRaw = contact.monthsOffset ?? contact.prazoMeses ?? contact.prazo_meses ?? contact.meses;
+
+    const contactDate = rawContactDate ? String(rawContactDate).slice(0, 10) : '';
+    const purchaseDate = rawPurchaseDate ? String(rawPurchaseDate).slice(0, 10) : '';
+    const monthsOffset = Number(monthsRaw);
+
+    return {
+      id: String(rawId),
+      purchaseId: rawPurchaseId ? String(rawPurchaseId) : '',
+      clientId: contact.clientId ?? contact.cliente_id ?? '',
+      purchaseDate,
+      contactDate,
+      monthsOffset: Number.isFinite(monthsOffset) ? monthsOffset : null,
+      completed: Boolean(contact.completed ?? contact.efetuado ?? contact.realizado),
+      completedAt: contact.completedAt ?? contact.efetuadoEm ?? contact.efetuado_em ?? null,
+      createdAt: contact.createdAt ?? contact.created_at ?? null,
+      updatedAt: contact.updatedAt ?? contact.updated_at ?? null,
+    };
   }
 
   function mapApiPurchase(purchase) {
@@ -562,6 +606,23 @@ let isSavingQuickSale = false;
 
     const id = purchase.id ?? purchase.purchaseId ?? purchase.compra_id ?? rawDate;
 
+    const contactsSource = Array.isArray(purchase.contacts)
+      ? purchase.contacts
+      : Array.isArray(purchase.contatos)
+        ? purchase.contatos
+        : [];
+    const contacts = contactsSource
+      .map((item) => mapApiContact(item))
+      .filter((item) => Boolean(item))
+      .sort((a, b) => {
+        const monthsA = Number.isFinite(a.monthsOffset) ? a.monthsOffset : Number.MAX_SAFE_INTEGER;
+        const monthsB = Number.isFinite(b.monthsOffset) ? b.monthsOffset : Number.MAX_SAFE_INTEGER;
+        if (monthsA !== monthsB) {
+          return monthsA - monthsB;
+        }
+        return (a.contactDate || '').localeCompare(b.contactDate || '');
+      });
+
     return {
       id: String(id),
       date: String(rawDate).slice(0, 10),
@@ -577,6 +638,7 @@ let isSavingQuickSale = false;
         oe: normalizeEye(oeSource),
         od: normalizeEye(odSource),
       },
+      contacts,
     };
   }
 
@@ -595,6 +657,23 @@ let isSavingQuickSale = false;
     const purchases = purchasesSource
       .map((item) => mapApiPurchase(item))
       .filter((item) => Boolean(item));
+
+    const contactsSource = Array.isArray(apiClient.contacts)
+      ? apiClient.contacts
+      : Array.isArray(apiClient.contatos)
+        ? apiClient.contatos
+        : [];
+    const contacts = contactsSource.map((item) => mapApiContact(item)).filter((item) => Boolean(item));
+
+    if (!contacts.length && purchases.length) {
+      purchases.forEach((purchase) => {
+        if (Array.isArray(purchase.contacts)) {
+          purchase.contacts.forEach((contact) => {
+            contacts.push(contact);
+          });
+        }
+      });
+    }
 
     if (!purchases.length && apiClient.compra) {
       const singlePurchase = mapApiPurchase(apiClient.compra);
@@ -633,6 +712,7 @@ let isSavingQuickSale = false;
           ? apiClient.interesses.slice()
           : [],
       purchases,
+      contacts,
       lastPurchase:
         apiClient.lastPurchase ??
         apiClient.ultimaCompra ??
@@ -907,6 +987,7 @@ let isSavingQuickSale = false;
 
     renderClientInterests(client);
     renderPurchaseHistory(client);
+    renderClientContacts(client);
   }
 
   function createMetaItem(label, value) {
@@ -1041,6 +1122,97 @@ let isSavingQuickSale = false;
         details.append(meta, dioptryTable);
         article.append(toggle, details);
         clientPurchasesContainer.appendChild(article);
+      });
+  }
+
+  function renderClientContacts(client) {
+    if (!clientContactHistoryContainer) {
+      return;
+    }
+
+    clientContactHistoryContainer.innerHTML = '';
+
+    const purchasesWithContacts = Array.isArray(client.purchases)
+      ? client.purchases
+          .map((purchase) => ({
+            ...purchase,
+            contacts: Array.isArray(purchase.contacts) ? purchase.contacts.slice() : [],
+          }))
+          .filter((purchase) => purchase.contacts.length > 0)
+      : [];
+
+    if (!purchasesWithContacts.length) {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'client-card__empty';
+      placeholder.textContent = 'Nenhum contato registrado.';
+      clientContactHistoryContainer.appendChild(placeholder);
+      return;
+    }
+
+    purchasesWithContacts
+      .slice()
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .forEach((purchase, index) => {
+        const article = document.createElement('article');
+        article.className = 'client-contact';
+        if (index === 0) {
+          article.classList.add('is-open');
+        }
+
+        const pendingCount = purchase.contacts.filter((contact) => !contact.completed).length;
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'client-contact__toggle';
+        toggle.dataset.purchaseId = purchase.id;
+        toggle.innerHTML = `
+          <span>${formatFullDate(purchase.date)}</span>
+          <span>${pendingCount === 0 ? 'Todos concluídos' : `${pendingCount} pendente(s)`}</span>
+        `;
+
+        const details = document.createElement('div');
+        details.className = 'client-contact__details';
+
+        const list = document.createElement('div');
+        list.className = 'client-contact__list';
+
+        purchase.contacts
+          .slice()
+          .sort((a, b) => {
+            const monthsA = Number.isFinite(a.monthsOffset) ? a.monthsOffset : Number.MAX_SAFE_INTEGER;
+            const monthsB = Number.isFinite(b.monthsOffset) ? b.monthsOffset : Number.MAX_SAFE_INTEGER;
+            if (monthsA !== monthsB) {
+              return monthsA - monthsB;
+            }
+            return (a.contactDate || '').localeCompare(b.contactDate || '');
+          })
+          .forEach((contact) => {
+            const item = document.createElement('div');
+            item.className = 'client-contact__item';
+
+            const label = document.createElement('div');
+            label.className = 'client-contact__label';
+            label.innerHTML = `
+              <span>${formatContactTitle(contact.monthsOffset)}</span>
+              <span>${formatFullDate(contact.contactDate)}</span>
+            `;
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'client-contact__status';
+            button.dataset.contactId = contact.id;
+            button.dataset.completed = contact.completed ? 'true' : 'false';
+            button.textContent = contact.completed ? 'Efetuado' : 'Pendente';
+            if (contact.completed) {
+              button.classList.add('is-completed');
+            }
+
+            item.append(label, button);
+            list.appendChild(item);
+          });
+
+        details.appendChild(list);
+        article.append(toggle, details);
+        clientContactHistoryContainer.appendChild(article);
       });
   }
 
@@ -1521,6 +1693,84 @@ let isSavingQuickSale = false;
     }
   }
 
+  function handleContactHistoryClick(event) {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const toggle = target.closest('.client-contact__toggle');
+    if (toggle) {
+      const article = toggle.closest('.client-contact');
+      if (!article) {
+        return;
+      }
+      const isOpen = article.classList.contains('is-open');
+      clientContactHistoryContainer
+        ?.querySelectorAll('.client-contact')
+        .forEach((contact) => contact.classList.remove('is-open'));
+      if (!isOpen) {
+        article.classList.add('is-open');
+      }
+      return;
+    }
+
+    const statusButton = target.closest('.client-contact__status');
+    if (statusButton instanceof HTMLButtonElement) {
+      handleContactStatusButton(statusButton);
+    }
+  }
+
+  async function handleContactStatusButton(button) {
+    const contactId = button.dataset.contactId;
+    if (!contactId) {
+      return;
+    }
+
+    const currentlyCompleted = button.dataset.completed === 'true';
+    const nextValue = !currentlyCompleted;
+    const successMessage = nextValue
+      ? 'Contato marcado como efetuado.'
+      : 'Contato marcado como pendente.';
+    const errorMessage = 'Erro ao atualizar o contato.';
+
+    try {
+      button.disabled = true;
+      const response = await window.api.updateContact(contactId, { completed: nextValue });
+      const apiClient = response?.cliente;
+
+      if (apiClient) {
+        handleContactUpdateResponse(apiClient);
+        if (typeof window.showToast === 'function') {
+          window.showToast(successMessage, { type: 'success' });
+        }
+      }
+    } catch (error) {
+      const message = getApiErrorMessage(error, errorMessage);
+      if (typeof window.showToast === 'function') {
+        window.showToast(message, { type: 'error' });
+      }
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function handleContactUpdateResponse(apiClient) {
+    if (!apiClient) {
+      return null;
+    }
+
+    const updatedClient = upsertClientFromApi(apiClient);
+    setCurrentClient(updatedClient);
+    renderClientDetail(updatedClient);
+    renderClients();
+    ensureDetailButtonState();
+    if (typeof window.refreshCalendar === 'function') {
+      window.refreshCalendar({ showLoading: false });
+    }
+    return updatedClient;
+  }
+
   function handleTableClick(event) {
     const target = event.target;
     if (!(target instanceof Element)) {
@@ -1570,7 +1820,6 @@ let isSavingQuickSale = false;
       gender: client?.gender ?? '',
       userType: client?.userType ?? USER_TYPE_VALUES[0] ?? 'VS',
       birthDate: client?.birthDate ?? defaultBirthDate,
-      state: client?.state ?? CLIENT_STATE_VALUES[0] ?? 'pos-venda',
       acceptsContact: client?.acceptsContact ?? true,
       purchaseDate: latestPurchase?.date ?? todayIso,
       frame: latestPurchase?.frame ?? '',
@@ -1621,7 +1870,6 @@ let isSavingQuickSale = false;
     const birthDate = formData.get('birthDate');
     const purchaseDate = formData.get('purchaseDate');
     const userType = formData.get('userType')?.toString().toUpperCase() ?? '';
-    const state = formData.get('state')?.toString() ?? '';
     const frameMaterial = formData.get('frameMaterial')?.toString().toUpperCase() ?? '';
 
     return {
@@ -1631,7 +1879,6 @@ let isSavingQuickSale = false;
       gender: formData.get('gender')?.toString() ?? '',
       userType,
       birthDate: birthDate ? birthDate.toString() : '',
-      state,
       acceptsContact,
       purchase: {
         date: purchaseDate ? purchaseDate.toString() : new Date().toISOString().slice(0, 10),
@@ -1698,7 +1945,6 @@ let isSavingQuickSale = false;
       birthDate: birthDateIso,
       acceptsContact: data.acceptsContact,
       userType: data.userType,
-      state: data.state,
       purchase: {
         ...purchasePayload,
         id: purchaseId,
@@ -1998,6 +2244,7 @@ let isSavingQuickSale = false;
   });
 
   clientPurchasesContainer?.addEventListener('click', handlePurchaseToggle);
+  clientContactHistoryContainer?.addEventListener('click', handleContactHistoryClick);
   clientQuickSaleButton?.addEventListener('click', openQuickSaleModal);
   clientQuickSaleCloseButton?.addEventListener('click', closeQuickSaleModal);
   clientQuickSaleCancelButton?.addEventListener('click', closeQuickSaleModal);
@@ -2067,4 +2314,5 @@ let isSavingQuickSale = false;
 
   window.closeClientsAdvancedSearchModal = closeAdvancedSearchModalInternal;
   window.closeClientInterestsModal = closeClientInterestsModalInternal;
+  window.handleContactUpdateResponse = handleContactUpdateResponse;
 })();

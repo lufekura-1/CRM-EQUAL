@@ -419,6 +419,10 @@ function decoratePurchaseResponse(purchase) {
 
   const dioptry = cloneDioptry(purchase.dioptry);
 
+  const contacts = Array.isArray(purchase.contacts)
+    ? purchase.contacts.map((contact) => decorateContactResponse(contact)).filter(Boolean)
+    : [];
+
   return {
     ...purchase,
     dioptry,
@@ -432,6 +436,37 @@ function decoratePurchaseResponse(purchase) {
     valor_lente: purchase.lensValue ?? null,
     notaFiscal: purchase.invoice ?? '',
     nota_fiscal: purchase.invoice ?? '',
+    contacts,
+    contatos: contacts,
+  };
+}
+
+function decorateContactResponse(contact) {
+  if (!contact) {
+    return null;
+  }
+
+  const completed = Boolean(contact.completed);
+
+  return {
+    ...contact,
+    completed,
+    contactDate: contact.contactDate ?? null,
+    purchaseDate: contact.purchaseDate ?? null,
+    monthsOffset: contact.monthsOffset ?? null,
+    clienteId: contact.clientId ?? null,
+    cliente_id: contact.clientId ?? null,
+    compraId: contact.purchaseId ?? null,
+    compra_id: contact.purchaseId ?? null,
+    dataContato: contact.contactDate ?? null,
+    data_contato: contact.contactDate ?? null,
+    dataCompra: contact.purchaseDate ?? null,
+    data_compra: contact.purchaseDate ?? null,
+    prazoMeses: contact.monthsOffset ?? null,
+    prazo_meses: contact.monthsOffset ?? null,
+    efetuado: completed,
+    efetuadoEm: contact.completedAt ?? null,
+    efetuado_em: contact.completedAt ?? null,
   };
 }
 
@@ -453,6 +488,10 @@ function decorateClientResponse(cliente) {
 
   const lastPurchase = cliente.lastPurchase ?? purchases[purchases.length - 1]?.date ?? null;
 
+  const contacts = Array.isArray(cliente.contacts)
+    ? cliente.contacts.map((contact) => decorateContactResponse(contact)).filter(Boolean)
+    : [];
+
   return {
     ...cliente,
     gender: cliente.gender ?? null,
@@ -462,6 +501,7 @@ function decorateClientResponse(cliente) {
     state: cliente.state ?? null,
     interests: filteredInterests,
     purchases,
+    contacts,
     lastPurchase,
     genero: cliente.gender ?? null,
     dataNascimento: cliente.birthDate ?? null,
@@ -475,6 +515,7 @@ function decorateClientResponse(cliente) {
     interesses: filteredInterests,
     compras: purchases,
     compra: purchases[purchases.length - 1] || null,
+    contatos: contacts,
   };
 }
 
@@ -564,6 +605,10 @@ const eventoUpdateSchema = eventoCreateSchema
     { message: 'Informe ao menos um campo para atualizar.' }
   );
 
+const contatoUpdateSchema = z.object({
+  completed: z.boolean({ required_error: 'Campo "completed" é obrigatório.' }),
+});
+
 const CLIENTES_PAGE_SIZE = 10;
 
 function extractValidationError(error) {
@@ -641,7 +686,6 @@ app.post('/api/clientes', async (req, res) => {
       birthDate,
       acceptsContact,
       userType,
-      state,
       interests,
       purchase,
       purchases,
@@ -656,7 +700,6 @@ app.post('/api/clientes', async (req, res) => {
         birthDate: birthDate ?? null,
         acceptsContact: normalizeAcceptsContactInput(acceptsContact),
         userType: userType ?? null,
-        state: state ?? null,
         interests: Array.isArray(interests) ? interests : [],
         purchase: purchase ?? null,
         purchases: purchases ?? undefined,
@@ -686,7 +729,6 @@ app.put('/api/clientes/:id', async (req, res) => {
       birthDate,
       acceptsContact,
       userType,
-      state,
       interests,
       purchase,
       purchases,
@@ -701,7 +743,6 @@ app.put('/api/clientes/:id', async (req, res) => {
         birthDate: birthDate === undefined ? undefined : birthDate ?? null,
         acceptsContact: normalizeAcceptsContactInput(acceptsContact, { allowUndefined: true }),
         userType: userType === undefined ? undefined : userType ?? null,
-        state: state === undefined ? undefined : state ?? null,
         interests,
         purchase,
         purchases,
@@ -713,6 +754,32 @@ app.put('/api/clientes/:id', async (req, res) => {
     }
 
     res.json({ cliente: decorateClientResponse(updated) });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+app.patch('/api/contatos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const parsedBody = contatoUpdateSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({ error: extractValidationError(parsedBody.error) });
+    }
+
+    const { completed } = parsedBody.data;
+    const result = await Promise.resolve(storage.updateContactStatus(id, completed));
+
+    if (!result) {
+      return res.status(404).json({ error: 'Contato não encontrado.' });
+    }
+
+    const { contact, cliente } = result;
+
+    res.json({
+      contato: decorateContactResponse(contact),
+      cliente: decorateClientResponse(cliente),
+    });
   } catch (error) {
     handleError(res, error);
   }
@@ -766,7 +833,63 @@ app.get('/api/eventos', async (req, res) => {
       return true;
     });
 
-    res.json({ eventos: filteredEventos.map(toApiEvento) });
+    const contatos = await Promise.resolve(storage.listContacts());
+    const filteredContatos = contatos.filter((contato) => {
+      if (!fromDate && !toDate) {
+        return true;
+      }
+
+      if (!contato.contactDate) {
+        return false;
+      }
+
+      const contatoDate = new Date(`${contato.contactDate}T00:00:00Z`);
+      if (Number.isNaN(contatoDate.getTime())) {
+        return false;
+      }
+
+      if (fromDate && contatoDate < fromDate) {
+        return false;
+      }
+
+      if (toDate && contatoDate > toDate) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const contactEvents = filteredContatos
+      .filter((contato) => contato.contactDate)
+      .map((contato) => {
+        const months = Number(contato.monthsOffset ?? contato.prazoMeses ?? contato.prazo_meses);
+        const monthsLabel = Number.isFinite(months)
+          ? `${months} ${months === 1 ? 'mês' : 'meses'}`
+          : null;
+        const title = monthsLabel
+          ? `Contato pós-venda - ${monthsLabel}`
+          : 'Contato pós-venda';
+        const description = contato.completed ? 'Contato efetuado' : 'Contato pendente';
+
+        return {
+          id: `contact-${contato.id}`,
+          date: contato.contactDate,
+          title,
+          description,
+          color: '#22c55e',
+          clientId: contato.clientId ?? contato.cliente_id ?? null,
+          type: 'contact',
+          contactId: contato.id,
+          contactCompleted: Boolean(contato.completed),
+          completed: Boolean(contato.completed),
+          monthsOffset: contato.monthsOffset ?? null,
+          purchaseId: contato.purchaseId ?? null,
+          purchaseDate: contato.purchaseDate ?? null,
+        };
+      });
+
+    const decoratedEventos = filteredEventos.map(toApiEvento);
+    res.json({ eventos: [...decoratedEventos, ...contactEvents] });
   } catch (error) {
     handleError(res, error);
   }

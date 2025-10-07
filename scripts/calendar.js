@@ -72,6 +72,13 @@ function normalizeEventData(rawEvent) {
     description: rawEvent.description ?? rawEvent.descricao ?? '',
     color: rawEvent.color ?? rawEvent.cor ?? '',
     clientId: rawEvent.clientId ?? rawEvent.cliente_id ?? null,
+    type: rawEvent.type ?? rawEvent.eventType ?? (String(rawEvent.id ?? '').startsWith('contact-') ? 'contact' : 'event'),
+    contactId: rawEvent.contactId ?? rawEvent.contatoId ?? rawEvent.contato_id ?? null,
+    contactCompleted: Boolean(rawEvent.contactCompleted ?? rawEvent.completed ?? rawEvent.efetuado),
+    contactMonths:
+      rawEvent.contactMonths ?? rawEvent.monthsOffset ?? rawEvent.prazoMeses ?? rawEvent.prazo_meses ?? null,
+    purchaseId: rawEvent.purchaseId ?? rawEvent.compraId ?? rawEvent.compra_id ?? null,
+    purchaseDate: rawEvent.purchaseDate ?? rawEvent.dataCompra ?? rawEvent.data_compra ?? null,
   };
 }
 
@@ -246,6 +253,13 @@ function renderEventsForCell(cell, dateKey) {
     chip.type = 'button';
     chip.textContent = event.title;
     chip.dataset.eventId = String(event.id);
+    chip.dataset.eventType = event.type || 'event';
+    if (event.type === 'contact') {
+      chip.classList.add('calendar__event-chip--contact');
+      if (event.contactCompleted) {
+        chip.classList.add('is-completed');
+      }
+    }
     chip.addEventListener('click', () => openEventDetailsModal(event));
     eventsContainer.appendChild(chip);
   });

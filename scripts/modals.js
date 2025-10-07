@@ -153,6 +153,12 @@ function scheduleDetailAutoClose(delay) {
 function closeEventDetailsModal() {
   closeOverlay(eventDetailsOverlay);
   clearDetailAutoClose();
+  if (eventDetailsToggleContactButton) {
+    eventDetailsToggleContactButton.hidden = true;
+    eventDetailsToggleContactButton.disabled = false;
+    eventDetailsToggleContactButton.dataset.contactId = '';
+    eventDetailsToggleContactButton.dataset.completed = 'false';
+  }
   currentDetailEvent = null;
 }
 
@@ -172,23 +178,75 @@ function createDetailsRow(value, isEmpty = false) {
   return container;
 }
 
+function renderEventDetailsView() {
+  if (!eventDetailsBody || !currentDetailEvent) {
+    return;
+  }
+
+  const event = currentDetailEvent;
+  eventDetailsBody.innerHTML = '';
+
+  const eventDate = event.date ? formatDisplayDate(event.date) : '';
+  if (eventDate) {
+    eventDetailsBody.appendChild(createDetailsRow(eventDate));
+  }
+
+  if (event.type === 'contact') {
+    const title = event.title || 'Contato pós-venda';
+    eventDetailsBody.appendChild(createDetailsRow(title));
+    const statusText = event.contactCompleted ? 'Status: Contato efetuado' : 'Status: Contato pendente';
+    eventDetailsBody.appendChild(createDetailsRow(statusText));
+    const purchaseDate = event.purchaseDate ? String(event.purchaseDate).slice(0, 10) : '';
+    if (purchaseDate) {
+      eventDetailsBody.appendChild(
+        createDetailsRow(`Compra em ${formatDisplayDate(purchaseDate)}`)
+      );
+    }
+  } else {
+    eventDetailsBody.appendChild(createDetailsRow(event.title));
+
+    if (event.description) {
+      eventDetailsBody.appendChild(createDetailsRow(event.description));
+    } else {
+      eventDetailsBody.appendChild(createDetailsRow('Nenhuma descrição informada.', true));
+    }
+  }
+
+  if (eventDetailsEditButton) {
+    const isContact = event.type === 'contact';
+    eventDetailsEditButton.hidden = isContact;
+    eventDetailsEditButton.disabled = isContact;
+  }
+
+  if (eventDetailsDeleteButton) {
+    const isContact = event.type === 'contact';
+    eventDetailsDeleteButton.hidden = isContact;
+    eventDetailsDeleteButton.disabled = isContact;
+  }
+
+  if (eventDetailsToggleContactButton) {
+    if (event.type === 'contact' && event.contactId) {
+      eventDetailsToggleContactButton.hidden = false;
+      eventDetailsToggleContactButton.dataset.contactId = String(event.contactId);
+      eventDetailsToggleContactButton.dataset.completed = event.contactCompleted ? 'true' : 'false';
+      eventDetailsToggleContactButton.textContent = event.contactCompleted
+        ? 'Marcar como pendente'
+        : 'Marcar como efetuado';
+    } else {
+      eventDetailsToggleContactButton.hidden = true;
+      eventDetailsToggleContactButton.dataset.contactId = '';
+      eventDetailsToggleContactButton.dataset.completed = 'false';
+    }
+  }
+}
+
 function openEventDetailsModal(event) {
   if (!eventDetailsOverlay || !eventDetailsBody) {
     return;
   }
 
   currentDetailEvent = event;
-  eventDetailsBody.innerHTML = '';
-  eventDetailsBody.appendChild(createDetailsRow(formatDisplayDate(event.date)));
-  eventDetailsBody.appendChild(createDetailsRow(event.title));
-
-  if (event.description) {
-    eventDetailsBody.appendChild(createDetailsRow(event.description));
-  } else {
-    eventDetailsBody.appendChild(
-      createDetailsRow('Nenhuma descrição informada.', true)
-    );
-  }
+  renderEventDetailsView();
 
   openOverlay(eventDetailsOverlay);
   isDetailHovered = false;
@@ -226,5 +284,70 @@ async function handleDeleteCurrentEvent() {
       eventDetailsDeleteButton.disabled = false;
     }
     isDeletingEvent = false;
+  }
+}
+
+async function handleToggleContactFromModal() {
+  if (!currentDetailEvent || currentDetailEvent.type !== 'contact') {
+    return;
+  }
+
+  const contactId = currentDetailEvent.contactId;
+  if (!contactId) {
+    return;
+  }
+
+  const nextValue = !currentDetailEvent.contactCompleted;
+  const successMessage = nextValue
+    ? 'Contato marcado como efetuado.'
+    : 'Contato marcado como pendente.';
+  const errorMessage = 'Erro ao atualizar o contato.';
+
+  try {
+    if (eventDetailsToggleContactButton) {
+      eventDetailsToggleContactButton.disabled = true;
+    }
+
+    const response = await window.api.updateContact(contactId, { completed: nextValue });
+    if (response?.contato) {
+      const updatedContact = response.contato;
+      const completedValue =
+        updatedContact.completed ?? updatedContact.efetuado ?? updatedContact.realizado ?? nextValue;
+      currentDetailEvent.contactCompleted = Boolean(completedValue);
+      if (updatedContact.title) {
+        currentDetailEvent.title = updatedContact.title;
+      }
+      if (updatedContact.contactDate ?? updatedContact.data_contato) {
+        currentDetailEvent.date = String(updatedContact.contactDate ?? updatedContact.data_contato).slice(0, 10);
+      }
+      if (updatedContact.purchaseDate ?? updatedContact.data_compra) {
+        currentDetailEvent.purchaseDate = String(
+          updatedContact.purchaseDate ?? updatedContact.data_compra
+        ).slice(0, 10);
+      }
+    } else {
+      currentDetailEvent.contactCompleted = nextValue;
+    }
+
+    if (typeof window.handleContactUpdateResponse === 'function' && response?.cliente) {
+      window.handleContactUpdateResponse(response.cliente);
+    }
+
+    renderEventDetailsView();
+
+    if (typeof window.showToast === 'function') {
+      window.showToast(successMessage, { type: 'success' });
+    }
+  } catch (error) {
+    const message = window.api?.getErrorMessage
+      ? window.api.getErrorMessage(error, errorMessage)
+      : errorMessage;
+    if (typeof window.showToast === 'function') {
+      window.showToast(message, { type: 'error' });
+    }
+  } finally {
+    if (eventDetailsToggleContactButton) {
+      eventDetailsToggleContactButton.disabled = false;
+    }
   }
 }
