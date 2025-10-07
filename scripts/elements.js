@@ -18,9 +18,9 @@ const addEventSaveButton = addEventOverlay?.querySelector('[data-action="save"]'
 const eventDetailsOverlay = document.querySelector('[data-modal="event-details"]');
 const eventDetailsBody = eventDetailsOverlay?.querySelector('[data-details="body"]');
 const eventDetailsCloseButton = eventDetailsOverlay?.querySelector('[data-action="close"]');
-const eventDetailsEditButton = eventDetailsOverlay?.querySelector('[data-action="edit"]');
-const eventDetailsDeleteButton = eventDetailsOverlay?.querySelector('[data-action="delete"]');
-const eventDetailsToggleContactButton = eventDetailsOverlay?.querySelector('[data-action="toggle-contact"]');
+const eventDetailsTitleEntity = eventDetailsOverlay?.querySelector('[data-details="title-entity"]');
+const eventDetailsTitleStatus = eventDetailsOverlay?.querySelector('[data-details="status-label"]');
+const eventDetailsToggleStatusButton = eventDetailsOverlay?.querySelector('[data-action="toggle-status"]');
 const eventDetailsModal = eventDetailsOverlay?.querySelector('.modal');
 const userSelectorButton = document.querySelector('[data-role="user-selector"]');
 const userSelectorOverlay = document.querySelector('[data-modal="user-selector"]');

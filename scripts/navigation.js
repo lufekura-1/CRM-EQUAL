@@ -1,3 +1,26 @@
+const ACTIVE_PAGE_STORAGE_KEY = 'crm-active-page';
+
+function storeActivePage(page) {
+  try {
+    if (page) {
+      window.localStorage.setItem(ACTIVE_PAGE_STORAGE_KEY, page);
+    } else {
+      window.localStorage.removeItem(ACTIVE_PAGE_STORAGE_KEY);
+    }
+  } catch (error) {
+    console.warn('Não foi possível salvar a página ativa.', error);
+  }
+}
+
+function getStoredActivePage() {
+  try {
+    return window.localStorage.getItem(ACTIVE_PAGE_STORAGE_KEY);
+  } catch (error) {
+    console.warn('Não foi possível recuperar a página ativa salva.', error);
+    return null;
+  }
+}
+
 function setActivePage(page) {
   sidebarButtons.forEach((button) => {
     const isActive = button.dataset.page === page;
@@ -39,4 +62,8 @@ function setActivePage(page) {
       detail: { page },
     }),
   );
+
+  storeActivePage(page);
 }
+
+window.getStoredActivePage = getStoredActivePage;
