@@ -822,6 +822,16 @@ body.modal-open {
   text-align: center;
 }
 
+.calendar__event-chip--contact {
+  background-color: #22c55e;
+  color: #052e16;
+}
+
+.calendar__event-chip--contact.is-completed {
+  background-color: #14532d;
+  color: #ecfdf5;
+}
+
 .calendar__event-chip:hover,
 .calendar__event-chip:focus {
   transform: translateY(-2px);
@@ -1152,6 +1162,10 @@ body.modal-open {
 
 .modal__action--delete {
   color: #ff5252;
+}
+
+.modal__action--contact {
+  color: #22c55e;
 }
 
 .calendar__date--empty {
@@ -1960,6 +1974,107 @@ body.modal-open {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.client-contact-history {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.client-contact {
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 14px;
+  overflow: hidden;
+  background-color: rgba(34, 197, 94, 0.08);
+}
+
+.client-contact__toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.client-contact__toggle:hover,
+.client-contact__toggle:focus {
+  background-color: rgba(34, 197, 94, 0.12);
+  outline: none;
+}
+
+.client-contact__details {
+  padding: 0 18px 18px;
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.client-contact.is-open .client-contact__details {
+  display: flex;
+}
+
+.client-contact__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.client-contact__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background-color: rgba(15, 118, 110, 0.15);
+}
+
+.client-contact__label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+}
+
+.client-contact__label span:last-child {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+}
+
+.client-contact__status {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.client-contact__status:hover,
+.client-contact__status:focus {
+  background-color: rgba(34, 197, 94, 0.35);
+  outline: none;
+}
+
+.client-contact__status.is-completed {
+  background-color: #15803d;
+  color: #ecfdf5;
+}
+
+.client-contact__status:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .client-purchase {

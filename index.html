@@ -624,7 +624,9 @@
                 <header class="client-card__header">
                   <h2 class="client-card__title">Histórico de contato</h2>
                 </header>
-                <div class="client-card__empty">Nenhum contato registrado.</div>
+                <div class="client-contact-history" data-role="client-contact-history">
+                  <div class="client-card__empty">Nenhum contato registrado.</div>
+                </div>
               </article>
             </div>
           </div>
@@ -667,15 +669,6 @@
                 <label class="client-form__field">
                   <span class="client-form__label">Data de nascimento</span>
                   <input type="date" name="birthDate" required />
-                </label>
-                <label class="client-form__field">
-                  <span class="client-form__label">Estado do cliente</span>
-                  <select name="state" required>
-                    <option value="">Selecione</option>
-                    <option value="pos-venda">Pós-venda</option>
-                    <option value="oferta">Oferta</option>
-                    <option value="nao-contatar">Não contatar</option>
-                  </select>
                 </label>
                 <label class="client-form__field client-form__field--checkbox">
                   <input type="checkbox" name="acceptsContact" />
@@ -1148,6 +1141,15 @@
             aria-label="Excluir evento"
           >
             🗑
+          </button>
+          <button
+            class="modal__action modal__action--contact"
+            type="button"
+            data-action="toggle-contact"
+            aria-label="Alternar status do contato"
+            hidden
+          >
+            ✔
           </button>
         </div>
       </div>

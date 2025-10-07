@@ -345,13 +345,6 @@
       result.userType = normalizedUserType ? normalizedUserType.toUpperCase() : normalizedUserType;
     }
 
-    const stateValue =
-      payload.state !== undefined ? payload.state : payload.estadoCliente ?? payload['estado_cliente'];
-    if (stateValue !== undefined) {
-      const normalizedState = normalizeNullable(stateValue);
-      result.state = normalizedState ? normalizedState.toLowerCase() : normalizedState;
-    }
-
     if (Array.isArray(payload.interests)) {
       const normalizedInterests = payload.interests
         .map((item) => normalizeNullable(item))
@@ -432,6 +425,14 @@
       const body = JSON.stringify(normalizeClientPayload(payload));
       return request(`/api/clientes/${encodeURIComponent(id)}`, {
         method: 'PUT',
+        body,
+      });
+    },
+    async updateContact(id, payload) {
+      const completedValue = payload?.completed;
+      const body = JSON.stringify({ completed: Boolean(completedValue) });
+      return request(`/api/contatos/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
         body,
       });
     },

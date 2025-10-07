@@ -99,6 +99,10 @@ eventDetailsDeleteButton?.addEventListener('click', () => {
   handleDeleteCurrentEvent();
 });
 
+eventDetailsToggleContactButton?.addEventListener('click', () => {
+  handleToggleContactFromModal();
+});
+
 eventDetailsModal?.addEventListener('mouseenter', () => {
   isDetailHovered = true;
   clearDetailAutoClose();
