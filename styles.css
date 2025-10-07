@@ -806,30 +806,63 @@ body.modal-open {
 }
 
 .calendar__event-chip {
-  background-color: #ff9800;
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
-  color: #141414;
   border: none;
   cursor: pointer;
   transition: transform 0.2s ease;
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
-  text-align: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
 }
 
-.calendar__event-chip--contact {
-  background-color: #22c55e;
-  color: #052e16;
+.calendar__event-chip--pending {
+  background-color: #facc15;
+  color: #422006;
 }
 
-.calendar__event-chip--contact.is-completed {
-  background-color: #14532d;
-  color: #ecfdf5;
+.calendar__event-chip--completed {
+  background-color: #86efac;
+  color: #064e3b;
+}
+
+.calendar__event-chip--overdue {
+  background-color: #f87171;
+  color: #7f1d1d;
+}
+
+.calendar__event-chip-label {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.calendar__event-chip-status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.calendar__event-chip-status--pending {
+  background-color: #facc15;
+  border: 2px solid #d97706;
+}
+
+.calendar__event-chip-status--completed {
+  background-color: #86efac;
+  border: 2px solid #047857;
+}
+
+.calendar__event-chip-status--overdue {
+  background-color: #f87171;
+  border: 2px solid #b91c1c;
 }
 
 .calendar__event-chip:hover,
@@ -892,6 +925,31 @@ body.modal-open {
 .modal__title {
   font-size: 20px;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modal__title-separator {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.modal__title-status {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.modal__title-status--pending {
+  color: #facc15;
+}
+
+.modal__title-status--completed {
+  color: #86efac;
+}
+
+.modal__title-status--overdue {
+  color: #f87171;
 }
 
 .modal__close {
@@ -1068,6 +1126,13 @@ body.modal-open {
   gap: 4px;
 }
 
+.modal__details-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .modal__details-value {
   color: #ffffff;
   font-size: 15px;
@@ -1140,32 +1205,30 @@ body.modal-open {
 }
 
 .modal__actions {
-  margin-left: auto;
-  margin-top: auto;
+  margin-top: 24px;
   display: flex;
-  gap: 10px;
+  justify-content: flex-end;
 }
 
-.modal__action {
-  background: transparent;
+.modal__status-button {
+  background-color: #2563eb;
+  color: #ffffff;
   border: none;
-  font-size: 22px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-weight: 600;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  transition: background-color 0.2s ease;
 }
 
-.modal__action--edit {
-  color: #ff9800;
+.modal__status-button:hover,
+.modal__status-button:focus {
+  background-color: #1d4ed8;
 }
 
-.modal__action--delete {
-  color: #ff5252;
-}
-
-.modal__action--contact {
-  color: #22c55e;
+.modal__status-button:disabled {
+  opacity: 0.7;
+  cursor: progress;
 }
 
 .calendar__date--empty {

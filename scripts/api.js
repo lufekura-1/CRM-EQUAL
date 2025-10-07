@@ -228,13 +228,17 @@
     if (!payload) {
       return null;
     }
-    return {
+    const result = {
       date: payload.date,
       title: payload.title,
       description: payload.description ?? null,
       color: payload.color ?? null,
       clientId: payload.clientId ?? null,
     };
+    if (payload.completed !== undefined) {
+      result.completed = Boolean(payload.completed);
+    }
+    return result;
   }
 
   function normalizeClientPayload(payload) {

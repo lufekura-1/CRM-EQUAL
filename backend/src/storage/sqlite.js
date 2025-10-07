@@ -32,6 +32,7 @@ db.exec(`
     descricao TEXT,
     cor TEXT,
     cliente_id INTEGER,
+    completed INTEGER NOT NULL DEFAULT 0,
     created_at TEXT
   );
 `);
@@ -100,6 +101,7 @@ ensureColumn('clientes', 'updated_at', 'TEXT');
 
 ensureColumn('eventos', 'updated_at', 'TEXT');
 ensureColumn('eventos', 'cliente_id', 'INTEGER');
+ensureColumn('eventos', 'completed', 'INTEGER DEFAULT 0');
 
 const purchaseColumns = [
   ['armacao', 'TEXT'],
@@ -482,25 +484,25 @@ const updateContactCompletionStmt = db.prepare(`
 `);
 
 const listEventosStmt = db.prepare(`
-  SELECT id, data, titulo, descricao, cor, cliente_id, created_at, updated_at
+  SELECT id, data, titulo, descricao, cor, cliente_id, completed, created_at, updated_at
   FROM eventos
   ORDER BY data DESC, id DESC
 `);
 
 const getEventoStmt = db.prepare(`
-  SELECT id, data, titulo, descricao, cor, cliente_id, created_at, updated_at
+  SELECT id, data, titulo, descricao, cor, cliente_id, completed, created_at, updated_at
   FROM eventos
   WHERE id = ?
 `);
 
 const insertEventoStmt = db.prepare(`
-  INSERT INTO eventos (data, titulo, descricao, cor, cliente_id, created_at, updated_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO eventos (data, titulo, descricao, cor, cliente_id, completed, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const updateEventoStmt = db.prepare(`
   UPDATE eventos
-  SET data = ?, titulo = ?, descricao = ?, cor = ?, cliente_id = ?, updated_at = ?
+  SET data = ?, titulo = ?, descricao = ?, cor = ?, cliente_id = ?, completed = ?, updated_at = ?
   WHERE id = ?
 `);
 
@@ -1193,12 +1195,20 @@ function listEventos() {
   return listEventosStmt.all();
 }
 
+function normalizeCompletedFlag(value, fallback = 0) {
+  if (value === undefined || value === null) {
+    return fallback ? 1 : 0;
+  }
+  return value ? 1 : 0;
+}
+
 function createEvento({
   data,
   titulo,
   descricao = null,
   cor = null,
   cliente_id = null,
+  completed = 0,
 }) {
   if (!data || !titulo) {
     throw new Error('Campos "data" e "titulo" são obrigatórios.');
@@ -1211,6 +1221,7 @@ function createEvento({
     descricao,
     cor,
     cliente_id,
+    normalizeCompletedFlag(completed),
     now,
     now
   );
@@ -1218,7 +1229,7 @@ function createEvento({
   return getEventoStmt.get(result.lastInsertRowid);
 }
 
-function updateEvento(id, { data, titulo, descricao, cor, cliente_id }) {
+function updateEvento(id, { data, titulo, descricao, cor, cliente_id, completed }) {
   const eventoId = Number(id);
   if (Number.isNaN(eventoId)) {
     return null;
@@ -1235,6 +1246,10 @@ function updateEvento(id, { data, titulo, descricao, cor, cliente_id }) {
     descricao: descricao ?? existing.descricao,
     cor: cor ?? existing.cor,
     cliente_id: cliente_id === undefined ? existing.cliente_id : cliente_id,
+    completed:
+      completed === undefined
+        ? normalizeCompletedFlag(existing.completed)
+        : normalizeCompletedFlag(completed, existing.completed),
   };
 
   updateEventoStmt.run(
@@ -1243,6 +1258,7 @@ function updateEvento(id, { data, titulo, descricao, cor, cliente_id }) {
     updated.descricao,
     updated.cor,
     updated.cliente_id,
+    updated.completed,
     new Date().toISOString(),
     eventoId
   );

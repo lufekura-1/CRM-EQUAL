@@ -79,6 +79,11 @@ function normalizeEventData(rawEvent) {
       rawEvent.contactMonths ?? rawEvent.monthsOffset ?? rawEvent.prazoMeses ?? rawEvent.prazo_meses ?? null,
     purchaseId: rawEvent.purchaseId ?? rawEvent.compraId ?? rawEvent.compra_id ?? null,
     purchaseDate: rawEvent.purchaseDate ?? rawEvent.dataCompra ?? rawEvent.data_compra ?? null,
+    completed: Boolean(rawEvent.completed ?? rawEvent.eventCompleted ?? rawEvent.efetuado),
+    clientName: rawEvent.clientName ?? rawEvent.nomeCliente ?? rawEvent.nome ?? rawEvent.clienteNome ?? '',
+    clientPhone: rawEvent.clientPhone ?? rawEvent.telefoneCliente ?? rawEvent.telefone ?? rawEvent.phone ?? '',
+    purchaseFrame: rawEvent.purchaseFrame ?? rawEvent.frame ?? rawEvent.armacao ?? '',
+    purchaseLens: rawEvent.purchaseLens ?? rawEvent.lens ?? rawEvent.lente ?? '',
   };
 }
 
@@ -238,6 +243,29 @@ function createDateCell(
   return cell;
 }
 
+function getEventChipLabel(event) {
+  if (!event) {
+    return '';
+  }
+
+  if (event.type === 'contact') {
+    const name = event.clientName || event.title || 'Contato';
+    const monthsLabel = typeof formatPostSaleLabel === 'function'
+      ? formatPostSaleLabel(event.contactMonths ?? event.monthsOffset)
+      : '';
+    return monthsLabel ? `${name} ${monthsLabel}` : name;
+  }
+
+  return event.title || 'Evento';
+}
+
+function createStatusDot(statusKey) {
+  const dot = document.createElement('span');
+  dot.className = `calendar__event-chip-status calendar__event-chip-status--${statusKey}`;
+  dot.setAttribute('aria-hidden', 'true');
+  return dot;
+}
+
 function renderEventsForCell(cell, dateKey) {
   const eventsContainer = cell.querySelector('.calendar__date-events');
   if (!eventsContainer) {
@@ -251,15 +279,25 @@ function renderEventsForCell(cell, dateKey) {
     const chip = document.createElement('button');
     chip.className = 'calendar__event-chip';
     chip.type = 'button';
-    chip.textContent = event.title;
     chip.dataset.eventId = String(event.id);
     chip.dataset.eventType = event.type || 'event';
-    if (event.type === 'contact') {
-      chip.classList.add('calendar__event-chip--contact');
-      if (event.contactCompleted) {
-        chip.classList.add('is-completed');
-      }
-    }
+    const status = typeof getEventStatus === 'function'
+      ? getEventStatus(event)
+      : { key: 'pending', label: 'Pendente' };
+    chip.classList.add(`calendar__event-chip--${status.key}`);
+    chip.dataset.eventStatus = status.key;
+
+    const labelElement = document.createElement('span');
+    labelElement.className = 'calendar__event-chip-label';
+    labelElement.textContent = getEventChipLabel(event);
+    chip.appendChild(labelElement);
+
+    chip.appendChild(createStatusDot(status.key));
+
+    const accessibleLabel = `${labelElement.textContent} - ${status.label}`;
+    chip.setAttribute('aria-label', accessibleLabel);
+    chip.title = accessibleLabel;
+
     chip.addEventListener('click', () => openEventDetailsModal(event));
     eventsContainer.appendChild(chip);
   });

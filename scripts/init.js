@@ -16,7 +16,21 @@ homeShortcuts.forEach((shortcut) => {
 
 initializeUserSelector();
 
-setActivePage('home');
+const initialPage =
+  typeof getStoredActivePage === 'function' ? getStoredActivePage() : null;
+
+const hasStoredPage = initialPage
+  && (
+    Array.from(sidebarButtons).some((button) => button.dataset.page === initialPage)
+    || Array.from(menus).some((menu) => menu.dataset.page === initialPage)
+    || Array.from(contentPages).some((section) => section.dataset.page === initialPage)
+  );
+
+if (hasStoredPage) {
+  setActivePage(initialPage);
+} else {
+  setActivePage('home');
+}
 
 if (prevMonthButton && nextMonthButton) {
   prevMonthButton.addEventListener('click', () => changeCalendarPeriod(-1));
@@ -86,31 +100,8 @@ eventDetailsCloseButton?.addEventListener('click', () => {
   closeEventDetailsModal();
 });
 
-eventDetailsEditButton?.addEventListener('click', () => {
-  if (!currentDetailEvent) {
-    return;
-  }
-  const eventToEdit = currentDetailEvent;
-  closeEventDetailsModal();
-  openAddEventModal(eventToEdit);
-});
-
-eventDetailsDeleteButton?.addEventListener('click', () => {
-  handleDeleteCurrentEvent();
-});
-
-eventDetailsToggleContactButton?.addEventListener('click', () => {
-  handleToggleContactFromModal();
-});
-
-eventDetailsModal?.addEventListener('mouseenter', () => {
-  isDetailHovered = true;
-  clearDetailAutoClose();
-});
-
-eventDetailsModal?.addEventListener('mouseleave', () => {
-  isDetailHovered = false;
-  scheduleDetailAutoClose(3000);
+eventDetailsToggleStatusButton?.addEventListener('click', () => {
+  handleToggleStatusFromModal();
 });
 
 document.addEventListener('keydown', (event) => {

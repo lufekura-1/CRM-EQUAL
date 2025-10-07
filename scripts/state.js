@@ -2,8 +2,6 @@ const events = {};
 let editingEvent = null;
 let editingEventOriginalDateKey = null;
 let currentDetailEvent = null;
-let detailAutoCloseTimeout = null;
-let isDetailHovered = false;
 let currentClientId = '';
 let currentClientData = null;
 
@@ -51,3 +49,52 @@ const MONTH_NAMES = [
 
 let currentCalendarDate = new Date();
 let currentCalendarView = 'month';
+
+function parseDateKeyToDate(dateKey) {
+  if (!dateKey) {
+    return null;
+  }
+  const normalized = String(dateKey).slice(0, 10);
+  const parsed = new Date(`${normalized}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  parsed.setHours(0, 0, 0, 0);
+  return parsed;
+}
+
+function formatPostSaleLabel(months) {
+  const numeric = Number(months);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return '';
+  }
+  return `PV-${numeric}M`;
+}
+
+function getEventStatus(event) {
+  if (!event) {
+    return { key: 'pending', label: 'Pendente' };
+  }
+
+  const isContact = event.type === 'contact';
+  const isCompleted = isContact
+    ? Boolean(event.contactCompleted ?? event.completed)
+    : Boolean(event.completed);
+
+  if (isCompleted) {
+    return { key: 'completed', label: 'Efetuado' };
+  }
+
+  const eventDate = parseDateKeyToDate(event.date ?? event.rawDate ?? event.contactDate ?? null);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (eventDate && eventDate < today) {
+    return { key: 'overdue', label: 'Atrasado' };
+  }
+
+  return { key: 'pending', label: 'Pendente' };
+}
+
+window.getEventStatus = getEventStatus;
+window.formatPostSaleLabel = formatPostSaleLabel;

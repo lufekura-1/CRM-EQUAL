@@ -23,6 +23,7 @@ function toApiEvento(evento) {
     description: evento.descricao,
     color: evento.cor,
     clientId: evento.cliente_id,
+    completed: Boolean(evento.completed),
     createdAt: evento.created_at,
   };
 }
@@ -42,6 +43,12 @@ function fromApiEvento(payload, { defaultNull = false } = {}) {
     descricao: normalize(payload.description),
     cor: normalize(payload.color),
     cliente_id: normalize(payload.clientId),
+    completed:
+      payload.completed === undefined
+        ? undefined
+        : payload.completed
+          ? 1
+          : 0,
   };
 }
 
@@ -591,9 +598,16 @@ const eventoCreateSchema = z.object({
   description: normalizeNullableStringSchema,
   color: normalizeNullableStringSchema,
   clientId: clientIdSchema,
+  completed: optionalBooleanSchema.transform((value) => {
+    if (value === undefined) {
+      return false;
+    }
+    return Boolean(value);
+  }),
 });
 
 const eventoUpdateSchema = eventoCreateSchema
+  .extend({ completed: optionalBooleanSchema })
   .partial()
   .refine(
     (value) =>
@@ -601,7 +615,8 @@ const eventoUpdateSchema = eventoCreateSchema
       value.title !== undefined ||
       value.description !== undefined ||
       value.color !== undefined ||
-      value.clientId !== undefined,
+      value.clientId !== undefined ||
+      value.completed !== undefined,
     { message: 'Informe ao menos um campo para atualizar.' }
   );
 
@@ -811,7 +826,11 @@ app.get('/api/eventos', async (req, res) => {
     const fromDate = from ? new Date(`${from}T00:00:00.000Z`) : null;
     const toDate = to ? new Date(`${to}T23:59:59.999Z`) : null;
 
-    const eventos = await Promise.resolve(storage.listEventos());
+    const [eventos, contatos, clientes] = await Promise.all([
+      Promise.resolve(storage.listEventos()),
+      Promise.resolve(storage.listContacts()),
+      Promise.resolve(storage.listClientes()),
+    ]);
     const filteredEventos = eventos.filter((evento) => {
       if (!fromDate && !toDate) {
         return true;
@@ -833,7 +852,6 @@ app.get('/api/eventos', async (req, res) => {
       return true;
     });
 
-    const contatos = await Promise.resolve(storage.listContacts());
     const filteredContatos = contatos.filter((contato) => {
       if (!fromDate && !toDate) {
         return true;
@@ -859,6 +877,31 @@ app.get('/api/eventos', async (req, res) => {
       return true;
     });
 
+    const clientMap = new Map();
+    const purchaseMap = new Map();
+
+    clientes.forEach((cliente) => {
+      const clientId = cliente?.id ?? cliente?.cliente_id;
+      if (clientId !== undefined && clientId !== null) {
+        const numericId = Number(clientId);
+        if (!Number.isNaN(numericId)) {
+          clientMap.set(numericId, cliente);
+        }
+      }
+
+      if (Array.isArray(cliente?.purchases)) {
+        cliente.purchases.forEach((purchase) => {
+          if (purchase?.id === undefined || purchase?.id === null) {
+            return;
+          }
+          const numericId = Number(purchase.id);
+          if (!Number.isNaN(numericId)) {
+            purchaseMap.set(numericId, { ...purchase, clientId: cliente?.id ?? cliente?.cliente_id ?? null });
+          }
+        });
+      }
+    });
+
     const contactEvents = filteredContatos
       .filter((contato) => contato.contactDate)
       .map((contato) => {
@@ -870,6 +913,16 @@ app.get('/api/eventos', async (req, res) => {
           ? `Contato pós-venda - ${monthsLabel}`
           : 'Contato pós-venda';
         const description = contato.completed ? 'Contato efetuado' : 'Contato pendente';
+        const client = clientMap.get(Number(contato.clientId)) || null;
+        const purchase =
+          contato.purchaseId !== undefined && contato.purchaseId !== null
+            ? purchaseMap.get(Number(contato.purchaseId)) || null
+            : null;
+        const purchaseDate = contato.purchaseDate ?? purchase?.date ?? null;
+        const clientName = client?.nome ?? client?.name ?? null;
+        const clientPhone = client?.telefone ?? client?.phone ?? null;
+        const purchaseFrame = purchase?.frame ?? purchase?.armacao ?? '';
+        const purchaseLens = purchase?.lens ?? purchase?.lente ?? '';
 
         return {
           id: `contact-${contato.id}`,
@@ -883,12 +936,29 @@ app.get('/api/eventos', async (req, res) => {
           contactCompleted: Boolean(contato.completed),
           completed: Boolean(contato.completed),
           monthsOffset: contato.monthsOffset ?? null,
+          contactMonths: Number.isFinite(months) ? months : null,
           purchaseId: contato.purchaseId ?? null,
-          purchaseDate: contato.purchaseDate ?? null,
+          purchaseDate,
+          clientName,
+          clientPhone,
+          purchaseFrame,
+          purchaseLens,
         };
       });
 
-    const decoratedEventos = filteredEventos.map(toApiEvento);
+    const decoratedEventos = filteredEventos.map((evento) => {
+      const base = toApiEvento(evento);
+      const client =
+        base.clientId !== undefined && base.clientId !== null
+          ? clientMap.get(Number(base.clientId))
+          : null;
+
+      return {
+        ...base,
+        clientName: client?.nome ?? client?.name ?? null,
+        clientPhone: client?.telefone ?? client?.phone ?? null,
+      };
+    });
     res.json({ eventos: [...decoratedEventos, ...contactEvents] });
   } catch (error) {
     handleError(res, error);
@@ -902,17 +972,11 @@ app.post('/api/eventos', async (req, res) => {
       return res.status(400).json({ error: extractValidationError(parsedBody.error) });
     }
 
-    const { date, title, description, color, clientId } = parsedBody.data;
+    const { date, title, description, color, clientId, completed } = parsedBody.data;
     const created = await Promise.resolve(
       storage.createEvento(
         fromApiEvento(
-          {
-            date,
-            title,
-            description: description ?? null,
-            color: color ?? null,
-            clientId: clientId ?? null,
-          },
+          { date, title, description: description ?? null, color: color ?? null, clientId: clientId ?? null, completed },
           { defaultNull: true }
         )
       )
@@ -933,11 +997,11 @@ app.put('/api/eventos/:id', async (req, res) => {
       return res.status(400).json({ error: extractValidationError(parsedBody.error) });
     }
 
-    const { date, title, description, color, clientId } = parsedBody.data;
+    const { date, title, description, color, clientId, completed } = parsedBody.data;
     const updated = await Promise.resolve(
       storage.updateEvento(
         id,
-        fromApiEvento({ date, title, description, color, clientId })
+        fromApiEvento({ date, title, description, color, clientId, completed })
       )
     );
 

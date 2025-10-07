@@ -385,6 +385,7 @@ function createEvento({
   descricao = null,
   cor = null,
   cliente_id = null,
+  completed = false,
 }) {
   if (!data || !titulo) {
     throw new Error('Campos "data" e "titulo" são obrigatórios.');
@@ -398,6 +399,7 @@ function createEvento({
     descricao,
     cor,
     cliente_id,
+    completed: Boolean(completed),
     created_at: timestamp,
     updated_at: timestamp,
   };
@@ -406,7 +408,7 @@ function createEvento({
   return { ...evento };
 }
 
-function updateEvento(id, { data, titulo, descricao, cor, cliente_id }) {
+function updateEvento(id, { data, titulo, descricao, cor, cliente_id, completed }) {
   const eventoId = Number(id);
   if (Number.isNaN(eventoId)) {
     return null;
@@ -422,6 +424,9 @@ function updateEvento(id, { data, titulo, descricao, cor, cliente_id }) {
   evento.descricao = descricao ?? evento.descricao;
   evento.cor = cor ?? evento.cor;
   evento.cliente_id = cliente_id === undefined ? evento.cliente_id : cliente_id;
+  if (completed !== undefined) {
+    evento.completed = Boolean(completed);
+  }
   evento.updated_at = new Date().toISOString();
 
   return { ...evento };

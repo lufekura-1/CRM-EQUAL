@@ -1112,7 +1112,16 @@
         aria-labelledby="event-details-title"
       >
         <div class="modal__header">
-          <h2 class="modal__title" id="event-details-title">Detalhes do evento</h2>
+          <h2 class="modal__title" id="event-details-title">
+            <span data-details="title-entity">Detalhes do evento</span>
+            <span class="modal__title-separator" aria-hidden="true">-</span>
+            <span
+              class="modal__title-status modal__title-status--pending"
+              data-details="status-label"
+            >
+              Pendente
+            </span>
+          </h2>
           <button
             class="modal__close"
             type="button"
@@ -1127,29 +1136,12 @@
         </div>
         <div class="modal__actions">
           <button
-            class="modal__action modal__action--edit"
+            class="modal__status-button"
             type="button"
-            data-action="edit"
-            aria-label="Editar evento"
-          >
-            ✎
-          </button>
-          <button
-            class="modal__action modal__action--delete"
-            type="button"
-            data-action="delete"
-            aria-label="Excluir evento"
-          >
-            🗑
-          </button>
-          <button
-            class="modal__action modal__action--contact"
-            type="button"
-            data-action="toggle-contact"
-            aria-label="Alternar status do contato"
+            data-action="toggle-status"
             hidden
           >
-            ✔
+            Marcar como Efetuado
           </button>
         </div>
       </div>
