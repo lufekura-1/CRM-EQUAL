@@ -1808,6 +1808,8 @@ let isSavingQuickSale = false;
 
     const toggle = target.closest('.client-contact__toggle');
     if (toggle) {
+      event.preventDefault();
+      event.stopPropagation();
       const article = toggle.closest('.client-contact');
       if (!article) {
         return;
@@ -1828,6 +1830,8 @@ let isSavingQuickSale = false;
 
     const statusButton = target.closest('.client-contact__status');
     if (statusButton instanceof HTMLButtonElement) {
+      event.preventDefault();
+      event.stopPropagation();
       handleContactStatusButton(statusButton);
     }
   }

@@ -106,7 +106,9 @@ eventDetailsCloseButton?.addEventListener('click', () => {
   closeEventDetailsModal();
 });
 
-eventDetailsToggleStatusButton?.addEventListener('click', () => {
+eventDetailsToggleStatusButton?.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
   handleToggleStatusFromModal();
 });
 
