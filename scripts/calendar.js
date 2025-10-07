@@ -259,11 +259,24 @@ function getEventChipLabel(event) {
   return event.title || 'Evento';
 }
 
-function createStatusDot(statusKey) {
+function createStatusDot(typeKey, statusKey) {
   const dot = document.createElement('span');
-  dot.className = `calendar__event-chip-status calendar__event-chip-status--${statusKey}`;
+  dot.className = 'calendar__event-chip-status';
+  dot.dataset.dotType = typeKey;
+  dot.dataset.dotStatus = statusKey;
   dot.setAttribute('aria-hidden', 'true');
   return dot;
+}
+
+function getEventChipType(event) {
+  const rawType = typeof event?.type === 'string' ? event.type.toLowerCase() : '';
+  if (rawType === 'contact') {
+    return 'contact';
+  }
+  if (rawType === 'folga' || rawType === 'folgas' || rawType === 'dayoff' || rawType === 'day-off') {
+    return 'dayoff';
+  }
+  return 'event';
 }
 
 function renderEventsForCell(cell, dateKey) {
@@ -284,7 +297,10 @@ function renderEventsForCell(cell, dateKey) {
     const status = typeof getEventStatus === 'function'
       ? getEventStatus(event)
       : { key: 'pending', label: 'Pendente' };
-    chip.classList.add(`calendar__event-chip--${status.key}`);
+    const chipType = getEventChipType(event);
+    const chipVariant = status.key === 'completed' ? 'completed' : 'pending';
+    chip.dataset.chipType = chipType;
+    chip.dataset.chipVariant = chipVariant;
     chip.dataset.eventStatus = status.key;
 
     const labelElement = document.createElement('span');
@@ -292,7 +308,7 @@ function renderEventsForCell(cell, dateKey) {
     labelElement.textContent = getEventChipLabel(event);
     chip.appendChild(labelElement);
 
-    chip.appendChild(createStatusDot(status.key));
+    chip.appendChild(createStatusDot(chipType, status.key));
 
     const accessibleLabel = `${labelElement.textContent} - ${status.label}`;
     chip.setAttribute('aria-label', accessibleLabel);
