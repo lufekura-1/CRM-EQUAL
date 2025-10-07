@@ -1337,7 +1337,10 @@ let isSavingQuickSale = false;
   }
 
   function handleQuickSaleOverlayClick(event) {
-    if (event.target === clientQuickSaleOverlay) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    if (!event.target.closest('.modal')) {
       closeQuickSaleModal();
     }
   }
@@ -2264,7 +2267,10 @@ let isSavingQuickSale = false;
     clientsAdvancedForm.requestSubmit();
   });
   clientsAdvancedOverlay?.addEventListener('click', (event) => {
-    if (event.target === clientsAdvancedOverlay) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    if (!event.target.closest('.modal')) {
       closeAdvancedSearchModalInternal();
     }
   });
@@ -2276,7 +2282,10 @@ let isSavingQuickSale = false;
     });
   });
   clientInterestsOverlay?.addEventListener('click', (event) => {
-    if (event.target === clientInterestsOverlay) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    if (!event.target.closest('.modal')) {
       closeClientInterestsModalInternal();
     }
   });

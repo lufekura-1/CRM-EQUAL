@@ -69,7 +69,10 @@ homeAddEventCardButton?.addEventListener('click', () => {
 
 if (addEventOverlay) {
   addEventOverlay.addEventListener('click', (event) => {
-    if (event.target === addEventOverlay) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    if (!event.target.closest('.modal')) {
       closeAddEventModal();
     }
   });
@@ -90,7 +93,10 @@ addEventForm?.addEventListener('submit', (event) => {
 
 if (eventDetailsOverlay) {
   eventDetailsOverlay.addEventListener('click', (event) => {
-    if (event.target === eventDetailsOverlay) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    if (!event.target.closest('.modal')) {
       closeEventDetailsModal();
     }
   });

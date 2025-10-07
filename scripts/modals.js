@@ -227,45 +227,45 @@ function renderEventDetailsView() {
 
   if (event.type === 'contact') {
     const clientName = event.clientName || 'Cliente não informado';
-    eventDetailsBody.appendChild(createDetailsRow('Nome do cliente', `Nome: ${clientName}`));
+    eventDetailsBody.appendChild(createDetailsRow('Nome do cliente', clientName));
 
     const phone = formatPhoneNumber(event.clientPhone);
-    eventDetailsBody.appendChild(createDetailsRow('Telefone do cliente', `Telefone: ${phone}`));
+    eventDetailsBody.appendChild(createDetailsRow('Telefone do cliente', phone));
 
     const monthsLabel = typeof formatPostSaleLabel === 'function'
       ? formatPostSaleLabel(event.contactMonths ?? event.monthsOffset)
       : '';
-    const purchaseLabel = monthsLabel ? `Data da compra - (${monthsLabel})` : 'Data da compra';
+    const purchaseLabel = 'Data da compra';
     const purchaseDate = event.purchaseDate ? formatShortDate(event.purchaseDate) : '';
     const purchaseValue = purchaseDate
-      ? `Data da compra: ${purchaseDate}${monthsLabel ? ` - ${monthsLabel}` : ''}`
-      : 'Data da compra: Não informada';
+      ? `${purchaseDate}${monthsLabel ? ` - ${monthsLabel}` : ''}`
+      : 'Não informada';
     eventDetailsBody.appendChild(
       createDetailsRow(purchaseLabel, purchaseValue, { isEmpty: !purchaseDate })
     );
 
     const purchaseParts = [];
     if (event.purchaseFrame) {
-      purchaseParts.push(`Armação: ${event.purchaseFrame}`);
+      purchaseParts.push(`Armação ${event.purchaseFrame}`);
     }
     if (event.purchaseLens) {
-      purchaseParts.push(`Lente: ${event.purchaseLens}`);
+      purchaseParts.push(`Lente ${event.purchaseLens}`);
     }
     const purchaseText = purchaseParts.length
-      ? purchaseParts.join('  ')
+      ? purchaseParts.join(' · ')
       : 'Informações não disponíveis';
     eventDetailsBody.appendChild(
-      createDetailsRow('Compra do cliente', `Compra: ${purchaseText}`, {
+      createDetailsRow('Compra do cliente', purchaseText, {
         isEmpty: !purchaseParts.length,
       })
     );
   } else {
     const title = event.title || 'Evento';
-    eventDetailsBody.appendChild(createDetailsRow('Título do evento', `Título: ${title}`));
+    eventDetailsBody.appendChild(createDetailsRow('Título do evento', title));
 
     if (event.clientName) {
       eventDetailsBody.appendChild(
-        createDetailsRow('Cliente relacionado', `Cliente: ${event.clientName}`)
+        createDetailsRow('Cliente relacionado', event.clientName)
       );
     }
   }

@@ -131,7 +131,10 @@ function initializeUserSelector() {
   });
 
   userSelectorOverlay.addEventListener('click', (event) => {
-    if (event.target === userSelectorOverlay) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    if (!event.target.closest('.modal')) {
       closeUserSelectorModal();
     }
   });
