@@ -7,6 +7,58 @@ function toggleBodyModalState() {
   }
 }
 
+function patchElement(element, { text, attributes = {}, dataset = {}, classList = {} } = {}) {
+  if (!(element instanceof Element)) {
+    return element;
+  }
+
+  if (text !== undefined && element.textContent !== text) {
+    element.textContent = text;
+  }
+
+  Object.entries(attributes).forEach(([name, value]) => {
+    if (value === null || value === undefined || value === false) {
+      element.removeAttribute(name);
+    } else {
+      const stringValue = String(value);
+      if (element.getAttribute(name) !== stringValue) {
+        element.setAttribute(name, stringValue);
+      }
+    }
+  });
+
+  Object.entries(dataset).forEach(([name, value]) => {
+    if (value === null || value === undefined) {
+      delete element.dataset[name];
+    } else {
+      const stringValue = String(value);
+      if (element.dataset[name] !== stringValue) {
+        element.dataset[name] = stringValue;
+      }
+    }
+  });
+
+  if (Array.isArray(classList.add)) {
+    classList.add.forEach((className) => {
+      element.classList.add(className);
+    });
+  }
+
+  if (Array.isArray(classList.remove)) {
+    classList.remove.forEach((className) => {
+      element.classList.remove(className);
+    });
+  }
+
+  if (classList.toggle && typeof classList.toggle === 'object') {
+    Object.entries(classList.toggle).forEach(([className, enabled]) => {
+      element.classList.toggle(className, Boolean(enabled));
+    });
+  }
+
+  return element;
+}
+
 function openOverlay(overlay) {
   if (!overlay) {
     return;
@@ -193,25 +245,91 @@ function closeEventDetailsModal() {
   currentDetailEvent = null;
 }
 
-function createDetailsRow(label, value, { isEmpty = false } = {}) {
-  const container = document.createElement('div');
-  container.className = 'modal__details-row';
+const EVENT_DETAILS_ROW_KEYS = [
+  'scheduledDate',
+  'clientName',
+  'clientPhone',
+  'purchaseDate',
+  'purchaseInfo',
+  'eventTitle',
+  'relatedClient',
+  'observation',
+];
 
-  const labelElement = document.createElement('span');
-  labelElement.className = 'modal__details-label';
-  labelElement.textContent = `${label}:`;
-  container.appendChild(labelElement);
+const eventDetailsRows = new Map();
 
-  const valueElement = document.createElement('p');
-  valueElement.className = 'modal__details-value';
-  valueElement.textContent = value;
-
-  if (isEmpty) {
-    valueElement.classList.add('modal__details-value--empty');
+function ensureEventDetailsRows() {
+  if (!eventDetailsBody || eventDetailsRows.size > 0) {
+    return;
   }
 
-  container.appendChild(valueElement);
-  return container;
+  EVENT_DETAILS_ROW_KEYS.forEach((key) => {
+    const container = document.createElement('div');
+    container.className = 'modal__details-row';
+    container.dataset.detailKey = key;
+
+    const labelElement = document.createElement('span');
+    labelElement.className = 'modal__details-label';
+    container.appendChild(labelElement);
+
+    const valueElement = document.createElement('p');
+    valueElement.className = 'modal__details-value';
+    container.appendChild(valueElement);
+
+    eventDetailsRows.set(key, {
+      container,
+      labelElement,
+      valueElement,
+    });
+
+    eventDetailsBody.appendChild(container);
+  });
+}
+
+function setDetailRowVisibility(row, visible) {
+  if (!row) {
+    return;
+  }
+
+  patchElement(row.container, {
+    attributes: {
+      hidden: visible ? null : 'hidden',
+    },
+    dataset: {
+      visible: visible ? 'true' : 'false',
+    },
+  });
+}
+
+function updateDetailRow(key, { label, value = '', isEmpty = false, visible = true } = {}) {
+  ensureEventDetailsRows();
+
+  const row = eventDetailsRows.get(key);
+  if (!row) {
+    return;
+  }
+
+  if (label !== undefined) {
+    patchElement(row.labelElement, { text: `${label}:` });
+  }
+
+  patchElement(row.valueElement, {
+    text: value,
+    classList: {
+      toggle: {
+        'modal__details-value--empty': Boolean(isEmpty),
+      },
+    },
+  });
+
+  setDetailRowVisibility(row, visible);
+}
+
+function resetDetailRowsVisibility() {
+  ensureEventDetailsRows();
+  eventDetailsRows.forEach((row) => {
+    setDetailRowVisibility(row, false);
+  });
 }
 
 function formatShortDate(dateKey) {
@@ -255,29 +373,56 @@ function renderEventDetailsView() {
     : { key: 'pending', label: 'Pendente' };
 
   if (eventDetailsTitleEntity) {
-    eventDetailsTitleEntity.textContent =
-      event.type === 'contact' ? 'Detalhes do Contato' : 'Detalhes do Evento';
+    const entityText = event.type === 'contact' ? 'Detalhes do Contato' : 'Detalhes do Evento';
+    patchElement(eventDetailsTitleEntity, { text: entityText });
   }
 
   if (eventDetailsTitleStatus) {
-    eventDetailsTitleStatus.textContent = status.label;
-    eventDetailsTitleStatus.className = `modal__title-status modal__title-status--${status.key}`;
+    const statusModifierClass = `modal__title-status--${status.key}`;
+    const statusClassesToRemove = Array.from(eventDetailsTitleStatus.classList).filter((className) =>
+      className.startsWith('modal__title-status--') && className !== statusModifierClass
+    );
+    patchElement(eventDetailsTitleStatus, {
+      text: status.label,
+      classList: {
+        add: ['modal__title-status', statusModifierClass],
+        remove: statusClassesToRemove,
+      },
+      dataset: {
+        statusKey: status.key,
+      },
+    });
   }
 
-  eventDetailsBody.innerHTML = '';
+  resetDetailRowsVisibility();
 
   const scheduledDate = event.date ? formatShortDate(event.date) : '';
   if (scheduledDate) {
     const dateLabel = event.type === 'contact' ? 'Data do contato' : 'Data do evento';
-    eventDetailsBody.appendChild(createDetailsRow(dateLabel, scheduledDate));
+    updateDetailRow('scheduledDate', {
+      label: dateLabel,
+      value: scheduledDate,
+      isEmpty: false,
+      visible: true,
+    });
   }
 
   if (event.type === 'contact') {
     const clientName = event.clientName || 'Cliente não informado';
-    eventDetailsBody.appendChild(createDetailsRow('Nome do cliente', clientName));
+    updateDetailRow('clientName', {
+      label: 'Nome do cliente',
+      value: clientName,
+      isEmpty: !event.clientName,
+      visible: true,
+    });
 
     const phone = formatPhoneNumber(event.clientPhone);
-    eventDetailsBody.appendChild(createDetailsRow('Telefone do cliente', phone));
+    updateDetailRow('clientPhone', {
+      label: 'Telefone do cliente',
+      value: phone,
+      isEmpty: phone === 'Não informado',
+      visible: true,
+    });
 
     const monthsLabel = typeof formatPostSaleLabel === 'function'
       ? formatPostSaleLabel(event.contactMonths ?? event.monthsOffset)
@@ -287,9 +432,12 @@ function renderEventDetailsView() {
     const purchaseValue = purchaseDate
       ? `${purchaseDate}${monthsLabel ? ` - ${monthsLabel}` : ''}`
       : 'Não informada';
-    eventDetailsBody.appendChild(
-      createDetailsRow(purchaseLabel, purchaseValue, { isEmpty: !purchaseDate })
-    );
+    updateDetailRow('purchaseDate', {
+      label: purchaseLabel,
+      value: purchaseValue,
+      isEmpty: !purchaseDate,
+      visible: true,
+    });
 
     const purchaseParts = [];
     if (event.purchaseFrame) {
@@ -301,19 +449,28 @@ function renderEventDetailsView() {
     const purchaseText = purchaseParts.length
       ? purchaseParts.join(' · ')
       : 'Informações não disponíveis';
-    eventDetailsBody.appendChild(
-      createDetailsRow('Compra do cliente', purchaseText, {
-        isEmpty: !purchaseParts.length,
-      })
-    );
+    updateDetailRow('purchaseInfo', {
+      label: 'Compra do cliente',
+      value: purchaseText,
+      isEmpty: !purchaseParts.length,
+      visible: true,
+    });
   } else {
     const title = event.title || 'Evento';
-    eventDetailsBody.appendChild(createDetailsRow('Título do evento', title));
+    updateDetailRow('eventTitle', {
+      label: 'Título do evento',
+      value: title,
+      isEmpty: !event.title,
+      visible: true,
+    });
 
     if (event.clientName) {
-      eventDetailsBody.appendChild(
-        createDetailsRow('Cliente relacionado', event.clientName)
-      );
+      updateDetailRow('relatedClient', {
+        label: 'Cliente relacionado',
+        value: event.clientName,
+        isEmpty: false,
+        visible: true,
+      });
     }
   }
 
@@ -323,28 +480,47 @@ function renderEventDetailsView() {
   const observationText = hasObservation
     ? String(observationSource)
     : 'Sem observações registradas.';
-  eventDetailsBody.appendChild(
-    createDetailsRow('Observação', observationText, { isEmpty: !hasObservation })
-  );
+  updateDetailRow('observation', {
+    label: 'Observação',
+    value: observationText,
+    isEmpty: !hasObservation,
+    visible: true,
+  });
 
   if (eventDetailsToggleStatusButton) {
     const isContact = event.type === 'contact';
     const hasIdentifier = isContact ? Boolean(event.contactId) : Boolean(event.id);
     if (!hasIdentifier) {
       eventDetailsToggleStatusButton.hidden = true;
-      eventDetailsToggleStatusButton.dataset.contactId = '';
-      eventDetailsToggleStatusButton.dataset.eventId = '';
-      eventDetailsToggleStatusButton.dataset.entityType = '';
-      eventDetailsToggleStatusButton.dataset.statusKey = status.key;
+      eventDetailsToggleStatusButton.disabled = false;
+      patchElement(eventDetailsToggleStatusButton, {
+        dataset: {
+          contactId: '',
+          eventId: '',
+          entityType: '',
+          statusKey: status.key,
+        },
+        attributes: {
+          hidden: 'hidden',
+        },
+      });
     } else {
+      const buttonText =
+        status.key === 'completed' ? 'Marcar como Pendente' : 'Marcar como Efetuado';
       eventDetailsToggleStatusButton.hidden = false;
       eventDetailsToggleStatusButton.disabled = false;
-      eventDetailsToggleStatusButton.textContent =
-        status.key === 'completed' ? 'Marcar como Pendente' : 'Marcar como Efetuado';
-      eventDetailsToggleStatusButton.dataset.entityType = isContact ? 'contact' : 'event';
-      eventDetailsToggleStatusButton.dataset.contactId = isContact ? String(event.contactId) : '';
-      eventDetailsToggleStatusButton.dataset.eventId = String(event.id ?? '');
-      eventDetailsToggleStatusButton.dataset.statusKey = status.key;
+      patchElement(eventDetailsToggleStatusButton, {
+        text: buttonText,
+        dataset: {
+          entityType: isContact ? 'contact' : 'event',
+          contactId: isContact ? String(event.contactId) : '',
+          eventId: String(event.id ?? ''),
+          statusKey: status.key,
+        },
+        attributes: {
+          hidden: null,
+        },
+      });
     }
   }
 }
