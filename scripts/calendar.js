@@ -168,6 +168,55 @@ function isAnyModalVisible() {
   return Boolean(document.querySelector('.modal-overlay.is-visible'));
 }
 
+function captureModalOverlayState() {
+  if (typeof document === 'undefined') {
+    return [];
+  }
+
+  return Array.from(document.querySelectorAll('.modal-overlay')).map((overlay) => ({
+    overlay,
+    parent: overlay.parentNode,
+    nextSibling: overlay.nextSibling,
+  }));
+}
+
+function restoreModalOverlayState(state) {
+  if (!Array.isArray(state) || typeof document === 'undefined') {
+    return;
+  }
+
+  state.forEach(({ overlay, parent, nextSibling }) => {
+    if (!(overlay instanceof HTMLElement)) {
+      return;
+    }
+
+    if (overlay.isConnected) {
+      return;
+    }
+
+    const targetParent = parent && parent.isConnected ? parent : document.body;
+    if (!targetParent) {
+      return;
+    }
+
+    if (overlay.dataset?.modal) {
+      Array.from(
+        document.querySelectorAll(`.modal-overlay[data-modal="${overlay.dataset.modal}"]`),
+      ).forEach((node) => {
+        if (node !== overlay && node instanceof HTMLElement) {
+          node.remove();
+        }
+      });
+    }
+
+    if (nextSibling && nextSibling.parentNode === targetParent) {
+      targetParent.insertBefore(overlay, nextSibling);
+    } else {
+      targetParent.appendChild(overlay);
+    }
+  });
+}
+
 function refreshVisibleCalendarCells() {
   if (!datesContainer) {
     return;
@@ -647,51 +696,57 @@ async function performFullRefresh(options = {}) {
 }
 
 async function refreshCalendar(options = {}) {
-  if (!datesContainer) {
-    return;
-  }
+  const overlayState = captureModalOverlayState();
 
-  const { allowModalRebuild = false } = options;
-  const modalVisible = isAnyModalVisible();
-
-  if (options.forceFull) {
-    if (modalVisible && !allowModalRebuild) {
-      return;
-    }
-    await performFullRefresh(options);
-    return;
-  }
-
-  if (!datesContainer.children.length) {
-    if (modalVisible && !allowModalRebuild) {
-      return;
-    }
-    await performFullRefresh(options);
-    return;
-  }
-
-  const hint = getPendingEventHint();
-  if (hint) {
-    const updated = await refreshSingleEvent(hint);
-    if (updated) {
+  try {
+    if (!datesContainer) {
       return;
     }
 
-    if (hint.event) {
-      const applied = applyEventUpdate(hint.event, {
-        previousDateKey: hint.previousDateKey || null,
-      });
-      if (applied) {
+    const { allowModalRebuild = false } = options;
+    const modalVisible = isAnyModalVisible();
+
+    if (options.forceFull) {
+      if (modalVisible && !allowModalRebuild) {
         return;
       }
+      await performFullRefresh(options);
+      return;
     }
-  }
 
-  if (modalVisible && !allowModalRebuild) {
-    return;
-  }
+    if (!datesContainer.children.length) {
+      if (modalVisible && !allowModalRebuild) {
+        return;
+      }
+      await performFullRefresh(options);
+      return;
+    }
 
-  await performFullRefresh(options);
+    const hint = getPendingEventHint();
+    if (hint) {
+      const updated = await refreshSingleEvent(hint);
+      if (updated) {
+        return;
+      }
+
+      if (hint.event) {
+        const applied = applyEventUpdate(hint.event, {
+          previousDateKey: hint.previousDateKey || null,
+        });
+        if (applied) {
+          return;
+        }
+      }
+    }
+
+    if (modalVisible && !allowModalRebuild) {
+      return;
+    }
+
+    await performFullRefresh(options);
+  } finally {
+    restoreModalOverlayState(overlayState);
+  }
 }
 
 function createDateCell(
@@ -1009,24 +1064,30 @@ function updateCalendarViewButtons() {
 }
 
 function renderCalendarView({ rebuild = true } = {}) {
-  updateCalendarHeader();
+  const overlayState = captureModalOverlayState();
 
-  if (!datesContainer) {
-    return;
-  }
+  try {
+    updateCalendarHeader();
 
-  if (rebuild) {
-    if (currentCalendarView === 'week') {
-      renderWeeklyCalendar();
-    } else {
-      renderMonthlyCalendar();
+    if (!datesContainer) {
+      return;
     }
-    lastRenderedViewKey = getCurrentViewKey();
+
+    if (rebuild) {
+      if (currentCalendarView === 'week') {
+        renderWeeklyCalendar();
+      } else {
+        renderMonthlyCalendar();
+      }
+      lastRenderedViewKey = getCurrentViewKey();
+    }
+
+    refreshVisibleCalendarCells();
+
+    updateCalendarViewButtons();
+  } finally {
+    restoreModalOverlayState(overlayState);
   }
-
-  refreshVisibleCalendarCells();
-
-  updateCalendarViewButtons();
 }
 
 function changeCalendarPeriod(offset) {

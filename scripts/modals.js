@@ -78,13 +78,100 @@ function normalizeDateKey(value) {
   return shortValue;
 }
 
+const overlayPersistenceObservers = new WeakMap();
+
+function restoreOverlayPosition(overlay, hint = {}) {
+  if (!(overlay instanceof HTMLElement)) {
+    return;
+  }
+
+  const body = document.body;
+  if (!body) {
+    return;
+  }
+
+  const { nextSibling, parentNode } = hint;
+  const targetParent = parentNode && parentNode.isConnected ? parentNode : body;
+
+  if (overlay.dataset?.modal) {
+    const duplicates = Array.from(
+      document.querySelectorAll(`.modal-overlay[data-modal="${overlay.dataset.modal}"]`),
+    ).filter((node) => node !== overlay);
+    duplicates.forEach((node) => {
+      if (node instanceof HTMLElement) {
+        node.remove();
+      }
+    });
+  }
+
+  if (nextSibling && nextSibling.parentNode === targetParent) {
+    targetParent.insertBefore(overlay, nextSibling);
+    return;
+  }
+
+  targetParent.appendChild(overlay);
+}
+
+function watchOverlayPersistence(overlay) {
+  if (!(overlay instanceof HTMLElement)) {
+    return;
+  }
+
+  if (overlayPersistenceObservers.has(overlay)) {
+    return;
+  }
+
+  const hint = {
+    nextSibling: overlay.nextSibling,
+    parentNode: overlay.parentNode,
+  };
+
+  const ensurePresence = () => {
+    if (!overlay.isConnected) {
+      restoreOverlayPosition(overlay, hint);
+    }
+  };
+
+  const observer = new MutationObserver((mutations) => {
+    let shouldRestore = false;
+
+    mutations.forEach((mutation) => {
+      if (shouldRestore) {
+        return;
+      }
+      if (Array.from(mutation.removedNodes).includes(overlay)) {
+        shouldRestore = true;
+      }
+    });
+
+    if (shouldRestore) {
+      ensurePresence();
+    }
+  });
+
+  const observeBody = () => {
+    if (!document.body) {
+      window.requestAnimationFrame(observeBody);
+      return;
+    }
+    observer.observe(document.body, { childList: true });
+  };
+
+  observeBody();
+  ensurePresence();
+  overlayPersistenceObservers.set(overlay, { observer, ensurePresence, hint });
+}
+
 function ensureOverlayInDocument(overlay) {
   if (!(overlay instanceof HTMLElement)) {
     return;
   }
 
+  watchOverlayPersistence(overlay);
+
   if (!overlay.isConnected && document.body) {
-    document.body.appendChild(overlay);
+    const persistence = overlayPersistenceObservers.get(overlay);
+    restoreOverlayPosition(overlay, persistence?.hint);
   }
 }
 
@@ -724,5 +811,9 @@ function initializeModalInteractions() {
   });
   eventDetailsToggleStatusButton?.addEventListener('click', handleEventDetailsToggleClick);
 }
+
+Array.from(document.querySelectorAll('.modal-overlay')).forEach((overlay) => {
+  watchOverlayPersistence(overlay);
+});
 
 initializeModalInteractions();
