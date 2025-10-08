@@ -64,6 +64,20 @@ function closeAddEventModal() {
   editingEvent = null;
   editingEventOriginalDateKey = null;
 }
+
+function handleAddEventOverlayClick(event) {
+  if (!(event.target instanceof Element)) {
+    return;
+  }
+  if (!event.target.closest('.modal')) {
+    closeAddEventModal();
+  }
+}
+
+function handleAddEventFormSubmit(event) {
+  event.preventDefault();
+  handleSaveEvent();
+}
 let isSavingEvent = false;
 
 async function handleSaveEvent() {
@@ -313,6 +327,21 @@ function openEventDetailsModal(event) {
   openOverlay(eventDetailsOverlay);
 }
 
+function handleEventDetailsOverlayClick(event) {
+  if (!(event.target instanceof Element)) {
+    return;
+  }
+  if (!event.target.closest('.modal')) {
+    closeEventDetailsModal();
+  }
+}
+
+function handleEventDetailsToggleClick(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  handleToggleStatusFromModal();
+}
+
 async function handleToggleStatusFromModal() {
   if (!currentDetailEvent) {
     return;
@@ -396,3 +425,23 @@ async function handleToggleStatusFromModal() {
     }
   }
 }
+
+function initializeModalInteractions() {
+  addEventOverlay?.addEventListener('click', handleAddEventOverlayClick);
+  addEventCloseButton?.addEventListener('click', () => {
+    closeAddEventModal();
+  });
+  addEventSaveButton?.addEventListener('click', (event) => {
+    event.preventDefault();
+    handleSaveEvent();
+  });
+  addEventForm?.addEventListener('submit', handleAddEventFormSubmit);
+
+  eventDetailsOverlay?.addEventListener('click', handleEventDetailsOverlayClick);
+  eventDetailsCloseButton?.addEventListener('click', () => {
+    closeEventDetailsModal();
+  });
+  eventDetailsToggleStatusButton?.addEventListener('click', handleEventDetailsToggleClick);
+}
+
+initializeModalInteractions();
