@@ -1671,6 +1671,15 @@ let isSavingQuickSale = false;
     submitQuickSaleForm();
   }
 
+  function clearElementChildren(element) {
+    if (!(element instanceof Element)) {
+      return;
+    }
+    while (element.lastChild) {
+      element.removeChild(element.lastChild);
+    }
+  }
+
   function ensureAdvancedSelectOptions() {
     if (!clientsAdvancedSelects) {
       return;
@@ -1684,7 +1693,7 @@ let isSavingQuickSale = false;
         if (select.options.length > USER_TYPE_VALUES.length) {
           return;
         }
-        select.innerHTML = '';
+        clearElementChildren(select);
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         defaultOption.textContent = 'Todos';
@@ -1699,7 +1708,7 @@ let isSavingQuickSale = false;
         if (select.options.length > CLIENT_STATE_VALUES.length) {
           return;
         }
-        select.innerHTML = '';
+        clearElementChildren(select);
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         defaultOption.textContent = 'Todos';
@@ -1722,7 +1731,7 @@ let isSavingQuickSale = false;
     if (existing >= CLIENT_INTEREST_OPTIONS.length) {
       return;
     }
-    container.innerHTML = '';
+    clearElementChildren(container);
     CLIENT_INTEREST_OPTIONS.forEach((interest) => {
       const label = document.createElement('label');
       label.className = 'modal__checkbox';
