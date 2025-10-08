@@ -59,6 +59,25 @@ function patchElement(element, { text, attributes = {}, dataset = {}, classList 
   return element;
 }
 
+function normalizeDateKey(value) {
+  if (!value) {
+    return null;
+  }
+
+  const stringValue = String(value);
+  const shortValue = stringValue.slice(0, 10);
+  if (shortValue.length === 10 && shortValue.includes('-')) {
+    return shortValue;
+  }
+
+  const parsed = new Date(stringValue);
+  if (!Number.isNaN(parsed.getTime())) {
+    return typeof formatDateKey === 'function' ? formatDateKey(parsed) : parsed.toISOString().slice(0, 10);
+  }
+
+  return shortValue;
+}
+
 function ensureOverlayInDocument(overlay) {
   if (!(overlay instanceof HTMLElement)) {
     return;
@@ -200,6 +219,8 @@ async function handleSaveEvent() {
     ? 'Erro ao atualizar o evento.'
     : 'Erro ao criar o evento.';
 
+  const previousDateKey = normalizeDateKey(editingEventOriginalDateKey);
+
   try {
     isSavingEvent = true;
     if (addEventSaveButton) {
@@ -211,20 +232,16 @@ async function handleSaveEvent() {
       const updatedEvent = response?.evento || response?.event || response;
       if (updatedEvent && typeof updatedEvent === 'object') {
         editingEvent = { ...editingEvent, ...updatedEvent };
-        editingEventOriginalDateKey = updatedEvent.date || updatedEvent.rawDate || payload.date;
       } else {
         editingEvent = { ...editingEvent, ...payload };
-        editingEventOriginalDateKey = payload.date;
       }
     } else {
       const response = await window.api.createEvent(payload);
       const createdEvent = response?.evento || response?.event || response;
       if (createdEvent && typeof createdEvent === 'object') {
         editingEvent = createdEvent;
-        editingEventOriginalDateKey = createdEvent.date || createdEvent.rawDate || payload.date;
       } else {
         editingEvent = { ...payload };
-        editingEventOriginalDateKey = payload.date;
       }
     }
 
@@ -236,12 +253,25 @@ async function handleSaveEvent() {
       window.showInlineFeedback(addEventForm, successMessage, { type: 'success' });
     }
 
-    if (editingEvent && typeof window.updateCalendarEvent === 'function') {
-      try {
-        window.updateCalendarEvent(editingEvent);
-      } catch (updateError) {
-        console.error('[modals] Falha ao sincronizar evento com o calendário.', updateError);
+    if (editingEvent) {
+      const nextDateKey = normalizeDateKey(
+        editingEvent?.date || editingEvent?.rawDate || payload.date || null,
+      );
+
+      if (typeof window.updateCalendarEvent === 'function') {
+        const previousKeyForUpdate =
+          previousDateKey && previousDateKey !== nextDateKey ? previousDateKey : null;
+
+        try {
+          window.updateCalendarEvent(editingEvent, {
+            previousDateKey: previousKeyForUpdate,
+          });
+        } catch (updateError) {
+          console.error('[modals] Falha ao sincronizar evento com o calendário.', updateError);
+        }
       }
+
+      editingEventOriginalDateKey = nextDateKey || previousDateKey || null;
     }
 
   } catch (error) {
@@ -648,7 +678,10 @@ async function handleToggleStatusFromModal() {
     }
 
     if (!isContact && typeof window.updateCalendarEvent === 'function') {
-      window.updateCalendarEvent(currentDetailEvent);
+      const dateKey = normalizeDateKey(currentDetailEvent?.date || currentDetailEvent?.rawDate || null);
+      window.updateCalendarEvent(currentDetailEvent, {
+        previousDateKey: dateKey,
+      });
     }
   } catch (error) {
     const message = window.api?.getErrorMessage

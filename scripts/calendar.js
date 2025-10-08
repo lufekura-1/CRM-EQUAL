@@ -164,6 +164,10 @@ function updateCalendarHeader() {
   patchElement(monthLabel, { text: label });
 }
 
+function isAnyModalVisible() {
+  return Boolean(document.querySelector('.modal-overlay.is-visible'));
+}
+
 function refreshVisibleCalendarCells() {
   if (!datesContainer) {
     return;
@@ -431,6 +435,7 @@ function getPendingEventHint() {
       kind: 'event',
       id: String(editingId),
       event: editingEvent,
+      previousDateKey: editingEventOriginalDateKey || null,
     };
   }
 
@@ -442,6 +447,7 @@ function getPendingEventHint() {
         kind: 'event',
         id: String(detailId),
         event: currentDetailEvent,
+        previousDateKey: currentDetailEvent?.date ? String(currentDetailEvent.date).slice(0, 10) : null,
       };
     }
   }
@@ -454,6 +460,7 @@ function getPendingEventHint() {
         kind: 'event',
         id: String(state.currentEventId),
         event: findEventInStore(state.currentEventId)?.event ?? null,
+        previousDateKey: null,
       };
     }
   }
@@ -461,7 +468,7 @@ function getPendingEventHint() {
   return null;
 }
 
-function applyEventUpdate(event) {
+function applyEventUpdate(event, { previousDateKey = null } = {}) {
   const normalized = normalizeEventData(event);
   if (!normalized) {
     return false;
@@ -482,6 +489,30 @@ function applyEventUpdate(event) {
     }
     affectedKeys.add(existing.dateKey);
     updated = true;
+  } else if (previousDateKey) {
+    const fallbackList = events[previousDateKey];
+    if (Array.isArray(fallbackList)) {
+      const fallbackIndex = fallbackList.findIndex((item) => {
+        if (String(item.id ?? '') === String(eventId)) {
+          return true;
+        }
+        if (normalized.contactId != null) {
+          const contactMatch = String(item.contactId ?? '') === String(normalized.contactId ?? '');
+          if (contactMatch) {
+            return true;
+          }
+        }
+        return false;
+      });
+      if (fallbackIndex >= 0) {
+        fallbackList.splice(fallbackIndex, 1);
+        if (fallbackList.length === 0) {
+          delete events[previousDateKey];
+        }
+        affectedKeys.add(previousDateKey);
+        updated = true;
+      }
+    }
   }
 
   const range = getCalendarRange();
@@ -508,13 +539,13 @@ function applyEventUpdate(event) {
   return updated;
 }
 
-function synchronizeCalendarEvent(eventLike) {
+function synchronizeCalendarEvent(eventLike, options = {}) {
   const normalized = normalizeEventData(eventLike);
   if (!normalized) {
     return false;
   }
 
-  return applyEventUpdate(normalized);
+  return applyEventUpdate(normalized, options);
 }
 
 async function refreshSingleEvent(hint) {
@@ -548,7 +579,7 @@ async function refreshSingleEvent(hint) {
     return false;
   }
 
-  applyEventUpdate(updatedEvent);
+  applyEventUpdate(updatedEvent, { previousDateKey: hint.previousDateKey || null });
   return true;
 }
 
@@ -620,12 +651,21 @@ async function refreshCalendar(options = {}) {
     return;
   }
 
+  const { allowModalRebuild = false } = options;
+  const modalVisible = isAnyModalVisible();
+
   if (options.forceFull) {
+    if (modalVisible && !allowModalRebuild) {
+      return;
+    }
     await performFullRefresh(options);
     return;
   }
 
   if (!datesContainer.children.length) {
+    if (modalVisible && !allowModalRebuild) {
+      return;
+    }
     await performFullRefresh(options);
     return;
   }
@@ -636,6 +676,19 @@ async function refreshCalendar(options = {}) {
     if (updated) {
       return;
     }
+
+    if (hint.event) {
+      const applied = applyEventUpdate(hint.event, {
+        previousDateKey: hint.previousDateKey || null,
+      });
+      if (applied) {
+        return;
+      }
+    }
+  }
+
+  if (modalVisible && !allowModalRebuild) {
+    return;
   }
 
   await performFullRefresh(options);
@@ -982,7 +1035,7 @@ function changeCalendarPeriod(offset) {
   } else {
     currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset, 1);
   }
-  refreshCalendar({ forceFull: true });
+  refreshCalendar({ forceFull: true, allowModalRebuild: true });
 }
 
 function setCalendarView(view) {
@@ -1003,7 +1056,7 @@ function setCalendarView(view) {
     currentCalendarDate = new Date(today.getFullYear(), today.getMonth(), 1);
   }
 
-  refreshCalendar({ forceFull: true });
+  refreshCalendar({ forceFull: true, allowModalRebuild: true });
 }
 
 window.refreshCalendar = refreshCalendar;
