@@ -159,9 +159,25 @@
     };
 
     async function tryRequest(baseUrl) {
+      const requestUrl = buildUrl(path, baseUrl);
+      let parsedBody = null;
+      if (hasBody) {
+        try {
+          parsedBody = JSON.parse(body);
+        } catch (parseError) {
+          parsedBody = body;
+        }
+      }
+
+      console.log('[api.request] Enviando requisição.', {
+        url: requestUrl,
+        method: fetchOptions.method || 'GET',
+        body: parsedBody,
+      });
+
       let response;
       try {
-        response = await fetch(buildUrl(path, baseUrl), fetchOptions);
+        response = await fetch(requestUrl, fetchOptions);
       } catch (networkError) {
         throw createNetworkError(baseUrl, networkError);
       }
@@ -169,6 +185,13 @@
       const contentType = response.headers.get('content-type') || '';
       const isJson = contentType.includes('application/json');
       const data = isJson ? await response.json().catch(() => null) : null;
+
+      console.log('[api.request] Resposta recebida.', {
+        url: requestUrl,
+        method: fetchOptions.method || 'GET',
+        status: response.status,
+        ok: response.ok,
+      });
 
       if (!response.ok) {
         const message = data?.error || data?.message || `Erro ao comunicar com o servidor (${response.status}).`;
@@ -424,7 +447,7 @@
     async updateEvent(id, payload) {
       const body = JSON.stringify(normalizeEventPayload(payload));
       return request(`/api/eventos/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
+        method: 'PUT',
         body,
       });
     },

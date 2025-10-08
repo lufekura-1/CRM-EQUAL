@@ -1657,11 +1657,17 @@ let isSavingQuickSale = false;
 
   async function handleQuickSaleSubmit(event) {
     event.preventDefault();
+    if (event && typeof event.stopPropagation === 'function') {
+      event.stopPropagation();
+    }
     await submitQuickSaleForm();
   }
 
   function handleQuickSaleSaveClick(event) {
     event.preventDefault();
+    if (event && typeof event.stopPropagation === 'function') {
+      event.stopPropagation();
+    }
     submitQuickSaleForm();
   }
 
@@ -2417,6 +2423,9 @@ let isSavingQuickSale = false;
 
   async function handleClientFormSubmit(event) {
     event.preventDefault();
+    if (event && typeof event.stopPropagation === 'function') {
+      event.stopPropagation();
+    }
     if (isSavingClient) {
       return;
     }
@@ -2650,6 +2659,9 @@ let isSavingQuickSale = false;
 
   function handleAdvancedFormSubmit(event) {
     event.preventDefault();
+    if (event && typeof event.stopPropagation === 'function') {
+      event.stopPropagation();
+    }
     if (!clientsAdvancedForm) {
       return;
     }
@@ -2728,6 +2740,9 @@ let isSavingQuickSale = false;
 
   function handleClientInterestsSubmit(event) {
     event.preventDefault();
+    if (event && typeof event.stopPropagation === 'function') {
+      event.stopPropagation();
+    }
     if (typeof window.clearInlineFeedback === 'function') {
       window.clearInlineFeedback(clientInterestsForm);
     }

@@ -408,12 +408,13 @@ function getPendingEventHint() {
 function applyEventUpdate(event) {
   const normalized = normalizeEventData(event);
   if (!normalized) {
-    return;
+    return false;
   }
 
   const eventId = normalized.id;
   const existing = findEventInStore(eventId);
   const affectedKeys = new Set();
+  let updated = false;
 
   if (existing && existing.dateKey) {
     const list = events[existing.dateKey];
@@ -424,6 +425,7 @@ function applyEventUpdate(event) {
       }
     }
     affectedKeys.add(existing.dateKey);
+    updated = true;
   }
 
   const range = getCalendarRange();
@@ -437,13 +439,26 @@ function applyEventUpdate(event) {
     }
     sortEventsForDate(list);
     affectedKeys.add(normalized.date);
+    updated = true;
   }
 
   affectedKeys.forEach((key) => {
     if (key) {
       renderCalendarCell(key);
+      updated = true;
     }
   });
+
+  return updated;
+}
+
+function synchronizeCalendarEvent(eventLike) {
+  const normalized = normalizeEventData(eventLike);
+  if (!normalized) {
+    return false;
+  }
+
+  return applyEventUpdate(normalized);
 }
 
 async function refreshSingleEvent(hint) {
@@ -927,6 +942,7 @@ function setCalendarView(view) {
 }
 
 window.refreshCalendar = refreshCalendar;
+window.updateCalendarEvent = synchronizeCalendarEvent;
 
 function updateCalendarContactEvent({ contact, client, purchase } = {}) {
   if (!contact || !contact.id) {

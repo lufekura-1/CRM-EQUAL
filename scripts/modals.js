@@ -135,6 +135,7 @@ function handleAddEventOverlayClick(event) {
 
 function handleAddEventFormSubmit(event) {
   event.preventDefault();
+  event.stopPropagation();
   handleSaveEvent();
 }
 let isSavingEvent = false;
@@ -215,7 +216,18 @@ async function handleSaveEvent() {
       window.showInlineFeedback(addEventForm, successMessage, { type: 'success' });
     }
 
-    await refreshCalendar({ showLoading: false });
+    let calendarUpdated = false;
+    if (editingEvent && typeof window.updateCalendarEvent === 'function') {
+      try {
+        calendarUpdated = Boolean(window.updateCalendarEvent(editingEvent));
+      } catch (updateError) {
+        console.error('[modals] Falha ao sincronizar evento com o calendário.', updateError);
+      }
+    }
+
+    if (!calendarUpdated && typeof window.refreshCalendar === 'function') {
+      window.refreshCalendar({ showLoading: false });
+    }
   } catch (error) {
     const message = window.api?.getErrorMessage(error, errorMessage);
     if (typeof window.showToast === 'function') {
@@ -643,6 +655,7 @@ function initializeModalInteractions() {
   });
   addEventSaveButton?.addEventListener('click', (event) => {
     event.preventDefault();
+    event.stopPropagation();
     handleSaveEvent();
   });
   addEventForm?.addEventListener('submit', handleAddEventFormSubmit);
