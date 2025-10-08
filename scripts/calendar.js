@@ -272,6 +272,35 @@ function showCalendarStatus(message, type = 'info') {
   datesContainer.appendChild(statusElement);
 }
 
+const EVENTS_ENDPOINT = '/api/eventos';
+
+function resolveApiUrl(path) {
+  if (!path) {
+    return path;
+  }
+
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const api = window.api;
+
+  if (api && typeof api.resolvePath === 'function') {
+    return api.resolvePath(normalizedPath);
+  }
+
+  if (api && typeof api.getBaseUrl === 'function') {
+    const baseUrl = api.getBaseUrl();
+    if (baseUrl) {
+      const trimmedBase = String(baseUrl).replace(/\/$/, '');
+      return `${trimmedBase}${normalizedPath}`;
+    }
+  }
+
+  return normalizedPath;
+}
+
 function buildEventsUrl(range = {}) {
   const params = new URLSearchParams();
   if (range.from) {
@@ -281,7 +310,49 @@ function buildEventsUrl(range = {}) {
     params.set('to', range.to);
   }
   const query = params.toString();
-  return query ? `/api/eventos?${query}` : '/api/eventos';
+  const path = query ? `${EVENTS_ENDPOINT}?${query}` : EVENTS_ENDPOINT;
+  return resolveApiUrl(path);
+}
+
+function buildEventDetailUrl(id) {
+  if (!id) {
+    return resolveApiUrl(EVENTS_ENDPOINT);
+  }
+
+  const encodedId = encodeURIComponent(id);
+  return resolveApiUrl(`${EVENTS_ENDPOINT}/${encodedId}`);
+}
+
+function extractEventsPayload(payload) {
+  if (!payload) {
+    return [];
+  }
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload.eventos)) {
+    return payload.eventos;
+  }
+
+  if (Array.isArray(payload.events)) {
+    return payload.events;
+  }
+
+  if (Array.isArray(payload.data)) {
+    return payload.data;
+  }
+
+  if (Array.isArray(payload.data?.eventos)) {
+    return payload.data.eventos;
+  }
+
+  if (Array.isArray(payload.data?.events)) {
+    return payload.data.events;
+  }
+
+  return [];
 }
 
 function isDateWithinRange(dateKey, range) {
@@ -383,11 +454,16 @@ async function refreshSingleEvent(hint) {
   let updatedEvent = null;
 
   try {
-    const response = await safeFetch(`/api/eventos/${encodeURIComponent(hint.id)}`, {
+    const url = buildEventDetailUrl(hint.id);
+    const response = await safeFetch(url, {
       method: 'GET',
       parse: 'json',
     });
-    const payload = response?.data?.evento ?? response?.data?.event ?? response?.data;
+    const payload =
+      response?.data?.evento ??
+      response?.data?.event ??
+      response?.data?.data ??
+      response?.data;
     updatedEvent = normalizeEventData(payload);
   } catch (error) {
     console.warn('[calendar] Falha ao buscar evento atualizado.', error);
@@ -418,30 +494,34 @@ async function performFullRefresh({ showLoading = true } = {}) {
 
   isCalendarLoading = true;
 
+  const url = buildEventsUrl(range);
+
   try {
-    const url = buildEventsUrl(range);
     const response = await safeFetch(url, { method: 'GET', parse: 'json' });
     const payload = response?.data;
-    const eventList = Array.isArray(payload?.eventos)
-      ? payload.eventos
-      : Array.isArray(payload?.events)
-        ? payload.events
-        : Array.isArray(payload)
-          ? payload
-          : [];
+    const eventList = extractEventsPayload(payload);
     populateEvents(eventList);
     renderCalendarView();
   } catch (error) {
-    const message = window.api?.getErrorMessage
-      ? window.api.getErrorMessage(error, 'Erro ao carregar eventos.')
-      : 'Erro ao carregar eventos.';
-    if (typeof window.showToast === 'function') {
-      window.showToast(message, { type: 'error' });
+    console.error('[calendar] Falha ao carregar eventos.', {
+      error,
+      range,
+      url,
+    });
+    const resolvedMessage = window.api?.getErrorMessage
+      ? window.api.getErrorMessage(error, '')
+      : error?.message || '';
+    const fallbackMessage = 'Não foi possível carregar os eventos.';
+    const statusMessage = resolvedMessage || fallbackMessage;
+
+    if (resolvedMessage && typeof window.showToast === 'function') {
+      window.showToast(resolvedMessage, { type: 'error' });
     }
+
     if (Object.keys(events).length > 0) {
       renderCalendarView();
     } else {
-      showCalendarStatus(message, 'error');
+      showCalendarStatus(statusMessage, 'error');
     }
   } finally {
     isCalendarLoading = false;

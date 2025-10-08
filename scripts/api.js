@@ -398,6 +398,12 @@
   }
 
   const api = {
+    resolvePath(path) {
+      return buildUrl(path, apiBaseUrl);
+    },
+    getBaseUrl() {
+      return apiBaseUrl;
+    },
     async getEvents(params = {}) {
       await ensureBaseUrl();
       const searchParams = new URLSearchParams();

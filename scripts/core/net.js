@@ -142,6 +142,18 @@
       return result;
     } catch (cause) {
       const error = toError(cause, { url, options });
+      const status =
+        (cause && typeof cause.status === 'number' && Number.isFinite(cause.status)
+          ? cause.status
+          : cause?.response?.status) ?? error.status ?? null;
+      const message = error.message || cause?.message || 'Falha na requisição.';
+
+      console.error('[safeFetch] Requisição falhou.', {
+        url,
+        status,
+        message,
+        error,
+      });
       if (error.name === 'AbortError') {
         error.message = error.message || 'Requisição cancelada.';
       } else if (!error.message) {
