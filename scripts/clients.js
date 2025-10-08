@@ -896,6 +896,7 @@ let isSavingQuickSale = false;
     pageItems.forEach((client) => {
       const row = document.createElement('tr');
       row.className = 'clients-table__row';
+      row.dataset.clientId = client.id;
 
       const selectCell = document.createElement('td');
       selectCell.className = 'clients-table__cell clients-table__cell--select';
@@ -1889,7 +1890,7 @@ let isSavingQuickSale = false;
       const apiClient = response?.cliente;
 
       if (apiClient) {
-        handleContactUpdateResponse(apiClient);
+        handleContactUpdateResponse(apiClient, { contactId });
         if (typeof window.showToast === 'function') {
           window.showToast(successMessage, { type: 'success' });
         }
@@ -1904,19 +1905,218 @@ let isSavingQuickSale = false;
     }
   }
 
-  function handleContactUpdateResponse(apiClient) {
+  function findClientContactContext(client, contactId) {
+    if (!client || !contactId) {
+      return null;
+    }
+
+    const normalizedId = String(contactId);
+    if (!normalizedId) {
+      return null;
+    }
+
+    let matchedContact = null;
+    let matchedPurchase = null;
+
+    if (Array.isArray(client.purchases)) {
+      client.purchases.some((purchase) => {
+        if (!Array.isArray(purchase.contacts)) {
+          return false;
+        }
+        const foundContact = purchase.contacts.find((contact) => String(contact.id) === normalizedId);
+        if (foundContact) {
+          matchedContact = foundContact;
+          matchedPurchase = purchase;
+          return true;
+        }
+        return false;
+      });
+    }
+
+    if (!matchedContact && Array.isArray(client.contacts)) {
+      matchedContact = client.contacts.find((contact) => String(contact.id) === normalizedId) || null;
+    }
+
+    if (!matchedContact) {
+      return null;
+    }
+
+    return {
+      contact: matchedContact,
+      purchase: matchedPurchase,
+    };
+  }
+
+  function updateContactStatusButtonUI(contact) {
+    if (!contact || !clientContactHistoryContainer) {
+      return null;
+    }
+
+    const button = clientContactHistoryContainer.querySelector(
+      `.client-contact__status[data-contact-id="${contact.id}"]`,
+    );
+
+    if (!(button instanceof HTMLButtonElement)) {
+      return null;
+    }
+
+    const isCompleted = Boolean(contact.completed);
+    button.dataset.completed = isCompleted ? 'true' : 'false';
+    button.classList.toggle('is-completed', isCompleted);
+    button.textContent = isCompleted ? 'Efetuado' : 'Pendente';
+    return button;
+  }
+
+  function updatePurchasePendingLabel(purchase) {
+    if (!purchase || !clientContactHistoryContainer) {
+      return;
+    }
+
+    const purchaseId = purchase.id ? String(purchase.id) : '';
+    const articleSelector = purchaseId
+      ? `.client-contact[data-purchase-id="${purchaseId}"]`
+      : '.client-contact';
+    const article = clientContactHistoryContainer.querySelector(articleSelector);
+
+    if (!(article instanceof HTMLElement)) {
+      return;
+    }
+
+    if (purchaseId) {
+      article.dataset.purchaseId = purchaseId;
+    }
+
+    const toggle = article.querySelector('.client-contact__toggle');
+    if (!toggle) {
+      return;
+    }
+
+    const spans = toggle.querySelectorAll('span');
+    if (spans.length < 2) {
+      return;
+    }
+
+    const pendingCount = Array.isArray(purchase.contacts)
+      ? purchase.contacts.filter((item) => !item.completed).length
+      : 0;
+    spans[1].textContent = pendingCount === 0 ? 'Todos concluídos' : `${pendingCount} pendente(s)`;
+  }
+
+  function updateClientContactHistoryUI(client, contactId) {
+    if (!client || !clientContactHistoryContainer) {
+      return null;
+    }
+
+    const context = findClientContactContext(client, contactId);
+    if (!context?.contact) {
+      renderClientContacts(client);
+      return null;
+    }
+
+    const button = updateContactStatusButtonUI(context.contact);
+    if (context.purchase) {
+      updatePurchasePendingLabel(context.purchase);
+    }
+
+    if (button) {
+      button.focus();
+    }
+
+    return context;
+  }
+
+  function updateClientRow(client) {
+    if (!clientsTableBody || !client) {
+      return false;
+    }
+
+    const row = clientsTableBody.querySelector(
+      `.clients-table__row[data-client-id="${client.id}"]`,
+    );
+
+    if (!(row instanceof HTMLTableRowElement)) {
+      return false;
+    }
+
+    const nameCell = row.querySelector('[data-column-id="name"]');
+    const nameButton = nameCell?.querySelector('button[data-action="open-client-detail"]');
+    if (nameButton) {
+      nameButton.textContent = client.name;
+      nameButton.dataset.clientId = client.id;
+    }
+
+    const updateText = (columnId, value) => {
+      const cell = row.querySelector(`[data-column-id="${columnId}"]`);
+      if (cell) {
+        cell.textContent = value;
+      }
+    };
+
+    updateText('cpf', client.cpf);
+    updateText('phone', client.phone);
+    updateText('gender', client.gender);
+    updateText('age', String(client.age));
+    updateText('lastPurchase', formatDisplayDate(client.lastPurchase));
+
+    const statusCell = row.querySelector('[data-column-id="acceptsContact"]');
+    if (statusCell) {
+      const wrapper = statusCell.querySelector('.clients-status');
+      const dot = wrapper?.querySelector('.clients-status__dot');
+      const label = wrapper?.querySelector('.clients-status__label');
+      const acceptsContact = Boolean(client.acceptsContact);
+      if (dot) {
+        dot.classList.toggle('is-no', !acceptsContact);
+      }
+      if (label) {
+        label.textContent = acceptsContact ? 'Sim' : 'Não';
+      }
+    }
+
+    return true;
+  }
+
+  function notifyCalendarAboutContactUpdate(context, client) {
+    if (!context?.contact) {
+      return;
+    }
+
+    if (typeof window.updateCalendarContactEvent !== 'function') {
+      return;
+    }
+
+    window.updateCalendarContactEvent({
+      contact: context.contact,
+      client,
+      purchase: context.purchase || null,
+    });
+  }
+
+  function handleContactUpdateResponse(apiClient, { contactId = null } = {}) {
     if (!apiClient) {
       return null;
     }
 
     const updatedClient = upsertClientFromApi(apiClient);
     setCurrentClient(updatedClient);
-    renderClientDetail(updatedClient);
-    renderClients();
-    ensureDetailButtonState();
-    if (typeof window.refreshCalendar === 'function') {
-      window.refreshCalendar({ showLoading: false });
+    if (contactId) {
+      state.detail.contacts.focusedContactId = String(contactId);
     }
+
+    const effectiveContactId = state.detail.contacts.focusedContactId;
+    const context = effectiveContactId
+      ? updateClientContactHistoryUI(updatedClient, effectiveContactId)
+      : null;
+
+    if (!context) {
+      renderClientContacts(updatedClient);
+    }
+
+    updateClientRow(updatedClient);
+    ensureDetailButtonState();
+    updateQuickSaleButtonState(updatedClient);
+    const calendarContext = context
+      || (effectiveContactId ? findClientContactContext(updatedClient, effectiveContactId) : null);
+    notifyCalendarAboutContactUpdate(calendarContext, updatedClient);
     return updatedClient;
   }
 

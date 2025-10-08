@@ -428,7 +428,9 @@ async function handleToggleStatusFromModal() {
       }
 
       if (typeof window.handleContactUpdateResponse === 'function' && response?.cliente) {
-        window.handleContactUpdateResponse(response.cliente);
+        window.handleContactUpdateResponse(response.cliente, {
+          contactId: currentDetailEvent.contactId,
+        });
       }
     } else {
       await window.api.updateEvent(currentDetailEvent.id, { completed: nextValue });

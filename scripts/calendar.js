@@ -17,6 +17,27 @@ function ensureEventsArray(dateKey) {
   return events[dateKey];
 }
 
+function sortEventsForDate(eventList) {
+  if (!Array.isArray(eventList)) {
+    return;
+  }
+
+  eventList.sort((a, b) => {
+    const dateA = new Date(a.rawDate || `${a.date}T00:00:00`);
+    const dateB = new Date(b.rawDate || `${b.date}T00:00:00`);
+    const timeA = dateA.getTime();
+    const timeB = dateB.getTime();
+
+    if (!Number.isNaN(timeA) && !Number.isNaN(timeB) && timeA !== timeB) {
+      return timeA - timeB;
+    }
+
+    const titleA = a.title || '';
+    const titleB = b.title || '';
+    return titleA.localeCompare(titleB);
+  });
+}
+
 function getStartOfWeek(date) {
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);
@@ -104,19 +125,7 @@ function populateEvents(eventList) {
   });
 
   Object.keys(events).forEach((dateKey) => {
-    const dateEvents = events[dateKey];
-    dateEvents.sort((a, b) => {
-      const dateA = new Date(a.rawDate || `${a.date}T00:00:00`);
-      const dateB = new Date(b.rawDate || `${b.date}T00:00:00`);
-      const timeA = dateA.getTime();
-      const timeB = dateB.getTime();
-
-      if (!Number.isNaN(timeA) && !Number.isNaN(timeB) && timeA !== timeB) {
-        return timeA - timeB;
-      }
-
-      return a.title.localeCompare(b.title);
-    });
+    sortEventsForDate(events[dateKey]);
   });
 }
 
@@ -319,6 +328,19 @@ function renderEventsForCell(cell, dateKey) {
   });
 }
 
+function renderCalendarCell(dateKey) {
+  if (!datesContainer || !dateKey) {
+    return;
+  }
+
+  const cell = datesContainer.querySelector(`.calendar__date[data-date-key="${dateKey}"]`);
+  if (!cell) {
+    return;
+  }
+
+  renderEventsForCell(cell, dateKey);
+}
+
 function renderMonthlyCalendar() {
   if (!monthLabel || !datesContainer) {
     return;
@@ -465,3 +487,92 @@ function setCalendarView(view) {
 }
 
 window.refreshCalendar = refreshCalendar;
+
+function updateCalendarContactEvent({ contact, client, purchase } = {}) {
+  if (!contact || !contact.id) {
+    return;
+  }
+
+  const contactId = String(contact.id);
+  let previousDateKey = null;
+  let previousEventList = null;
+  let previousEventIndex = -1;
+  let eventToUpdate = null;
+
+  Object.keys(events).some((dateKey) => {
+    const list = events[dateKey];
+    if (!Array.isArray(list)) {
+      return false;
+    }
+    const index = list.findIndex((event) => String(event.contactId) === contactId);
+    if (index >= 0) {
+      previousDateKey = dateKey;
+      previousEventList = list;
+      previousEventIndex = index;
+      eventToUpdate = list[index];
+      return true;
+    }
+    return false;
+  });
+
+  if (!eventToUpdate) {
+    return;
+  }
+
+  const nextDateKeyRaw = contact.contactDate ? String(contact.contactDate).slice(0, 10) : '';
+  const nextDateKey = nextDateKeyRaw || eventToUpdate.date || previousDateKey;
+
+  const completed = Boolean(contact.completed);
+  eventToUpdate.contactCompleted = completed;
+  eventToUpdate.completed = completed;
+
+  if (nextDateKeyRaw) {
+    eventToUpdate.date = nextDateKey;
+    eventToUpdate.rawDate = contact.contactDate;
+  }
+
+  if (contact.purchaseDate) {
+    eventToUpdate.purchaseDate = String(contact.purchaseDate).slice(0, 10);
+  } else if (purchase?.date) {
+    eventToUpdate.purchaseDate = String(purchase.date).slice(0, 10);
+  }
+
+  if (Number.isFinite(contact.monthsOffset)) {
+    eventToUpdate.contactMonths = contact.monthsOffset;
+  }
+
+  if (client?.name) {
+    eventToUpdate.clientName = client.name;
+  }
+
+  const affectedKeys = new Set();
+
+  if (nextDateKey !== previousDateKey) {
+    if (Array.isArray(previousEventList)) {
+      previousEventList.splice(previousEventIndex, 1);
+      if (previousEventList.length === 0) {
+        delete events[previousDateKey];
+      } else {
+        sortEventsForDate(previousEventList);
+      }
+    }
+
+    const nextList = ensureEventsArray(nextDateKey);
+    nextList.push(eventToUpdate);
+    sortEventsForDate(nextList);
+
+    affectedKeys.add(previousDateKey);
+    affectedKeys.add(nextDateKey);
+  } else if (Array.isArray(previousEventList)) {
+    sortEventsForDate(previousEventList);
+    affectedKeys.add(previousDateKey);
+  }
+
+  affectedKeys.forEach((key) => {
+    if (key) {
+      renderCalendarCell(key);
+    }
+  });
+}
+
+window.updateCalendarContactEvent = updateCalendarContactEvent;
