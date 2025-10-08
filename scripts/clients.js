@@ -220,9 +220,30 @@ let isSavingQuickSale = false;
         scrollTop: 0,
       },
     },
+    currentClientId: null,
   };
 
   let lastFilteredClients = [];
+
+  function refreshClientInCaches(client) {
+    if (!client) {
+      return;
+    }
+    const index = lastFilteredClients.findIndex((item) => item.id === client.id);
+    if (index >= 0) {
+      lastFilteredClients.splice(index, 1, client);
+    }
+  }
+
+  function removeClientFromCaches(clientId) {
+    if (!clientId) {
+      return;
+    }
+    const index = lastFilteredClients.findIndex((item) => item.id === clientId);
+    if (index >= 0) {
+      lastFilteredClients.splice(index, 1);
+    }
+  }
 
   function normalizeText(value) {
     return value ? value.toString().trim().toLowerCase() : '';
@@ -278,6 +299,75 @@ let isSavingQuickSale = false;
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = String(date.getFullYear()).slice(-2);
     return `${day}/${month}/${year}`;
+  }
+
+  function patchElement(element, { text, attributes = {}, dataset = {}, classList = {} } = {}) {
+    if (!(element instanceof Element)) {
+      return element;
+    }
+
+    if (text !== undefined && element.textContent !== text) {
+      element.textContent = text;
+    }
+
+    Object.entries(attributes).forEach(([name, value]) => {
+      if (value === null || value === undefined || value === false) {
+        element.removeAttribute(name);
+      } else {
+        const stringValue = String(value);
+        if (element.getAttribute(name) !== stringValue) {
+          element.setAttribute(name, stringValue);
+        }
+      }
+    });
+
+    Object.entries(dataset).forEach(([name, value]) => {
+      if (value === null || value === undefined) {
+        delete element.dataset[name];
+      } else {
+        const stringValue = String(value);
+        if (element.dataset[name] !== stringValue) {
+          element.dataset[name] = stringValue;
+        }
+      }
+    });
+
+    if (Array.isArray(classList.add)) {
+      classList.add.forEach((className) => {
+        element.classList.add(className);
+      });
+    }
+
+    if (Array.isArray(classList.remove)) {
+      classList.remove.forEach((className) => {
+        element.classList.remove(className);
+      });
+    }
+
+    if (classList.toggle && typeof classList.toggle === 'object') {
+      Object.entries(classList.toggle).forEach(([className, enabled]) => {
+        element.classList.toggle(className, Boolean(enabled));
+      });
+    }
+
+    return element;
+  }
+
+  function getCurrentClientId() {
+    return state.currentClientId ?? null;
+  }
+
+  function setCurrentClient(client) {
+    if (client?.id) {
+      state.currentClientId = String(client.id);
+    } else {
+      state.currentClientId = null;
+    }
+  }
+
+  function getCurrentClientData() {
+    const currentId = getCurrentClientId();
+    return currentId ? findClientById(currentId) : null;
   }
 
   function getFilteredClients() {
@@ -433,6 +523,25 @@ let isSavingQuickSale = false;
     return cell;
   }
 
+  function createSelectionCell(client) {
+    const cell = document.createElement('td');
+    cell.className = 'clients-table__cell clients-table__cell--select';
+    cell.dataset.columnId = 'selection';
+    const selectLabel = document.createElement('label');
+    selectLabel.className = 'clients-checkbox';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.dataset.clientId = client.id;
+    checkbox.checked = state.selectedIds.has(client.id);
+    checkbox.setAttribute('aria-label', `Selecionar ${client.name}`);
+    const custom = document.createElement('span');
+    custom.className = 'clients-checkbox__custom';
+    custom.setAttribute('aria-hidden', 'true');
+    selectLabel.append(checkbox, custom);
+    cell.appendChild(selectLabel);
+    return cell;
+  }
+
   function createNameCell(client) {
     const cell = document.createElement('td');
     cell.className = 'clients-table__cell clients-table__cell--name';
@@ -445,6 +554,39 @@ let isSavingQuickSale = false;
     button.textContent = client.name;
     cell.appendChild(button);
     return cell;
+  }
+
+  function createClientRowElement(client) {
+    const row = document.createElement('tr');
+    row.className = 'clients-table__row';
+    row.dataset.clientId = client.id;
+
+    row.append(
+      createSelectionCell(client),
+      createNameCell(client),
+      createTextCell('cpf', client.cpf),
+      createTextCell('phone', client.phone),
+      createTextCell('gender', client.gender),
+      createTextCell('age', String(client.age)),
+      createTextCell('lastPurchase', formatDisplayDate(client.lastPurchase)),
+    );
+
+    const statusCell = document.createElement('td');
+    statusCell.className = 'clients-table__cell';
+    statusCell.dataset.columnId = 'acceptsContact';
+    const statusWrapper = document.createElement('span');
+    statusWrapper.className = 'clients-status';
+    const statusDot = document.createElement('span');
+    statusDot.className = `clients-status__dot${client.acceptsContact ? '' : ' is-no'}`;
+    statusDot.setAttribute('aria-hidden', 'true');
+    const statusLabel = document.createElement('span');
+    statusLabel.className = 'clients-status__label';
+    statusLabel.textContent = client.acceptsContact ? 'Sim' : 'Não';
+    statusWrapper.append(statusDot, statusLabel);
+    statusCell.appendChild(statusWrapper);
+    row.appendChild(statusCell);
+
+    return row;
   }
 
   function calculateAgeFromBirthDate(isoString) {
@@ -822,6 +964,10 @@ let isSavingQuickSale = false;
         clientsErrorMessage = '';
         state.selectedIds.clear();
         state.page = 1;
+        const currentId = getCurrentClientId();
+        if (currentId && !CLIENTS.some((client) => client.id === currentId)) {
+          setCurrentClient(null);
+        }
       } catch (error) {
         clientsErrorMessage = getApiErrorMessage(error, 'Não foi possível carregar os clientes.');
         if (typeof window.showToast === 'function') {
@@ -894,50 +1040,7 @@ let isSavingQuickSale = false;
     const fragment = document.createDocumentFragment();
 
     pageItems.forEach((client) => {
-      const row = document.createElement('tr');
-      row.className = 'clients-table__row';
-      row.dataset.clientId = client.id;
-
-      const selectCell = document.createElement('td');
-      selectCell.className = 'clients-table__cell clients-table__cell--select';
-      selectCell.dataset.columnId = 'selection';
-      const selectLabel = document.createElement('label');
-      selectLabel.className = 'clients-checkbox';
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.dataset.clientId = client.id;
-      checkbox.checked = state.selectedIds.has(client.id);
-      checkbox.setAttribute('aria-label', `Selecionar ${client.name}`);
-      const custom = document.createElement('span');
-      custom.className = 'clients-checkbox__custom';
-      custom.setAttribute('aria-hidden', 'true');
-      selectLabel.append(checkbox, custom);
-      selectCell.appendChild(selectLabel);
-      row.appendChild(selectCell);
-
-      row.appendChild(createNameCell(client));
-      row.appendChild(createTextCell('cpf', client.cpf));
-      row.appendChild(createTextCell('phone', client.phone));
-      row.appendChild(createTextCell('gender', client.gender));
-      row.appendChild(createTextCell('age', String(client.age)));
-      row.appendChild(createTextCell('lastPurchase', formatDisplayDate(client.lastPurchase)));
-
-      const statusCell = document.createElement('td');
-      statusCell.className = 'clients-table__cell';
-      statusCell.dataset.columnId = 'acceptsContact';
-      const statusWrapper = document.createElement('span');
-      statusWrapper.className = 'clients-status';
-      const statusDot = document.createElement('span');
-      statusDot.className = `clients-status__dot${client.acceptsContact ? '' : ' is-no'}`;
-      statusDot.setAttribute('aria-hidden', 'true');
-      const statusLabel = document.createElement('span');
-      statusLabel.className = 'clients-status__label';
-      statusLabel.textContent = client.acceptsContact ? 'Sim' : 'Não';
-      statusWrapper.append(statusDot, statusLabel);
-      statusCell.appendChild(statusWrapper);
-      row.appendChild(statusCell);
-
-      fragment.appendChild(row);
+      fragment.appendChild(createClientRowElement(client));
     });
 
     clientsTableBody.appendChild(fragment);
@@ -1325,6 +1428,22 @@ let isSavingQuickSale = false;
     clientQuickSaleButton.disabled = !hasClient;
   }
 
+  function attachButtonHandler(element, handler) {
+    if (!element || typeof handler !== 'function') {
+      return;
+    }
+
+    if (element instanceof HTMLButtonElement && element.type !== 'button') {
+      element.type = 'button';
+    }
+
+    element.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      handler(event);
+    });
+  }
+
   function prepareQuickSaleForm(client) {
     if (!clientQuickSaleForm) {
       return;
@@ -1501,8 +1620,12 @@ let isSavingQuickSale = false;
 
       const updatedClient = upsertClientFromApi(apiClient);
       setCurrentClient(updatedClient);
+      refreshClientInCaches(updatedClient);
       renderClientDetail(updatedClient);
-      renderClients();
+      const rowUpdated = updateClientRow(updatedClient);
+      if (!rowUpdated) {
+        renderClients();
+      }
       ensureDetailButtonState();
       updateQuickSaleButtonState(updatedClient);
 
@@ -1806,6 +1929,8 @@ let isSavingQuickSale = false;
     if (!button) {
       return;
     }
+    event.preventDefault();
+    event.stopPropagation();
     const article = button.closest('.client-purchase');
     if (!article) {
       return;
@@ -1961,9 +2086,11 @@ let isSavingQuickSale = false;
     }
 
     const isCompleted = Boolean(contact.completed);
-    button.dataset.completed = isCompleted ? 'true' : 'false';
-    button.classList.toggle('is-completed', isCompleted);
-    button.textContent = isCompleted ? 'Efetuado' : 'Pendente';
+    patchElement(button, {
+      dataset: { completed: isCompleted ? 'true' : 'false' },
+      classList: { toggle: { 'is-completed': isCompleted } },
+      text: isCompleted ? 'Efetuado' : 'Pendente',
+    });
     return button;
   }
 
@@ -1983,7 +2110,7 @@ let isSavingQuickSale = false;
     }
 
     if (purchaseId) {
-      article.dataset.purchaseId = purchaseId;
+      patchElement(article, { dataset: { purchaseId } });
     }
 
     const toggle = article.querySelector('.client-contact__toggle');
@@ -1999,7 +2126,8 @@ let isSavingQuickSale = false;
     const pendingCount = Array.isArray(purchase.contacts)
       ? purchase.contacts.filter((item) => !item.completed).length
       : 0;
-    spans[1].textContent = pendingCount === 0 ? 'Todos concluídos' : `${pendingCount} pendente(s)`;
+    const pendingText = pendingCount === 0 ? 'Todos concluídos' : `${pendingCount} pendente(s)`;
+    patchElement(spans[1], { text: pendingText });
   }
 
   function updateClientContactHistoryUI(client, contactId) {
@@ -2038,17 +2166,27 @@ let isSavingQuickSale = false;
       return false;
     }
 
+    patchElement(row, { dataset: { clientId: client.id } });
+
+    const checkbox = row.querySelector('input[type="checkbox"][data-client-id]');
+    if (checkbox instanceof HTMLInputElement) {
+      checkbox.checked = state.selectedIds.has(client.id);
+      checkbox.dataset.clientId = client.id;
+    }
+
     const nameCell = row.querySelector('[data-column-id="name"]');
     const nameButton = nameCell?.querySelector('button[data-action="open-client-detail"]');
     if (nameButton) {
-      nameButton.textContent = client.name;
-      nameButton.dataset.clientId = client.id;
+      patchElement(nameButton, {
+        text: client.name,
+        dataset: { clientId: client.id },
+      });
     }
 
     const updateText = (columnId, value) => {
       const cell = row.querySelector(`[data-column-id="${columnId}"]`);
       if (cell) {
-        cell.textContent = value;
+        patchElement(cell, { text: value });
       }
     };
 
@@ -2065,14 +2203,28 @@ let isSavingQuickSale = false;
       const label = wrapper?.querySelector('.clients-status__label');
       const acceptsContact = Boolean(client.acceptsContact);
       if (dot) {
-        dot.classList.toggle('is-no', !acceptsContact);
+        patchElement(dot, { classList: { toggle: { 'is-no': !acceptsContact } } });
       }
       if (label) {
-        label.textContent = acceptsContact ? 'Sim' : 'Não';
+        patchElement(label, { text: acceptsContact ? 'Sim' : 'Não' });
       }
     }
 
     return true;
+  }
+
+  function removeClientRow(clientId) {
+    if (!clientsTableBody || !clientId) {
+      return false;
+    }
+    const row = clientsTableBody.querySelector(
+      `.clients-table__row[data-client-id="${clientId}"]`,
+    );
+    if (row) {
+      row.remove();
+      return true;
+    }
+    return false;
   }
 
   function notifyCalendarAboutContactUpdate(context, client) {
@@ -2098,6 +2250,7 @@ let isSavingQuickSale = false;
 
     const updatedClient = upsertClientFromApi(apiClient);
     setCurrentClient(updatedClient);
+    refreshClientInCaches(updatedClient);
     if (contactId) {
       state.detail.contacts.focusedContactId = String(contactId);
     }
@@ -2129,6 +2282,8 @@ let isSavingQuickSale = false;
     if (!trigger) {
       return;
     }
+    event.preventDefault();
+    event.stopPropagation();
     const clientId = trigger.dataset.clientId;
     const client = clientId ? findClientById(clientId) : null;
     if (!client) {
@@ -2326,8 +2481,12 @@ let isSavingQuickSale = false;
 
         const updatedClient = upsertClientFromApi(apiClient);
         setCurrentClient(updatedClient);
+        refreshClientInCaches(updatedClient);
         renderClientDetail(updatedClient);
         prepareClientForm('edit', updatedClient);
+        if (!updateClientRow(updatedClient)) {
+          renderClients();
+        }
       } else {
         const response = await window.api.createClient(apiPayload);
         const apiClient = response?.cliente;
@@ -2337,8 +2496,12 @@ let isSavingQuickSale = false;
 
         const createdClient = upsertClientFromApi(apiClient, { preferPrepend: true });
         setCurrentClient(createdClient);
+        refreshClientInCaches(createdClient);
         renderClientDetail(createdClient);
         prepareClientForm('edit', createdClient);
+        if (!updateClientRow(createdClient)) {
+          renderClients();
+        }
       }
 
       if (typeof window.showToast === 'function') {
@@ -2346,11 +2509,10 @@ let isSavingQuickSale = false;
       }
       if (typeof window.showInlineFeedback === 'function') {
         window.showInlineFeedback(clientFormElement, successMessage, {
-          type: 'success',
-        });
-      }
+        type: 'success',
+      });
+    }
 
-      renderClients();
       ensureDetailButtonState();
       updateQuickSaleButtonState(getCurrentClientData());
     } catch (error) {
@@ -2410,10 +2572,20 @@ let isSavingQuickSale = false;
 
       state.selectedIds.delete(client.id);
       setCurrentClient(null);
+      removeClientFromCaches(client.id);
       resetClientDetailState();
       updateQuickSaleButtonState(null);
       ensureDetailButtonState();
-      renderClients();
+      const removedFromTable = removeClientRow(client.id);
+      const remainingRows = clientsTableBody
+        ? clientsTableBody.querySelectorAll('.clients-table__row').length
+        : 0;
+      if (!removedFromTable || remainingRows === 0) {
+        renderClients();
+      } else {
+        updatePagination(lastFilteredClients.length);
+        updateSelectAllState(lastFilteredClients);
+      }
       setActivePage('clientes');
 
       if (typeof window.showToast === 'function') {
@@ -2570,7 +2742,10 @@ let isSavingQuickSale = false;
       .filter((value) => Boolean(value));
     client.interests = selected;
     renderClientInterests(client);
-    renderClients();
+    refreshClientInCaches(client);
+    if (!updateClientRow(client)) {
+      renderClients();
+    }
     updateAdvancedButtonState();
     if (typeof window.showToast === 'function') {
       window.showToast('Interesses atualizados com sucesso.', { type: 'success' });
@@ -2634,14 +2809,14 @@ let isSavingQuickSale = false;
   });
 
   sortButtons.forEach((button) => {
-    button.addEventListener('click', () => handleSortClick(button));
+    attachButtonHandler(button, () => handleSortClick(button));
   });
 
   selectAllCheckbox?.addEventListener('change', handleSelectAllChange);
   clientsTableBody.addEventListener('change', handleRowSelectionChange);
   clientsTableBody.addEventListener('click', handleTableClick);
   paginationButtons.forEach((button) => {
-    button.addEventListener('click', handlePaginationClick);
+    attachButtonHandler(button, handlePaginationClick);
   });
 
   clientPurchasesContainer?.addEventListener('click', handlePurchaseToggle);
@@ -2652,20 +2827,18 @@ let isSavingQuickSale = false;
   clientContactHistoryContainer?.addEventListener('scroll', () => {
     state.detail.contacts.scrollTop = clientContactHistoryContainer.scrollTop;
   });
-  clientQuickSaleButton?.addEventListener('click', openQuickSaleModal);
-  clientQuickSaleCloseButton?.addEventListener('click', closeQuickSaleModal);
-  clientQuickSaleCancelButton?.addEventListener('click', closeQuickSaleModal);
-  clientQuickSaleSaveButton?.addEventListener('click', handleQuickSaleSaveClick);
+  attachButtonHandler(clientQuickSaleButton, openQuickSaleModal);
+  attachButtonHandler(clientQuickSaleCloseButton, closeQuickSaleModal);
+  attachButtonHandler(clientQuickSaleCancelButton, closeQuickSaleModal);
+  attachButtonHandler(clientQuickSaleSaveButton, handleQuickSaleSaveClick);
   clientQuickSaleOverlay?.addEventListener('click', handleQuickSaleOverlayClick);
   clientQuickSaleForm?.addEventListener('submit', handleQuickSaleSubmit);
-  clientsDetailButton?.addEventListener('click', handleDetailButtonClick);
-  clientsNewButton?.addEventListener('click', handleNewClientClick);
-  clientsAdvancedSearchButton?.addEventListener('click', openAdvancedSearchModal);
-  clientsAdvancedCloseButton?.addEventListener('click', () => {
-    closeAdvancedSearchModalInternal();
-  });
-  clientsAdvancedResetButton?.addEventListener('click', handleAdvancedReset);
-  clientsAdvancedApplyButton?.addEventListener('click', () => {
+  attachButtonHandler(clientsDetailButton, handleDetailButtonClick);
+  attachButtonHandler(clientsNewButton, handleNewClientClick);
+  attachButtonHandler(clientsAdvancedSearchButton, openAdvancedSearchModal);
+  attachButtonHandler(clientsAdvancedCloseButton, closeAdvancedSearchModalInternal);
+  attachButtonHandler(clientsAdvancedResetButton, handleAdvancedReset);
+  attachButtonHandler(clientsAdvancedApplyButton, () => {
     if (!clientsAdvancedForm) {
       return;
     }
@@ -2680,9 +2853,9 @@ let isSavingQuickSale = false;
     }
   });
   clientsAdvancedForm?.addEventListener('submit', handleAdvancedFormSubmit);
-  clientInterestsEditButton?.addEventListener('click', openClientInterestsModal);
+  attachButtonHandler(clientInterestsEditButton, openClientInterestsModal);
   clientInterestsCancelButtons?.forEach((button) => {
-    button.addEventListener('click', () => {
+    attachButtonHandler(button, () => {
       closeClientInterestsModalInternal();
     });
   });
@@ -2695,21 +2868,21 @@ let isSavingQuickSale = false;
     }
   });
   clientInterestsForm?.addEventListener('submit', handleClientInterestsSubmit);
-  clientInterestsSaveButton?.addEventListener('click', () => {
+  attachButtonHandler(clientInterestsSaveButton, () => {
     clientInterestsForm?.requestSubmit();
   });
-  homeAddClientCardButton?.addEventListener('click', () => {
+  attachButtonHandler(homeAddClientCardButton, () => {
     prepareClientForm('create');
     setActivePage('cadastro-cliente');
   });
   clientFormElement?.addEventListener('submit', handleClientFormSubmit);
-  clientFormCancelButton?.addEventListener('click', handleClientDetailBack);
-  clientFormSaveButton?.addEventListener('click', () => {
+  attachButtonHandler(clientFormCancelButton, handleClientDetailBack);
+  attachButtonHandler(clientFormSaveButton, () => {
     clientFormElement?.requestSubmit();
   });
-  clientDetailBackButton?.addEventListener('click', handleClientDetailBack);
-  clientDetailEditButton?.addEventListener('click', handleClientDetailEdit);
-  clientDetailDeleteButton?.addEventListener('click', handleClientDetailDelete);
+  attachButtonHandler(clientDetailBackButton, handleClientDetailBack);
+  attachButtonHandler(clientDetailEditButton, handleClientDetailEdit);
+  attachButtonHandler(clientDetailDeleteButton, handleClientDetailDelete);
 
   document.addEventListener('pagechange', (event) => {
     if (event.detail?.page === 'clientes') {
