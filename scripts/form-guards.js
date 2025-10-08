@@ -1,11 +1,29 @@
 'use strict';
 
 (function preventFormReloads() {
-  const ATTRIBUTE_NAME = 'preventReload';
+  const ATTRIBUTE_NAME = 'data-prevent-reload';
   const formsWithGuard = new WeakSet();
 
   function shouldGuard(form) {
-    return form instanceof HTMLFormElement && form.dataset?.[ATTRIBUTE_NAME] === 'true';
+    if (!(form instanceof HTMLFormElement)) {
+      return false;
+    }
+
+    if (!form.hasAttribute(ATTRIBUTE_NAME)) {
+      return false;
+    }
+
+    const rawValue = form.getAttribute(ATTRIBUTE_NAME);
+    if (rawValue === null) {
+      return false;
+    }
+
+    const normalized = rawValue.trim().toLowerCase();
+    if (normalized === 'false' || normalized === '0') {
+      return false;
+    }
+
+    return true;
   }
 
   function attachGuard(form) {
@@ -32,13 +50,13 @@
     }
 
     const forms = typeof container.querySelectorAll === 'function'
-      ? container.querySelectorAll(`form[data-${ATTRIBUTE_NAME}="true"]`)
+      ? container.querySelectorAll(`form[${ATTRIBUTE_NAME}]`)
       : [];
     forms.forEach((form) => attachGuard(form));
 
     if (container instanceof HTMLFormElement) {
       attachGuard(container);
-    } else if (container instanceof Element && container.matches?.(`form[data-${ATTRIBUTE_NAME}="true"]`)) {
+    } else if (container instanceof Element && container.matches?.(`form[${ATTRIBUTE_NAME}]`)) {
       attachGuard(container);
     }
   }

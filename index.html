@@ -152,8 +152,8 @@
               </button>
               <button
                 class="topbar__button topbar__button--green"
-                type="submit"
-                form="client-registration-form"
+                type="button"
+                data-role="client-form-save"
               >
                 Salvar cadastro
               </button>
@@ -639,6 +639,14 @@
             autocomplete="off"
             data-prevent-reload="true"
           >
+            <div
+              class="inline-feedback"
+              data-role="inline-feedback"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-hidden="true"
+            ></div>
             <fieldset class="client-form__section">
               <legend class="client-form__title">Dados pessoais</legend>
               <div class="client-form__grid">
@@ -930,6 +938,14 @@
             autocomplete="off"
             data-prevent-reload="true"
           >
+            <div
+              class="inline-feedback inline-feedback--modal"
+              data-role="inline-feedback"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-hidden="true"
+            ></div>
             <label class="modal__field">
               <span class="modal__label">Data da compra</span>
               <input class="modal__input" type="date" name="saleDate" required />
@@ -1001,6 +1017,14 @@
             autocomplete="off"
             data-prevent-reload="true"
           >
+            <div
+              class="inline-feedback inline-feedback--modal"
+              data-role="inline-feedback"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-hidden="true"
+            ></div>
             <label class="modal__field">
               <span class="modal__label">Tipo de usuário</span>
               <select class="modal__input" name="userType" data-advanced-select="userType"></select>
@@ -1059,6 +1083,14 @@
             autocomplete="off"
             data-prevent-reload="true"
           >
+            <div
+              class="inline-feedback inline-feedback--modal"
+              data-role="inline-feedback"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-hidden="true"
+            ></div>
             <p class="modal__helper-text">Escolha as etiquetas que representam melhor este cliente.</p>
             <fieldset class="modal__fieldset">
               <legend class="visually-hidden">Etiquetas disponíveis</legend>
@@ -1096,6 +1128,14 @@
         </div>
         <div class="modal__content">
           <form class="modal__form" autocomplete="off" data-prevent-reload="true">
+            <div
+              class="inline-feedback inline-feedback--modal"
+              data-role="inline-feedback"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-hidden="true"
+            ></div>
             <label class="modal__field">
               <input class="modal__input" type="date" name="date" required />
             </label>

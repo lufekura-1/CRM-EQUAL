@@ -40,6 +40,10 @@ function openAddEventModal(eventData = null) {
   editingEvent = eventData;
   editingEventOriginalDateKey = eventData ? eventData.date : null;
 
+  if (typeof window.clearInlineFeedback === 'function') {
+    window.clearInlineFeedback(addEventForm);
+  }
+
   const todayKey = formatDateKey(new Date());
   const dateInput = addEventForm.elements.namedItem('date');
   const titleInput = addEventForm.elements.namedItem('title');
@@ -63,6 +67,9 @@ function closeAddEventModal() {
   resetAddEventForm();
   editingEvent = null;
   editingEventOriginalDateKey = null;
+  if (typeof window.clearInlineFeedback === 'function') {
+    window.clearInlineFeedback(addEventForm);
+  }
 }
 
 function handleAddEventOverlayClick(event) {
@@ -87,6 +94,10 @@ async function handleSaveEvent() {
 
   if (!addEventForm.reportValidity()) {
     return;
+  }
+
+  if (typeof window.clearInlineFeedback === 'function') {
+    window.clearInlineFeedback(addEventForm);
   }
 
   const formData = new FormData(addEventForm);
@@ -123,21 +134,43 @@ async function handleSaveEvent() {
     }
 
     if (isEditing) {
-      await window.api.updateEvent(editingEvent.id, payload);
+      const response = await window.api.updateEvent(editingEvent.id, payload);
+      const updatedEvent = response?.evento || response?.event || response;
+      if (updatedEvent && typeof updatedEvent === 'object') {
+        editingEvent = { ...editingEvent, ...updatedEvent };
+        editingEventOriginalDateKey = updatedEvent.date || updatedEvent.rawDate || payload.date;
+      } else {
+        editingEvent = { ...editingEvent, ...payload };
+        editingEventOriginalDateKey = payload.date;
+      }
     } else {
-      await window.api.createEvent(payload);
+      const response = await window.api.createEvent(payload);
+      const createdEvent = response?.evento || response?.event || response;
+      if (createdEvent && typeof createdEvent === 'object') {
+        editingEvent = createdEvent;
+        editingEventOriginalDateKey = createdEvent.date || createdEvent.rawDate || payload.date;
+      } else {
+        editingEvent = { ...payload };
+        editingEventOriginalDateKey = payload.date;
+      }
     }
 
     if (typeof window.showToast === 'function') {
       window.showToast(successMessage, { type: 'success' });
     }
 
-    closeAddEventModal();
+    if (typeof window.showInlineFeedback === 'function') {
+      window.showInlineFeedback(addEventForm, successMessage, { type: 'success' });
+    }
+
     await refreshCalendar({ showLoading: false });
   } catch (error) {
     const message = window.api?.getErrorMessage(error, errorMessage);
     if (typeof window.showToast === 'function') {
       window.showToast(message, { type: 'error' });
+    }
+    if (typeof window.showInlineFeedback === 'function') {
+      window.showInlineFeedback(addEventForm, message, { type: 'error' });
     }
   } finally {
     if (addEventSaveButton) {

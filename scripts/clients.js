@@ -1424,6 +1424,9 @@ let isSavingQuickSale = false;
       clientQuickSaleSaveButton.disabled = false;
     }
     isSavingQuickSale = false;
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientQuickSaleForm);
+    }
     closeOverlay(clientQuickSaleOverlay);
   }
 
@@ -1433,6 +1436,9 @@ let isSavingQuickSale = false;
       return;
     }
     prepareQuickSaleForm(client);
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientQuickSaleForm);
+    }
     openOverlay(clientQuickSaleOverlay);
   }
 
@@ -1451,6 +1457,10 @@ let isSavingQuickSale = false;
     }
     if (!clientQuickSaleForm?.reportValidity()) {
       return;
+    }
+
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientQuickSaleForm);
     }
 
     const client = getCurrentClientData();
@@ -1498,13 +1508,20 @@ let isSavingQuickSale = false;
       if (typeof window.showToast === 'function') {
         window.showToast(successMessage, { type: 'success' });
       }
+      if (typeof window.showInlineFeedback === 'function') {
+        window.showInlineFeedback(clientQuickSaleForm, successMessage, {
+          type: 'success',
+        });
+      }
 
-      closeQuickSaleModal();
-      setActivePage('cliente-detalhe');
+      prepareQuickSaleForm(updatedClient);
     } catch (error) {
       const message = getApiErrorMessage(error, errorMessage);
       if (typeof window.showToast === 'function') {
         window.showToast(message, { type: 'error' });
+      }
+      if (typeof window.showInlineFeedback === 'function') {
+        window.showInlineFeedback(clientQuickSaleForm, message, { type: 'error' });
       }
     } finally {
       if (clientQuickSaleSaveButton) {
@@ -1934,6 +1951,9 @@ let isSavingQuickSale = false;
       return;
     }
     clientFormElement.reset();
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientFormElement);
+    }
     clientFormElement.dataset.mode = mode;
     if (client?.id) {
       clientFormElement.dataset.clientId = client.id;
@@ -2046,6 +2066,10 @@ let isSavingQuickSale = false;
       return;
     }
 
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientFormElement);
+    }
+
     const data = collectFormData();
     if (!data) {
       return;
@@ -2103,6 +2127,7 @@ let isSavingQuickSale = false;
         const updatedClient = upsertClientFromApi(apiClient);
         setCurrentClient(updatedClient);
         renderClientDetail(updatedClient);
+        prepareClientForm('edit', updatedClient);
       } else {
         const response = await window.api.createClient(apiPayload);
         const apiClient = response?.cliente;
@@ -2113,20 +2138,28 @@ let isSavingQuickSale = false;
         const createdClient = upsertClientFromApi(apiClient, { preferPrepend: true });
         setCurrentClient(createdClient);
         renderClientDetail(createdClient);
+        prepareClientForm('edit', createdClient);
       }
 
       if (typeof window.showToast === 'function') {
         window.showToast(successMessage, { type: 'success' });
       }
+      if (typeof window.showInlineFeedback === 'function') {
+        window.showInlineFeedback(clientFormElement, successMessage, {
+          type: 'success',
+        });
+      }
 
       renderClients();
       ensureDetailButtonState();
       updateQuickSaleButtonState(getCurrentClientData());
-      setActivePage('clientes');
     } catch (error) {
       const message = getApiErrorMessage(error, errorMessage);
       if (typeof window.showToast === 'function') {
         window.showToast(message, { type: 'error' });
+      }
+      if (typeof window.showInlineFeedback === 'function') {
+        window.showInlineFeedback(clientFormElement, message, { type: 'error' });
       }
     } finally {
       isSavingClient = false;
@@ -2205,6 +2238,9 @@ let isSavingQuickSale = false;
   }
 
   function closeAdvancedSearchModalInternal() {
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientsAdvancedForm);
+    }
     closeOverlay(clientsAdvancedOverlay);
   }
 
@@ -2213,6 +2249,9 @@ let isSavingQuickSale = false;
     ensureInterestCheckboxes(clientsAdvancedInterestsContainer, 'advancedInterests');
     if (!clientsAdvancedOverlay) {
       return;
+    }
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientsAdvancedForm);
     }
     if (clientsAdvancedForm) {
       const userTypeField = clientsAdvancedForm.elements.namedItem('userType');
@@ -2242,6 +2281,9 @@ let isSavingQuickSale = false;
     if (!clientsAdvancedForm) {
       return;
     }
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientsAdvancedForm);
+    }
     const formData = new FormData(clientsAdvancedForm);
     const userTypeValue = formData.get('userType');
     const clientStateValue = formData.get('clientState');
@@ -2263,12 +2305,19 @@ let isSavingQuickSale = false;
     state.page = 1;
     renderClients();
     updateAdvancedButtonState();
-    closeAdvancedSearchModalInternal();
+    if (typeof window.showInlineFeedback === 'function') {
+      window.showInlineFeedback(clientsAdvancedForm, 'Filtros aplicados com sucesso.', {
+        type: 'success',
+      });
+    }
   }
 
   function handleAdvancedReset() {
     if (!clientsAdvancedForm) {
       return;
+    }
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientsAdvancedForm);
     }
     state.filters.userType = '';
     state.filters.clientState = '';
@@ -2283,6 +2332,9 @@ let isSavingQuickSale = false;
   }
 
   function closeClientInterestsModalInternal() {
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientInterestsForm);
+    }
     closeOverlay(clientInterestsOverlay);
   }
 
@@ -2293,14 +2345,19 @@ let isSavingQuickSale = false;
     }
     ensureInterestCheckboxes(clientInterestsOptionsContainer, 'interests');
     setCheckboxSelections(clientInterestsOptionsContainer, client.interests);
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientInterestsForm);
+    }
     openOverlay(clientInterestsOverlay);
   }
 
   function handleClientInterestsSubmit(event) {
     event.preventDefault();
+    if (typeof window.clearInlineFeedback === 'function') {
+      window.clearInlineFeedback(clientInterestsForm);
+    }
     const client = getCurrentClientData();
     if (!client || !clientInterestsForm) {
-      closeClientInterestsModalInternal();
       return;
     }
     const formData = new FormData(clientInterestsForm);
@@ -2312,7 +2369,11 @@ let isSavingQuickSale = false;
     renderClientInterests(client);
     renderClients();
     updateAdvancedButtonState();
-    closeClientInterestsModalInternal();
+    if (typeof window.showInlineFeedback === 'function') {
+      window.showInlineFeedback(clientInterestsForm, 'Interesses atualizados com sucesso.', {
+        type: 'success',
+      });
+    }
   }
 
   window.navigateToClientDetail = (clientId) => {
@@ -2437,6 +2498,9 @@ let isSavingQuickSale = false;
   });
   clientFormElement?.addEventListener('submit', handleClientFormSubmit);
   clientFormCancelButton?.addEventListener('click', handleClientDetailBack);
+  clientFormSaveButton?.addEventListener('click', () => {
+    clientFormElement?.requestSubmit();
+  });
   clientDetailBackButton?.addEventListener('click', handleClientDetailBack);
   clientDetailEditButton?.addEventListener('click', handleClientDetailEdit);
   clientDetailDeleteButton?.addEventListener('click', handleClientDetailDelete);
