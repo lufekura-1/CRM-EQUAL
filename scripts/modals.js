@@ -77,6 +77,15 @@ function closeOverlay(overlay) {
   toggleBodyModalState();
 }
 
+function ensureModalButton(button) {
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
+  if (button.type !== 'button') {
+    button.type = 'button';
+  }
+}
+
 function resetAddEventForm() {
   if (!addEventForm) {
     return;
@@ -216,18 +225,14 @@ async function handleSaveEvent() {
       window.showInlineFeedback(addEventForm, successMessage, { type: 'success' });
     }
 
-    let calendarUpdated = false;
     if (editingEvent && typeof window.updateCalendarEvent === 'function') {
       try {
-        calendarUpdated = Boolean(window.updateCalendarEvent(editingEvent));
+        window.updateCalendarEvent(editingEvent);
       } catch (updateError) {
         console.error('[modals] Falha ao sincronizar evento com o calendário.', updateError);
       }
     }
 
-    if (!calendarUpdated && typeof window.refreshCalendar === 'function') {
-      window.refreshCalendar({ showLoading: false });
-    }
   } catch (error) {
     const message = window.api?.getErrorMessage(error, errorMessage);
     if (typeof window.showToast === 'function') {
@@ -631,8 +636,8 @@ async function handleToggleStatusFromModal() {
       window.showToast(successMessage, { type: 'success' });
     }
 
-    if (!isContact && typeof window.refreshCalendar === 'function') {
-      window.refreshCalendar({ showLoading: false });
+    if (!isContact && typeof window.updateCalendarEvent === 'function') {
+      window.updateCalendarEvent(currentDetailEvent);
     }
   } catch (error) {
     const message = window.api?.getErrorMessage
@@ -649,8 +654,15 @@ async function handleToggleStatusFromModal() {
 }
 
 function initializeModalInteractions() {
+  ensureModalButton(addEventCloseButton);
+  ensureModalButton(addEventSaveButton);
+  ensureModalButton(eventDetailsCloseButton);
+  ensureModalButton(eventDetailsToggleStatusButton);
+
   addEventOverlay?.addEventListener('click', handleAddEventOverlayClick);
-  addEventCloseButton?.addEventListener('click', () => {
+  addEventCloseButton?.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
     closeAddEventModal();
   });
   addEventSaveButton?.addEventListener('click', (event) => {
@@ -661,7 +673,9 @@ function initializeModalInteractions() {
   addEventForm?.addEventListener('submit', handleAddEventFormSubmit);
 
   eventDetailsOverlay?.addEventListener('click', handleEventDetailsOverlayClick);
-  eventDetailsCloseButton?.addEventListener('click', () => {
+  eventDetailsCloseButton?.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
     closeEventDetailsModal();
   });
   eventDetailsToggleStatusButton?.addEventListener('click', handleEventDetailsToggleClick);
