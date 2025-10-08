@@ -114,6 +114,9 @@ function handleUserSelectorSubmit(event) {
   }
 
   setCurrentUser(selectedUserId);
+  if (typeof window.showToast === 'function') {
+    window.showToast(`Usuário alterado para ${selectedUser.name}.`, { type: 'success' });
+  }
   closeUserSelectorModal();
 }
 
