@@ -348,59 +348,6 @@ function renderEventDetailsView() {
     }
   }
 }
-// Captura o botão de status
-// Escuta o clique de QUALQUER botão de status, mesmo que ele seja criado depois
-document.addEventListener('click', async (e) => {
-  const btn = e.target.closest('.modal__status-button');
-  if (!btn) return; // ignora outros cliques
-
-  e.preventDefault();
-  e.stopPropagation();
-
-  const entityType = btn.dataset.entityType;
-  const eventId = btn.dataset.eventId;
-  const contactId = btn.dataset.contactId;
-  const statusKey = btn.dataset.statusKey;
-  const novoStatus = statusKey === 'completed' ? 'pending' : 'completed';
-
-  try {
-    const res = await fetch('/api/eventos/toggle', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        entityType,
-        eventId,
-        contactId,
-        status: novoStatus
-      })
-    });
-
-    if (!res.ok) throw new Error('Erro na atualização');
-    const data = await res.json();
-
-    // Atualiza visualmente o evento no calendário
-    if (typeof atualizarEventoNaTela === 'function') {
-      atualizarEventoNaTela(data);
-    }
-
-    // Mostra feedback visual
-    if (typeof mostrarToast === 'function') {
-      mostrarToast(`Evento marcado como ${novoStatus === 'completed' ? 'Efetuado' : 'Pendente'}`);
-    }
-
-    // Atualiza o texto do botão
-    btn.textContent =
-      novoStatus === 'completed' ? 'Marcar como Pendente' : 'Marcar como Efetuado';
-    btn.dataset.statusKey = novoStatus;
-  } catch (err) {
-    console.error('Erro ao alternar status:', err);
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Erro ao atualizar evento');
-    }
-  }
-});
-
-
 function openEventDetailsModal(event) {
   if (!eventDetailsOverlay || !eventDetailsBody) {
     return;

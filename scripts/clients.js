@@ -2305,6 +2305,9 @@ let isSavingQuickSale = false;
     state.page = 1;
     renderClients();
     updateAdvancedButtonState();
+    if (typeof window.showToast === 'function') {
+      window.showToast('Filtros aplicados com sucesso.', { type: 'success' });
+    }
     if (typeof window.showInlineFeedback === 'function') {
       window.showInlineFeedback(clientsAdvancedForm, 'Filtros aplicados com sucesso.', {
         type: 'success',
@@ -2369,6 +2372,9 @@ let isSavingQuickSale = false;
     renderClientInterests(client);
     renderClients();
     updateAdvancedButtonState();
+    if (typeof window.showToast === 'function') {
+      window.showToast('Interesses atualizados com sucesso.', { type: 'success' });
+    }
     if (typeof window.showInlineFeedback === 'function') {
       window.showInlineFeedback(clientInterestsForm, 'Interesses atualizados com sucesso.', {
         type: 'success',
