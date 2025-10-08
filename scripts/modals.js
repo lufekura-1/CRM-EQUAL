@@ -79,6 +79,22 @@ function normalizeDateKey(value) {
 }
 
 const overlayPersistenceObservers = new WeakMap();
+const modalOverlayState = {
+  activeOverlay: null,
+};
+
+function rememberActiveOverlay(overlay) {
+  if (!(overlay instanceof HTMLElement)) {
+    return;
+  }
+  modalOverlayState.activeOverlay = overlay;
+}
+
+function clearActiveOverlay(overlay) {
+  if (modalOverlayState.activeOverlay === overlay) {
+    modalOverlayState.activeOverlay = null;
+  }
+}
 
 function restoreOverlayPosition(overlay, hint = {}) {
   if (!(overlay instanceof HTMLElement)) {
@@ -182,6 +198,7 @@ function openOverlay(overlay) {
   ensureOverlayInDocument(overlay);
   overlay.classList.add('is-visible');
   overlay.setAttribute('aria-hidden', 'false');
+  rememberActiveOverlay(overlay);
   toggleBodyModalState();
 }
 
@@ -191,7 +208,55 @@ function closeOverlay(overlay) {
   }
   overlay.classList.remove('is-visible');
   overlay.setAttribute('aria-hidden', 'true');
+  clearActiveOverlay(overlay);
   toggleBodyModalState();
+}
+
+function captureActiveOverlayState() {
+  const overlay =
+    (modalOverlayState.activeOverlay instanceof HTMLElement
+      ? modalOverlayState.activeOverlay
+      : document.querySelector('.modal-overlay.is-visible')) || null;
+
+  if (!overlay) {
+    return null;
+  }
+
+  const persistence = overlayPersistenceObservers.get(overlay);
+  const hint = persistence?.hint || {
+    nextSibling: overlay.nextSibling,
+    parentNode: overlay.parentNode,
+  };
+
+  return {
+    overlay,
+    hint,
+    wasVisible: overlay.classList.contains('is-visible'),
+  };
+}
+
+function restoreActiveOverlayState(state) {
+  if (!state || !(state.overlay instanceof HTMLElement)) {
+    return;
+  }
+
+  const { overlay, hint, wasVisible } = state;
+  restoreOverlayPosition(overlay, hint || undefined);
+
+  overlay.classList.toggle('is-visible', Boolean(wasVisible));
+  overlay.setAttribute('aria-hidden', wasVisible ? 'false' : 'true');
+
+  if (wasVisible) {
+    rememberActiveOverlay(overlay);
+  } else {
+    clearActiveOverlay(overlay);
+  }
+
+  toggleBodyModalState();
+}
+
+function isAnyModalVisible() {
+  return Boolean(document.querySelector('.modal-overlay.is-visible'));
 }
 
 function ensureModalButton(button) {
@@ -254,8 +319,10 @@ function handleAddEventOverlayClick(event) {
   if (!(event.target instanceof Element)) {
     return;
   }
+
   if (!event.target.closest('.modal')) {
-    closeAddEventModal();
+    event.preventDefault();
+    event.stopPropagation();
   }
 }
 
@@ -684,8 +751,10 @@ function handleEventDetailsOverlayClick(event) {
   if (!(event.target instanceof Element)) {
     return;
   }
+
   if (!event.target.closest('.modal')) {
-    closeEventDetailsModal();
+    event.preventDefault();
+    event.stopPropagation();
   }
 }
 
@@ -815,5 +884,11 @@ function initializeModalInteractions() {
 Array.from(document.querySelectorAll('.modal-overlay')).forEach((overlay) => {
   watchOverlayPersistence(overlay);
 });
+
+window.ModalOverlayManager = {
+  captureState: captureActiveOverlayState,
+  restoreState: restoreActiveOverlayState,
+  isAnyModalVisible,
+};
 
 initializeModalInteractions();
