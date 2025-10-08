@@ -225,19 +225,36 @@
   }
 
   function normalizeEventPayload(payload) {
-    if (!payload) {
+    if (!payload || typeof payload !== 'object') {
       return null;
     }
-    const result = {
-      date: payload.date,
-      title: payload.title,
-      description: payload.description ?? null,
-      color: payload.color ?? null,
-      clientId: payload.clientId ?? null,
-    };
+
+    const result = {};
+
+    if (payload.date !== undefined) {
+      result.date = payload.date;
+    }
+
+    if (payload.title !== undefined) {
+      result.title = payload.title;
+    }
+
+    if (payload.description !== undefined) {
+      result.description = payload.description ?? null;
+    }
+
+    if (payload.color !== undefined) {
+      result.color = payload.color ?? null;
+    }
+
+    if (payload.clientId !== undefined) {
+      result.clientId = payload.clientId ?? null;
+    }
+
     if (payload.completed !== undefined) {
       result.completed = Boolean(payload.completed);
     }
+
     return result;
   }
 
@@ -401,7 +418,7 @@
     async updateEvent(id, payload) {
       const body = JSON.stringify(normalizeEventPayload(payload));
       return request(`/api/eventos/${encodeURIComponent(id)}`, {
-        method: 'PUT',
+        method: 'PATCH',
         body,
       });
     },
