@@ -62,6 +62,7 @@ function formatWeekRangeLabel(startDate, endDate) {
 }
 
 let isCalendarLoading = false;
+let lastRenderedViewKey = '';
 
 function clearChildren(element) {
   if (!(element instanceof Element)) {
@@ -123,6 +124,61 @@ function patchElement(element, { text, attributes = {}, dataset = {}, classList 
   }
 
   return element;
+}
+
+function getCurrentViewKey() {
+  if (currentCalendarView === 'week') {
+    const start = getStartOfWeek(currentCalendarDate);
+    return `week:${formatDateKey(start)}`;
+  }
+
+  const year = currentCalendarDate.getFullYear();
+  const monthIndex = currentCalendarDate.getMonth();
+  return `month:${year}-${String(monthIndex).padStart(2, '0')}`;
+}
+
+function updateCalendarHeader() {
+  if (calendarElement) {
+    const isWeekView = currentCalendarView === 'week';
+    calendarElement.classList.toggle('calendar--weekly', isWeekView);
+    calendarElement.classList.toggle('calendar--monthly', !isWeekView);
+    const ariaLabel = isWeekView ? 'Calendário semanal' : 'Calendário mensal';
+    calendarElement.setAttribute('aria-label', ariaLabel);
+  }
+
+  if (!monthLabel) {
+    return;
+  }
+
+  if (currentCalendarView === 'week') {
+    const startOfWeek = getStartOfWeek(currentCalendarDate);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    patchElement(monthLabel, { text: formatWeekRangeLabel(startOfWeek, endOfWeek) });
+    return;
+  }
+
+  const year = currentCalendarDate.getFullYear();
+  const month = currentCalendarDate.getMonth();
+  const label = `${MONTH_NAMES[month]} ${year}`;
+  patchElement(monthLabel, { text: label });
+}
+
+function refreshVisibleCalendarCells() {
+  if (!datesContainer) {
+    return;
+  }
+
+  const cells = datesContainer.querySelectorAll('.calendar__date[data-date-key]');
+  cells.forEach((cell) => {
+    if (!(cell instanceof HTMLElement)) {
+      return;
+    }
+    const { dateKey } = cell.dataset;
+    if (dateKey) {
+      renderEventsForCell(cell, dateKey);
+    }
+  });
 }
 
 function findEventInStore(identifier) {
@@ -496,15 +552,28 @@ async function refreshSingleEvent(hint) {
   return true;
 }
 
-async function performFullRefresh({ showLoading = true } = {}) {
+async function performFullRefresh(options = {}) {
+  const { showLoading = true, forceFull = false } = options;
+
   if (isCalendarLoading) {
     return;
   }
 
   const range = getCalendarRange();
+  const viewKey = getCurrentViewKey();
+  const hasDateCells = Boolean(datesContainer?.querySelector('.calendar__date'));
+  const needsStructureUpdate =
+    !datesContainer
+    || !hasDateCells
+    || viewKey !== lastRenderedViewKey
+    || forceFull;
 
   if (showLoading) {
-    showCalendarStatus('Carregando eventos...', 'info');
+    if (needsStructureUpdate) {
+      showCalendarStatus('Carregando eventos...', 'info');
+    } else if (calendarElement) {
+      calendarElement.setAttribute('aria-busy', 'true');
+    }
   }
 
   isCalendarLoading = true;
@@ -516,7 +585,7 @@ async function performFullRefresh({ showLoading = true } = {}) {
     const payload = response?.data;
     const eventList = extractEventsPayload(payload);
     populateEvents(eventList);
-    renderCalendarView();
+    renderCalendarView({ rebuild: needsStructureUpdate });
   } catch (error) {
     console.error('[calendar] Falha ao carregar eventos.', {
       error,
@@ -534,11 +603,14 @@ async function performFullRefresh({ showLoading = true } = {}) {
     }
 
     if (Object.keys(events).length > 0) {
-      renderCalendarView();
+      renderCalendarView({ rebuild: needsStructureUpdate });
     } else {
       showCalendarStatus(statusMessage, 'error');
     }
   } finally {
+    if (calendarElement) {
+      calendarElement.removeAttribute('aria-busy');
+    }
     isCalendarLoading = false;
   }
 }
@@ -797,7 +869,7 @@ function renderCalendarCell(dateKey) {
 }
 
 function renderMonthlyCalendar() {
-  if (!monthLabel || !datesContainer) {
+  if (!datesContainer) {
     return;
   }
 
@@ -806,8 +878,6 @@ function renderMonthlyCalendar() {
   const firstDayOfMonth = new Date(year, month, 1);
   const firstWeekday = firstDayOfMonth.getDay();
   const totalDays = new Date(year, month + 1, 0).getDate();
-
-  monthLabel.textContent = `${MONTH_NAMES[month]} ${year}`;
 
   clearChildren(datesContainer);
 
@@ -826,7 +896,6 @@ function renderMonthlyCalendar() {
     const cellDate = new Date(year, month, day);
     const dateKey = formatDateKey(cellDate);
     const cell = createDateCell(day, { isToday, dateKey });
-    renderEventsForCell(cell, dateKey);
     datesContainer.appendChild(cell);
   }
 
@@ -841,15 +910,13 @@ function renderMonthlyCalendar() {
 }
 
 function renderWeeklyCalendar() {
-  if (!monthLabel || !datesContainer) {
+  if (!datesContainer) {
     return;
   }
 
   const startOfWeek = getStartOfWeek(currentCalendarDate);
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-  monthLabel.textContent = formatWeekRangeLabel(startOfWeek, endOfWeek);
 
   clearChildren(datesContainer);
 
@@ -870,8 +937,6 @@ function renderWeeklyCalendar() {
       dateKey,
       variant: 'week',
     });
-
-    renderEventsForCell(cell, dateKey);
     datesContainer.appendChild(cell);
   }
 }
@@ -890,23 +955,23 @@ function updateCalendarViewButtons() {
   });
 }
 
-function renderCalendarView() {
-  if (!monthLabel || !datesContainer) {
+function renderCalendarView({ rebuild = true } = {}) {
+  updateCalendarHeader();
+
+  if (!datesContainer) {
     return;
   }
 
-  if (calendarElement) {
-    calendarElement.classList.toggle('calendar--weekly', currentCalendarView === 'week');
-    calendarElement.classList.toggle('calendar--monthly', currentCalendarView === 'month');
-    const ariaLabel = currentCalendarView === 'week' ? 'Calendário semanal' : 'Calendário mensal';
-    calendarElement.setAttribute('aria-label', ariaLabel);
+  if (rebuild) {
+    if (currentCalendarView === 'week') {
+      renderWeeklyCalendar();
+    } else {
+      renderMonthlyCalendar();
+    }
+    lastRenderedViewKey = getCurrentViewKey();
   }
 
-  if (currentCalendarView === 'week') {
-    renderWeeklyCalendar();
-  } else {
-    renderMonthlyCalendar();
-  }
+  refreshVisibleCalendarCells();
 
   updateCalendarViewButtons();
 }

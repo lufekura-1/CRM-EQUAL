@@ -59,10 +59,21 @@ function patchElement(element, { text, attributes = {}, dataset = {}, classList 
   return element;
 }
 
+function ensureOverlayInDocument(overlay) {
+  if (!(overlay instanceof HTMLElement)) {
+    return;
+  }
+
+  if (!overlay.isConnected && document.body) {
+    document.body.appendChild(overlay);
+  }
+}
+
 function openOverlay(overlay) {
   if (!overlay) {
     return;
   }
+  ensureOverlayInDocument(overlay);
   overlay.classList.add('is-visible');
   overlay.setAttribute('aria-hidden', 'false');
   toggleBodyModalState();
