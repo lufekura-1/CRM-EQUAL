@@ -41,6 +41,7 @@ const clientInterestsContainer = clientDetailElement?.querySelector('[data-role=
 const clientInterestsEditButton = document.querySelector('[data-role="client-interests-edit"]');
 const clientFormElement = document.querySelector('#client-registration-form');
 const clientFormCancelButton = document.querySelector('[data-role="client-form-cancel"]');
+const clientFormSaveButton = document.querySelector('[data-role="client-form-save"]');
 const clientsAdvancedSearchButton = document.querySelector('[data-role="clients-advanced-search"]');
 const clientsAdvancedOverlay = document.querySelector('[data-modal="clients-advanced-search"]');
 const clientsAdvancedForm = clientsAdvancedOverlay?.querySelector('[data-role="clients-advanced-form"]');
