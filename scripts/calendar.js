@@ -63,6 +63,115 @@ function formatWeekRangeLabel(startDate, endDate) {
 
 let isCalendarLoading = false;
 
+function clearChildren(element) {
+  if (!(element instanceof Element)) {
+    return;
+  }
+
+  while (element.firstChild) {
+    element.removeChild(element.firstChild);
+  }
+}
+
+function patchElement(element, { text, attributes = {}, dataset = {}, classList = {} } = {}) {
+  if (!(element instanceof Element)) {
+    return element;
+  }
+
+  if (text !== undefined && element.textContent !== text) {
+    element.textContent = text;
+  }
+
+  Object.entries(attributes).forEach(([name, value]) => {
+    if (value === null || value === undefined || value === false) {
+      element.removeAttribute(name);
+    } else {
+      const stringValue = String(value);
+      if (element.getAttribute(name) !== stringValue) {
+        element.setAttribute(name, stringValue);
+      }
+    }
+  });
+
+  Object.entries(dataset).forEach(([name, value]) => {
+    if (value === null || value === undefined) {
+      delete element.dataset[name];
+    } else {
+      const stringValue = String(value);
+      if (element.dataset[name] !== stringValue) {
+        element.dataset[name] = stringValue;
+      }
+    }
+  });
+
+  if (Array.isArray(classList.add)) {
+    classList.add.forEach((className) => {
+      element.classList.add(className);
+    });
+  }
+
+  if (Array.isArray(classList.remove)) {
+    classList.remove.forEach((className) => {
+      element.classList.remove(className);
+    });
+  }
+
+  if (classList.toggle && typeof classList.toggle === 'object') {
+    Object.entries(classList.toggle).forEach(([className, enabled]) => {
+      element.classList.toggle(className, Boolean(enabled));
+    });
+  }
+
+  return element;
+}
+
+function findEventInStore(identifier) {
+  if (!identifier) {
+    return null;
+  }
+
+  const normalized = String(identifier);
+  const byContact = normalized.startsWith('contact:')
+    ? normalized.slice('contact:'.length)
+    : null;
+  const byEvent = normalized.startsWith('event:')
+    ? normalized.slice('event:'.length)
+    : normalized;
+  const dateKeys = Object.keys(events);
+
+  for (const dateKey of dateKeys) {
+    const list = events[dateKey];
+    if (!Array.isArray(list) || list.length === 0) {
+      continue;
+    }
+
+    const index = list.findIndex((item) => {
+      if (byContact !== null) {
+        return String(item.contactId ?? '') === byContact;
+      }
+
+      const eventId = String(item.id ?? '');
+      if (eventId && eventId === byEvent) {
+        return true;
+      }
+
+      const contactId = item.contactId !== undefined && item.contactId !== null
+        ? String(item.contactId)
+        : '';
+      return contactId && contactId === byEvent;
+    });
+    if (index >= 0) {
+      return {
+        dateKey,
+        index,
+        event: list[index],
+      };
+    }
+  }
+
+  return null;
+}
+
 function resetEvents() {
   Object.keys(events).forEach((key) => {
     delete events[key];
@@ -153,7 +262,7 @@ function showCalendarStatus(message, type = 'info') {
   if (!datesContainer) {
     return;
   }
-  datesContainer.innerHTML = '';
+  clearChildren(datesContainer);
   const statusElement = document.createElement('div');
   statusElement.className = 'calendar__status';
   if (type === 'error') {
@@ -163,16 +272,145 @@ function showCalendarStatus(message, type = 'info') {
   datesContainer.appendChild(statusElement);
 }
 
-async function refreshCalendar({ showLoading = true } = {}) {
-  if (!datesContainer) {
+function buildEventsUrl(range = {}) {
+  const params = new URLSearchParams();
+  if (range.from) {
+    params.set('from', range.from);
+  }
+  if (range.to) {
+    params.set('to', range.to);
+  }
+  const query = params.toString();
+  return query ? `/api/eventos?${query}` : '/api/eventos';
+}
+
+function isDateWithinRange(dateKey, range) {
+  if (!dateKey || !range) {
+    return false;
+  }
+
+  const { from, to } = range;
+  if (!from || !to) {
+    return false;
+  }
+
+  return dateKey >= from && dateKey <= to;
+}
+
+function getPendingEventHint() {
+  const editingId = editingEvent?.id ?? editingEvent?.evento_id ?? null;
+  if (editingId) {
+    return {
+      kind: 'event',
+      id: String(editingId),
+      event: editingEvent,
+    };
+  }
+
+  const detailType = currentDetailEvent?.type;
+  if (detailType && detailType !== 'contact') {
+    const detailId = currentDetailEvent?.id ?? currentDetailEvent?.evento_id;
+    if (detailId) {
+      return {
+        kind: 'event',
+        id: String(detailId),
+        event: currentDetailEvent,
+      };
+    }
+  }
+
+  const appState = window.AppState;
+  if (appState && typeof appState.getState === 'function') {
+    const state = appState.getState();
+    if (state?.currentEventId) {
+      return {
+        kind: 'event',
+        id: String(state.currentEventId),
+        event: findEventInStore(state.currentEventId)?.event ?? null,
+      };
+    }
+  }
+
+  return null;
+}
+
+function applyEventUpdate(event) {
+  const normalized = normalizeEventData(event);
+  if (!normalized) {
     return;
   }
 
+  const eventId = normalized.id;
+  const existing = findEventInStore(eventId);
+  const affectedKeys = new Set();
+
+  if (existing && existing.dateKey) {
+    const list = events[existing.dateKey];
+    if (Array.isArray(list)) {
+      list.splice(existing.index, 1);
+      if (list.length === 0) {
+        delete events[existing.dateKey];
+      }
+    }
+    affectedKeys.add(existing.dateKey);
+  }
+
+  const range = getCalendarRange();
+  if (isDateWithinRange(normalized.date, range)) {
+    const list = ensureEventsArray(normalized.date);
+    const listIndex = list.findIndex((item) => String(item.id) === String(eventId));
+    if (listIndex >= 0) {
+      list[listIndex] = normalized;
+    } else {
+      list.push(normalized);
+    }
+    sortEventsForDate(list);
+    affectedKeys.add(normalized.date);
+  }
+
+  affectedKeys.forEach((key) => {
+    if (key) {
+      renderCalendarCell(key);
+    }
+  });
+}
+
+async function refreshSingleEvent(hint) {
+  if (!hint || hint.kind !== 'event' || !hint.id) {
+    return false;
+  }
+
+  let updatedEvent = null;
+
+  try {
+    const response = await safeFetch(`/api/eventos/${encodeURIComponent(hint.id)}`, {
+      method: 'GET',
+      parse: 'json',
+    });
+    const payload = response?.data?.evento ?? response?.data?.event ?? response?.data;
+    updatedEvent = normalizeEventData(payload);
+  } catch (error) {
+    console.warn('[calendar] Falha ao buscar evento atualizado.', error);
+  }
+
+  if (!updatedEvent) {
+    updatedEvent = normalizeEventData(hint.event);
+  }
+
+  if (!updatedEvent) {
+    return false;
+  }
+
+  applyEventUpdate(updatedEvent);
+  return true;
+}
+
+async function performFullRefresh({ showLoading = true } = {}) {
   if (isCalendarLoading) {
     return;
   }
 
-  const { from, to } = getCalendarRange();
+  const range = getCalendarRange();
 
   if (showLoading) {
     showCalendarStatus('Carregando eventos...', 'info');
@@ -181,28 +419,59 @@ async function refreshCalendar({ showLoading = true } = {}) {
   isCalendarLoading = true;
 
   try {
-    const response = await window.api.getEvents({ from, to });
-    const eventList = Array.isArray(response?.eventos)
-      ? response.eventos
-      : Array.isArray(response)
-        ? response
-        : [];
+    const url = buildEventsUrl(range);
+    const response = await safeFetch(url, { method: 'GET', parse: 'json' });
+    const payload = response?.data;
+    const eventList = Array.isArray(payload?.eventos)
+      ? payload.eventos
+      : Array.isArray(payload?.events)
+        ? payload.events
+        : Array.isArray(payload)
+          ? payload
+          : [];
     populateEvents(eventList);
-    renderCalendar();
+    renderCalendarView();
   } catch (error) {
-    const message = window.api?.getErrorMessage(error, 'Erro ao carregar eventos.');
+    const message = window.api?.getErrorMessage
+      ? window.api.getErrorMessage(error, 'Erro ao carregar eventos.')
+      : 'Erro ao carregar eventos.';
     if (typeof window.showToast === 'function') {
       window.showToast(message, { type: 'error' });
     }
-    const hasExistingEvents = Object.keys(events).length > 0;
-    if (hasExistingEvents) {
-      renderCalendar();
+    if (Object.keys(events).length > 0) {
+      renderCalendarView();
     } else {
       showCalendarStatus(message, 'error');
     }
   } finally {
     isCalendarLoading = false;
   }
+}
+
+async function refreshCalendar(options = {}) {
+  if (!datesContainer) {
+    return;
+  }
+
+  if (options.forceFull) {
+    await performFullRefresh(options);
+    return;
+  }
+
+  if (!datesContainer.children.length) {
+    await performFullRefresh(options);
+    return;
+  }
+
+  const hint = getPendingEventHint();
+  if (hint) {
+    const updated = await refreshSingleEvent(hint);
+    if (updated) {
+      return;
+    }
+  }
+
+  await performFullRefresh(options);
 }
 
 function createDateCell(
@@ -288,42 +557,133 @@ function getEventChipType(event) {
   return 'event';
 }
 
+function getEventKey(event) {
+  if (!event) {
+    return '';
+  }
+
+  if (event.type === 'contact' && event.contactId) {
+    return `contact:${String(event.contactId)}`;
+  }
+
+  const identifier = event.id ?? event.evento_id ?? null;
+  return identifier ? `event:${String(identifier)}` : '';
+}
+
+function handleEventChipClick(event) {
+  const chip = event.currentTarget;
+  if (!(chip instanceof HTMLElement)) {
+    return;
+  }
+
+  const key = chip.dataset.eventKey || chip.dataset.eventId || chip.dataset.contactId;
+  if (!key) {
+    return;
+  }
+
+  const stored = findEventInStore(key);
+  if (stored?.event) {
+    openEventDetailsModal(stored.event);
+  }
+}
+
+function updateEventChip(chip, event) {
+  if (!(chip instanceof HTMLElement) || !event) {
+    return;
+  }
+
+  const status = typeof getEventStatus === 'function'
+    ? getEventStatus(event)
+    : { key: 'pending', label: 'Pendente' };
+  const chipType = getEventChipType(event);
+  const chipVariant = status.key === 'completed' ? 'completed' : 'pending';
+  const labelText = getEventChipLabel(event);
+  const accessibleLabel = `${labelText} - ${status.label}`;
+  const key = getEventKey(event);
+
+  patchElement(chip, {
+    dataset: {
+      eventKey: key || null,
+      eventId: event.id != null ? String(event.id) : null,
+      contactId: event.contactId != null ? String(event.contactId) : null,
+      eventType: event.type || 'event',
+      chipType,
+      chipVariant,
+      eventStatus: status.key,
+    },
+    attributes: {
+      'aria-label': accessibleLabel,
+      title: accessibleLabel,
+      type: 'button',
+    },
+  });
+
+  const labelElement = chip.querySelector('.calendar__event-chip-label');
+  if (labelElement) {
+    patchElement(labelElement, { text: labelText });
+  }
+
+  const dotElement = chip.querySelector('.calendar__event-chip-status');
+  if (dotElement) {
+    patchElement(dotElement, {
+      dataset: {
+        dotType: chipType,
+        dotStatus: status.key,
+      },
+    });
+  }
+}
+
+function createEventChip(event) {
+  const chip = document.createElement('button');
+  chip.className = 'calendar__event-chip';
+  chip.type = 'button';
+  chip.addEventListener('click', handleEventChipClick);
+
+  const labelElement = document.createElement('span');
+  labelElement.className = 'calendar__event-chip-label';
+  chip.appendChild(labelElement);
+
+  chip.appendChild(createStatusDot(getEventChipType(event), 'pending'));
+  updateEventChip(chip, event);
+  return chip;
+}
+
 function renderEventsForCell(cell, dateKey) {
   const eventsContainer = cell.querySelector('.calendar__date-events');
   if (!eventsContainer) {
     return;
   }
 
-  eventsContainer.innerHTML = '';
+  const existingChips = new Map();
+  Array.from(eventsContainer.children).forEach((child) => {
+    if (child instanceof HTMLElement) {
+      const childKey = child.dataset.eventKey || child.dataset.eventId || child.dataset.contactId || '';
+      if (childKey) {
+        existingChips.set(childKey, child);
+      }
+    }
+  });
+
   const dateEvents = events[dateKey] || [];
+  const orderedChips = [];
 
   dateEvents.forEach((event) => {
-    const chip = document.createElement('button');
-    chip.className = 'calendar__event-chip';
-    chip.type = 'button';
-    chip.dataset.eventId = String(event.id);
-    chip.dataset.eventType = event.type || 'event';
-    const status = typeof getEventStatus === 'function'
-      ? getEventStatus(event)
-      : { key: 'pending', label: 'Pendente' };
-    const chipType = getEventChipType(event);
-    const chipVariant = status.key === 'completed' ? 'completed' : 'pending';
-    chip.dataset.chipType = chipType;
-    chip.dataset.chipVariant = chipVariant;
-    chip.dataset.eventStatus = status.key;
+    const eventKey = getEventKey(event);
+    if (!eventKey) {
+      return;
+    }
+    const existingChip = existingChips.get(eventKey) || createEventChip(event);
+    updateEventChip(existingChip, event);
+    orderedChips.push(existingChip);
+    existingChips.delete(eventKey);
+  });
 
-    const labelElement = document.createElement('span');
-    labelElement.className = 'calendar__event-chip-label';
-    labelElement.textContent = getEventChipLabel(event);
-    chip.appendChild(labelElement);
+  existingChips.forEach((chip) => {
+    chip.remove();
+  });
 
-    chip.appendChild(createStatusDot(chipType, status.key));
-
-    const accessibleLabel = `${labelElement.textContent} - ${status.label}`;
-    chip.setAttribute('aria-label', accessibleLabel);
-    chip.title = accessibleLabel;
-
-    chip.addEventListener('click', () => openEventDetailsModal(event));
+  orderedChips.forEach((chip) => {
     eventsContainer.appendChild(chip);
   });
 }
@@ -354,7 +714,7 @@ function renderMonthlyCalendar() {
 
   monthLabel.textContent = `${MONTH_NAMES[month]} ${year}`;
 
-  datesContainer.innerHTML = '';
+  clearChildren(datesContainer);
 
   for (let i = 0; i < firstWeekday; i += 1) {
     datesContainer.appendChild(createDateCell('', { isEmpty: true }));
@@ -396,7 +756,7 @@ function renderWeeklyCalendar() {
 
   monthLabel.textContent = formatWeekRangeLabel(startOfWeek, endOfWeek);
 
-  datesContainer.innerHTML = '';
+  clearChildren(datesContainer);
 
   const today = new Date();
 
@@ -435,7 +795,7 @@ function updateCalendarViewButtons() {
   });
 }
 
-function renderCalendar() {
+function renderCalendarView() {
   if (!monthLabel || !datesContainer) {
     return;
   }
@@ -462,7 +822,7 @@ function changeCalendarPeriod(offset) {
   } else {
     currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset, 1);
   }
-  refreshCalendar();
+  refreshCalendar({ forceFull: true });
 }
 
 function setCalendarView(view) {
@@ -483,7 +843,7 @@ function setCalendarView(view) {
     currentCalendarDate = new Date(today.getFullYear(), today.getMonth(), 1);
   }
 
-  refreshCalendar();
+  refreshCalendar({ forceFull: true });
 }
 
 window.refreshCalendar = refreshCalendar;
