@@ -67,51 +67,6 @@ homeAddEventCardButton?.addEventListener('click', () => {
   openAddEventModal();
 });
 
-if (addEventOverlay) {
-  addEventOverlay.addEventListener('click', (event) => {
-    if (!(event.target instanceof Element)) {
-      return;
-    }
-    if (!event.target.closest('.modal')) {
-      closeAddEventModal();
-    }
-  });
-}
-
-addEventCloseButton?.addEventListener('click', () => {
-  closeAddEventModal();
-});
-
-addEventSaveButton?.addEventListener('click', () => {
-  handleSaveEvent();
-});
-
-addEventForm?.addEventListener('submit', (event) => {
-  event.preventDefault();
-  handleSaveEvent();
-});
-
-if (eventDetailsOverlay) {
-  eventDetailsOverlay.addEventListener('click', (event) => {
-    if (!(event.target instanceof Element)) {
-      return;
-    }
-    if (!event.target.closest('.modal')) {
-      closeEventDetailsModal();
-    }
-  });
-}
-
-eventDetailsCloseButton?.addEventListener('click', () => {
-  closeEventDetailsModal();
-});
-
-eventDetailsToggleStatusButton?.addEventListener('click', (event) => {
-  event.preventDefault();
-  event.stopPropagation();
-  handleToggleStatusFromModal();
-});
-
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') {
     return;

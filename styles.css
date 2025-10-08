@@ -821,28 +821,16 @@ body.modal-open {
   text-align: left;
 }
 
-.calendar__event-chip[data-chip-type="event"][data-chip-variant="pending"] {
-  background-color: #fed7aa;
-  border-color: rgba(180, 83, 9, 0.35);
-  color: #431407;
+.calendar__event-chip[data-chip-type="event"] {
+  background-color: #ff7a18;
+  border-color: rgba(255, 122, 24, 0.55);
+  color: #1a0b00;
 }
 
-.calendar__event-chip[data-chip-type="event"][data-chip-variant="completed"] {
-  background-color: #ea580c;
-  border-color: rgba(194, 65, 12, 0.5);
-  color: #fff7ed;
-}
-
-.calendar__event-chip[data-chip-type="contact"][data-chip-variant="pending"] {
-  background-color: #bbf7d0;
-  border-color: rgba(22, 163, 74, 0.35);
-  color: #064e3b;
-}
-
-.calendar__event-chip[data-chip-type="contact"][data-chip-variant="completed"] {
-  background-color: #166534;
-  border-color: rgba(21, 128, 61, 0.55);
-  color: #ecfdf5;
+.calendar__event-chip[data-chip-type="contact"] {
+  background-color: #0d6efd;
+  border-color: rgba(13, 110, 253, 0.6);
+  color: #e9f2ff;
 }
 
 .calendar__event-chip[data-chip-type="dayoff"] {
@@ -868,36 +856,22 @@ body.modal-open {
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.calendar__event-chip-status[data-dot-type="event"][data-dot-status="pending"],
-.calendar__event-chip-status[data-dot-type="event"][data-dot-status="overdue"] {
-  background-color: #fcd34d;
-  border-color: #f59e0b;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.65);
+.calendar__event-chip-status[data-dot-status="pending"] {
+  background-color: #ffd400;
+  border-color: #ffb300;
+  box-shadow: 0 0 10px rgba(255, 180, 0, 0.8);
 }
 
-.calendar__event-chip-status[data-dot-type="event"][data-dot-status="overdue"] {
-  background-color: #fb923c;
-  border-color: #c2410c;
-  box-shadow: 0 0 8px rgba(194, 65, 12, 0.7);
+.calendar__event-chip-status[data-dot-status="overdue"] {
+  background-color: #ff1744;
+  border-color: #c51128;
+  box-shadow: 0 0 12px rgba(255, 23, 68, 0.75);
 }
 
-.calendar__event-chip-status[data-dot-type="event"][data-dot-status="completed"] {
-  background-color: #f97316;
-  border-color: #9a3412;
-  box-shadow: 0 0 8px rgba(249, 115, 22, 0.7);
-}
-
-.calendar__event-chip-status[data-dot-type="contact"][data-dot-status="pending"],
-.calendar__event-chip-status[data-dot-type="contact"][data-dot-status="overdue"] {
-  background-color: #bbf7d0;
-  border-color: #34d399;
-  box-shadow: 0 0 7px rgba(52, 211, 153, 0.6);
-}
-
-.calendar__event-chip-status[data-dot-type="contact"][data-dot-status="completed"] {
-  background-color: #15803d;
-  border-color: #166534;
-  box-shadow: 0 0 8px rgba(22, 101, 52, 0.75);
+.calendar__event-chip-status[data-dot-status="completed"] {
+  background-color: #72ff9f;
+  border-color: #1ad45a;
+  box-shadow: 0 0 12px rgba(26, 212, 90, 0.75);
 }
 
 .calendar__event-chip-status[data-dot-type="dayoff"] {
