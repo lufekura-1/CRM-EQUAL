@@ -633,7 +633,12 @@
         </section>
 
         <section class="content__page" data-page="cadastro-cliente" data-label="Cadastro do cliente">
-          <form class="client-form" id="client-registration-form" autocomplete="off">
+          <form
+            class="client-form"
+            id="client-registration-form"
+            autocomplete="off"
+            data-prevent-reload="true"
+          >
             <fieldset class="client-form__section">
               <legend class="client-form__title">Dados pessoais</legend>
               <div class="client-form__grid">
@@ -919,7 +924,12 @@
           </button>
         </div>
         <div class="modal__content">
-          <form class="modal__form modal__form--quick-sale" data-role="client-quick-sale-form" autocomplete="off">
+          <form
+            class="modal__form modal__form--quick-sale"
+            data-role="client-quick-sale-form"
+            autocomplete="off"
+            data-prevent-reload="true"
+          >
             <label class="modal__field">
               <span class="modal__label">Data da compra</span>
               <input class="modal__input" type="date" name="saleDate" required />
@@ -958,7 +968,7 @@
               <button class="modal__cancel-button" type="button" data-action="cancel-quick-sale">
                 Cancelar
               </button>
-              <button class="modal__save-button" type="submit" data-action="save-quick-sale">
+              <button class="modal__save-button" type="button" data-action="save-quick-sale">
                 Salvar
               </button>
             </div>
@@ -985,7 +995,12 @@
           </button>
         </div>
         <div class="modal__content">
-          <form class="modal__form modal__form--advanced-search" data-role="clients-advanced-form" autocomplete="off">
+          <form
+            class="modal__form modal__form--advanced-search"
+            data-role="clients-advanced-form"
+            autocomplete="off"
+            data-prevent-reload="true"
+          >
             <label class="modal__field">
               <span class="modal__label">Tipo de usuário</span>
               <select class="modal__input" name="userType" data-advanced-select="userType"></select>
@@ -1011,7 +1026,7 @@
               <button class="modal__cancel-button" type="button" data-action="reset">
                 Limpar filtros
               </button>
-              <button class="modal__save-button" type="submit" data-action="apply">
+              <button class="modal__save-button" type="button" data-action="apply">
                 Aplicar filtros
               </button>
             </div>
@@ -1038,7 +1053,12 @@
           </button>
         </div>
         <div class="modal__content">
-          <form class="modal__form modal__form--interests" data-role="client-interests-form" autocomplete="off">
+          <form
+            class="modal__form modal__form--interests"
+            data-role="client-interests-form"
+            autocomplete="off"
+            data-prevent-reload="true"
+          >
             <p class="modal__helper-text">Escolha as etiquetas que representam melhor este cliente.</p>
             <fieldset class="modal__fieldset">
               <legend class="visually-hidden">Etiquetas disponíveis</legend>
@@ -1048,7 +1068,7 @@
               <button class="modal__cancel-button" type="button" data-action="cancel">
                 Cancelar
               </button>
-              <button class="modal__save-button" type="submit" data-action="save">
+              <button class="modal__save-button" type="button" data-action="save">
                 Salvar
               </button>
             </div>
@@ -1075,7 +1095,7 @@
           </button>
         </div>
         <div class="modal__content">
-          <form class="modal__form" autocomplete="off">
+          <form class="modal__form" autocomplete="off" data-prevent-reload="true">
             <label class="modal__field">
               <input class="modal__input" type="date" name="date" required />
             </label>
@@ -1165,7 +1185,11 @@
           </button>
         </div>
         <div class="modal__content">
-          <form class="modal__form modal__form--user-selector" autocomplete="off">
+          <form
+            class="modal__form modal__form--user-selector"
+            autocomplete="off"
+            data-prevent-reload="true"
+          >
             <fieldset class="user-selector">
               <legend class="visually-hidden">Opções de usuário</legend>
             </fieldset>
@@ -1184,6 +1208,7 @@
     <script src="scripts/api.js"></script>
     <script src="scripts/feedback.js"></script>
     <script src="scripts/elements.js"></script>
+    <script src="scripts/form-guards.js"></script>
     <script src="scripts/state.js"></script>
     <script src="scripts/users.js"></script>
     <script src="scripts/calendar.js"></script>

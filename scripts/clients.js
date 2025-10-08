@@ -1445,8 +1445,7 @@ let isSavingQuickSale = false;
     }
   }
 
-  async function handleQuickSaleSubmit(event) {
-    event.preventDefault();
+  async function submitQuickSaleForm() {
     if (isSavingQuickSale) {
       return;
     }
@@ -1513,6 +1512,16 @@ let isSavingQuickSale = false;
       }
       isSavingQuickSale = false;
     }
+  }
+
+  async function handleQuickSaleSubmit(event) {
+    event.preventDefault();
+    await submitQuickSaleForm();
+  }
+
+  function handleQuickSaleSaveClick(event) {
+    event.preventDefault();
+    submitQuickSaleForm();
   }
 
   function ensureAdvancedSelectOptions() {
@@ -2379,6 +2388,7 @@ let isSavingQuickSale = false;
   clientQuickSaleButton?.addEventListener('click', openQuickSaleModal);
   clientQuickSaleCloseButton?.addEventListener('click', closeQuickSaleModal);
   clientQuickSaleCancelButton?.addEventListener('click', closeQuickSaleModal);
+  clientQuickSaleSaveButton?.addEventListener('click', handleQuickSaleSaveClick);
   clientQuickSaleOverlay?.addEventListener('click', handleQuickSaleOverlayClick);
   clientQuickSaleForm?.addEventListener('submit', handleQuickSaleSubmit);
   clientsDetailButton?.addEventListener('click', handleDetailButtonClick);
