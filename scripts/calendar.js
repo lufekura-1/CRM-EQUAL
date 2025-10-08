@@ -164,57 +164,87 @@ function updateCalendarHeader() {
   patchElement(monthLabel, { text: label });
 }
 
+function getModalOverlayManager() {
+  const manager = window.ModalOverlayManager;
+  if (manager && typeof manager === 'object') {
+    return manager;
+  }
+  return null;
+}
+
 function isAnyModalVisible() {
+  const manager = getModalOverlayManager();
+  if (manager && typeof manager.isAnyModalVisible === 'function') {
+    return manager.isAnyModalVisible();
+  }
+
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
   return Boolean(document.querySelector('.modal-overlay.is-visible'));
 }
 
-function captureModalOverlayState() {
-  if (typeof document === 'undefined') {
-    return [];
+function captureActiveModalState() {
+  const manager = getModalOverlayManager();
+  if (manager && typeof manager.captureState === 'function') {
+    return manager.captureState();
   }
 
-  return Array.from(document.querySelectorAll('.modal-overlay')).map((overlay) => ({
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const overlay = document.querySelector('.modal-overlay.is-visible');
+  if (!overlay) {
+    return null;
+  }
+
+  return {
     overlay,
     parent: overlay.parentNode,
     nextSibling: overlay.nextSibling,
-  }));
+    wasVisible: overlay.classList.contains('is-visible'),
+  };
 }
 
-function restoreModalOverlayState(state) {
-  if (!Array.isArray(state) || typeof document === 'undefined') {
+function restoreActiveModalState(state) {
+  const manager = getModalOverlayManager();
+  if (manager && typeof manager.restoreState === 'function') {
+    manager.restoreState(state);
     return;
   }
 
-  state.forEach(({ overlay, parent, nextSibling }) => {
-    if (!(overlay instanceof HTMLElement)) {
-      return;
-    }
+  if (!state || typeof document === 'undefined') {
+    return;
+  }
 
-    if (overlay.isConnected) {
-      return;
-    }
+  const { overlay, parent, nextSibling, wasVisible } = state;
+  if (!(overlay instanceof HTMLElement)) {
+    return;
+  }
 
-    const targetParent = parent && parent.isConnected ? parent : document.body;
-    if (!targetParent) {
-      return;
-    }
+  const targetParent = parent && parent.isConnected ? parent : document.body;
+  if (!targetParent) {
+    return;
+  }
 
-    if (overlay.dataset?.modal) {
-      Array.from(
-        document.querySelectorAll(`.modal-overlay[data-modal="${overlay.dataset.modal}"]`),
-      ).forEach((node) => {
-        if (node !== overlay && node instanceof HTMLElement) {
-          node.remove();
-        }
-      });
-    }
+  if (nextSibling && nextSibling.parentNode === targetParent) {
+    targetParent.insertBefore(overlay, nextSibling);
+  } else {
+    targetParent.appendChild(overlay);
+  }
 
-    if (nextSibling && nextSibling.parentNode === targetParent) {
-      targetParent.insertBefore(overlay, nextSibling);
-    } else {
-      targetParent.appendChild(overlay);
-    }
-  });
+  const shouldBeVisible = Boolean(wasVisible);
+  overlay.classList.toggle('is-visible', shouldBeVisible);
+  overlay.setAttribute('aria-hidden', shouldBeVisible ? 'false' : 'true');
+
+  if (document.body) {
+    const hasVisibleOverlay = shouldBeVisible
+      ? true
+      : Boolean(document.querySelector('.modal-overlay.is-visible'));
+    document.body.classList.toggle('modal-open', hasVisibleOverlay);
+  }
 }
 
 function refreshVisibleCalendarCells() {
@@ -229,7 +259,7 @@ function refreshVisibleCalendarCells() {
     }
     const { dateKey } = cell.dataset;
     if (dateKey) {
-      renderEventsForCell(cell, dateKey);
+      synchronizeEventsForCell(cell, dateKey);
     }
   });
 }
@@ -696,7 +726,7 @@ async function performFullRefresh(options = {}) {
 }
 
 async function refreshCalendar(options = {}) {
-  const overlayState = captureModalOverlayState();
+  const overlayState = captureActiveModalState();
 
   try {
     if (!datesContainer) {
@@ -745,7 +775,7 @@ async function refreshCalendar(options = {}) {
 
     await performFullRefresh(options);
   } finally {
-    restoreModalOverlayState(overlayState);
+    restoreActiveModalState(overlayState);
   }
 }
 
@@ -924,56 +954,73 @@ function createEventChip(event) {
   return chip;
 }
 
-function renderEventsForCell(cell, dateKey) {
+function getCalendarCell(dateKey) {
+  if (!datesContainer || !dateKey) {
+    return null;
+  }
+
+  return datesContainer.querySelector(`.calendar__date[data-date-key="${dateKey}"]`);
+}
+
+function synchronizeEventsForCell(cell, dateKey) {
+  if (!cell || !dateKey) {
+    return;
+  }
+
   const eventsContainer = cell.querySelector('.calendar__date-events');
   if (!eventsContainer) {
     return;
   }
 
   const existingChips = new Map();
-  Array.from(eventsContainer.children).forEach((child) => {
-    if (child instanceof HTMLElement) {
-      const childKey = child.dataset.eventKey || child.dataset.eventId || child.dataset.contactId || '';
-      if (childKey) {
-        existingChips.set(childKey, child);
-      }
+  Array.from(eventsContainer.querySelectorAll('.calendar__event-chip')).forEach((chip) => {
+    if (!(chip instanceof HTMLElement)) {
+      return;
+    }
+    const chipKey = chip.dataset.eventKey || chip.dataset.eventId || chip.dataset.contactId || '';
+    if (chipKey) {
+      existingChips.set(chipKey, chip);
     }
   });
 
   const dateEvents = events[dateKey] || [];
-  const orderedChips = [];
 
-  dateEvents.forEach((event) => {
+  dateEvents.forEach((event, index) => {
     const eventKey = getEventKey(event);
     if (!eventKey) {
       return;
     }
-    const existingChip = existingChips.get(eventKey) || createEventChip(event);
-    updateEventChip(existingChip, event);
-    orderedChips.push(existingChip);
+
+    let chip = existingChips.get(eventKey);
+    if (!chip) {
+      chip = createEventChip(event);
+      eventsContainer.appendChild(chip);
+    }
+
+    updateEventChip(chip, event);
+
+    const desiredNode = eventsContainer.children[index];
+    if (desiredNode !== chip) {
+      eventsContainer.insertBefore(chip, desiredNode || null);
+    }
+
     existingChips.delete(eventKey);
   });
 
   existingChips.forEach((chip) => {
-    chip.remove();
-  });
-
-  orderedChips.forEach((chip) => {
-    eventsContainer.appendChild(chip);
+    if (chip instanceof HTMLElement) {
+      chip.remove();
+    }
   });
 }
 
 function renderCalendarCell(dateKey) {
-  if (!datesContainer || !dateKey) {
-    return;
-  }
-
-  const cell = datesContainer.querySelector(`.calendar__date[data-date-key="${dateKey}"]`);
+  const cell = getCalendarCell(dateKey);
   if (!cell) {
     return;
   }
 
-  renderEventsForCell(cell, dateKey);
+  synchronizeEventsForCell(cell, dateKey);
 }
 
 function renderMonthlyCalendar() {
@@ -1064,7 +1111,7 @@ function updateCalendarViewButtons() {
 }
 
 function renderCalendarView({ rebuild = true } = {}) {
-  const overlayState = captureModalOverlayState();
+  const overlayState = captureActiveModalState();
 
   try {
     updateCalendarHeader();
@@ -1086,7 +1133,7 @@ function renderCalendarView({ rebuild = true } = {}) {
 
     updateCalendarViewButtons();
   } finally {
-    restoreModalOverlayState(overlayState);
+    restoreActiveModalState(overlayState);
   }
 }
 
