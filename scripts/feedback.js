@@ -51,6 +51,46 @@
 
   window.showToast = showToast;
 
+  function extractErrorMessage(error, fallback = 'Ocorreu um erro inesperado.') {
+    if (!error) {
+      return fallback;
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    if (typeof error === 'object') {
+      if (typeof error.message === 'string' && error.message.trim()) {
+        return error.message;
+      }
+
+      if (typeof error.error === 'string' && error.error.trim()) {
+        return error.error;
+      }
+
+      if (typeof error.data?.message === 'string' && error.data.message.trim()) {
+        return error.data.message;
+      }
+
+      if (typeof error.data?.error === 'string' && error.data.error.trim()) {
+        return error.data.error;
+      }
+    }
+
+    return fallback;
+  }
+
+  function showError(error, options = {}) {
+    const message = extractErrorMessage(error, options.fallbackMessage);
+    showToast(message, { type: 'error', duration: options.duration ?? 6000 });
+    if (options.log !== false) {
+      console.error('[feedback] Erro apresentado ao usuário:', error);
+    }
+  }
+
+  window.showError = showError;
+
   const inlineFeedbackTimeouts = new WeakMap();
   const INLINE_FEEDBACK_SELECTOR = '[data-role="inline-feedback"]';
 
