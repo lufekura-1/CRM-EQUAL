@@ -114,6 +114,25 @@
       }
       emitLoading(true, detail);
 
+      let loggedBody = null;
+      if (fetchOptions.body !== undefined && fetchOptions.body !== null) {
+        if (typeof fetchOptions.body === 'string') {
+          try {
+            loggedBody = JSON.parse(fetchOptions.body);
+          } catch (parseError) {
+            loggedBody = fetchOptions.body;
+          }
+        } else {
+          loggedBody = fetchOptions.body;
+        }
+      }
+
+      console.log('[safeFetch] Enviando requisição.', {
+        url,
+        method,
+        body: loggedBody,
+      });
+
       const response = await global.fetch(url, fetchOptions);
       const data = await parseBody(response, parse);
       const result = Object.freeze({
@@ -122,6 +141,13 @@
         statusText: response.statusText,
         headers: response.headers,
         data,
+      });
+
+      console.log('[safeFetch] Resposta recebida.', {
+        url,
+        method,
+        status: response.status,
+        ok: response.ok,
       });
 
       if (!response.ok) {
