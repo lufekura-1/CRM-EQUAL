@@ -17,16 +17,56 @@ function ensureEventsArray(dateKey) {
   return events[dateKey];
 }
 
+function extractDateKey(value) {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      return '';
+    }
+    return formatDateKey(value);
+  }
+
+  const text = value === undefined || value === null ? '' : String(value).trim();
+  if (!text) {
+    return '';
+  }
+
+  const match = text.match(/(\d{4}-\d{2}-\d{2})/);
+  if (match) {
+    return match[1];
+  }
+
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+
+  return formatDateKey(parsed);
+}
+
+function normalizeDateForStorage(value) {
+  const dateKey = extractDateKey(value);
+  if (!dateKey) {
+    return { dateKey: '', rawDate: '' };
+  }
+
+  const text = value === undefined || value === null ? '' : String(value).trim();
+  const rawDate = /^\d{4}-\d{2}-\d{2}$/.test(text) || !text ? `${dateKey}T00:00:00` : text;
+
+  return { dateKey, rawDate };
+}
+
 function sortEventsForDate(eventList) {
   if (!Array.isArray(eventList)) {
     return;
   }
 
   eventList.sort((a, b) => {
-    const dateA = new Date(a.rawDate || `${a.date}T00:00:00`);
-    const dateB = new Date(b.rawDate || `${b.date}T00:00:00`);
-    const timeA = dateA.getTime();
-    const timeB = dateB.getTime();
+    const normalizedA = normalizeDateForStorage(a.rawDate || a.date || '');
+    const normalizedB = normalizeDateForStorage(b.rawDate || b.date || '');
+    const dateA = normalizedA.dateKey ? new Date(`${normalizedA.dateKey}T00:00:00`) : null;
+    const dateB = normalizedB.dateKey ? new Date(`${normalizedB.dateKey}T00:00:00`) : null;
+    const timeA = dateA?.getTime() ?? Number.NaN;
+    const timeB = dateB?.getTime() ?? Number.NaN;
 
     if (!Number.isNaN(timeA) && !Number.isNaN(timeB) && timeA !== timeB) {
       return timeA - timeB;
@@ -322,12 +362,9 @@ function normalizeEventData(rawEvent) {
     return null;
   }
 
-  const sourceDate = rawEvent.date ?? rawEvent.data ?? '';
-  const dateObject = new Date(sourceDate);
-  const hasValidDate = !Number.isNaN(dateObject.getTime());
-  const dateKey = hasValidDate
-    ? formatDateKey(dateObject)
-    : String(sourceDate).slice(0, 10);
+  const { dateKey, rawDate } = normalizeDateForStorage(
+    rawEvent.rawDate ?? rawEvent.date ?? rawEvent.data ?? '',
+  );
 
   if (!dateKey) {
     return null;
@@ -336,7 +373,7 @@ function normalizeEventData(rawEvent) {
   return {
     id: String(rawEvent.id ?? rawEvent.evento_id ?? Date.now()),
     date: dateKey,
-    rawDate: sourceDate,
+    rawDate,
     title: rawEvent.title ?? rawEvent.titulo ?? '',
     description: rawEvent.description ?? rawEvent.descricao ?? '',
     color: rawEvent.color ?? rawEvent.cor ?? '',
@@ -1212,16 +1249,16 @@ function updateCalendarContactEvent({ contact, client, purchase } = {}) {
     return;
   }
 
-  const nextDateKeyRaw = contact.contactDate ? String(contact.contactDate).slice(0, 10) : '';
-  const nextDateKey = nextDateKeyRaw || eventToUpdate.date || previousDateKey;
+  const normalizedDate = normalizeDateForStorage(contact.contactDate ?? eventToUpdate.rawDate);
+  const nextDateKey = normalizedDate.dateKey || eventToUpdate.date || previousDateKey;
 
   const completed = Boolean(contact.completed);
   eventToUpdate.contactCompleted = completed;
   eventToUpdate.completed = completed;
 
-  if (nextDateKeyRaw) {
+  if (normalizedDate.dateKey) {
     eventToUpdate.date = nextDateKey;
-    eventToUpdate.rawDate = contact.contactDate;
+    eventToUpdate.rawDate = normalizedDate.rawDate;
   }
 
   if (contact.purchaseDate) {
