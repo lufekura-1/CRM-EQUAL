@@ -929,14 +929,25 @@ function updateEventChip(chip, event) {
   }
 
   const dotElement = chip.querySelector('.calendar__event-chip-status');
-  if (dotElement) {
-    patchElement(dotElement, {
-      dataset: {
-        dotType: chipType,
-        dotStatus: status.key,
-      },
-    });
+
+  if (status.key === 'completed') {
+    if (dotElement) {
+      dotElement.remove();
+    }
+    return;
   }
+
+  if (!dotElement) {
+    chip.appendChild(createStatusDot(chipType, status.key));
+    return;
+  }
+
+  patchElement(dotElement, {
+    dataset: {
+      dotType: chipType,
+      dotStatus: status.key,
+    },
+  });
 }
 
 function createEventChip(event) {
