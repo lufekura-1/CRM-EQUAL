@@ -94,6 +94,9 @@ function handleUserSelectorSubmit(event) {
   }
 
   event.preventDefault();
+  if (event && typeof event.stopPropagation === 'function') {
+    event.stopPropagation();
+  }
   const formData = new FormData(userSelectorForm);
   const selectedUserId = formData.get('selectedUser');
   if (!selectedUserId) {

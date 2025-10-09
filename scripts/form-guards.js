@@ -51,8 +51,9 @@
     }
 
     form.addEventListener('submit', (event) => {
-      if (!event.defaultPrevented) {
-        event.preventDefault();
+      event.preventDefault();
+      if (typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
       }
     });
 
