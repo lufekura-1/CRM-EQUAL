@@ -1028,6 +1028,18 @@ body.modal-open {
   line-height: 1.4;
 }
 
+.modal__fieldset--quick-sale-dioptry .client-form__table {
+  min-width: 360px;
+}
+
+.client-quick-sale__table-wrapper {
+  overflow-x: auto;
+}
+
+.client-quick-sale__table input {
+  text-align: center;
+}
+
 .modal__textarea {
   min-height: 100px;
   resize: vertical;
@@ -2132,6 +2144,9 @@ body.modal-open {
   transition: all 0.2s ease;
   background-color: #bbf7d0;
   color: #14532d;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .client-contact__status:hover,
@@ -2154,6 +2169,24 @@ body.modal-open {
 .client-contact__status:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.client-contact__status-label {
+  display: inline-block;
+}
+
+.client-contact__status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  border: 2px solid #15803d;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.55);
+  flex-shrink: 0;
+}
+
+.client-contact__status[data-status="completed"] .client-contact__status-dot {
+  display: none;
 }
 
 .client-purchase {
