@@ -817,9 +817,60 @@ async function handleToggleStatusFromModal() {
         currentDetailEvent.completed = nextValue;
       }
 
+      const apiContact = response?.contato ?? null;
+
+      if (typeof window.updateCalendarContactEvent === 'function') {
+        const calendarContact = apiContact || {
+          id: currentDetailEvent.contactId,
+          completed: currentDetailEvent.contactCompleted,
+          contactDate: currentDetailEvent.date
+            ? String(currentDetailEvent.date).slice(0, 10)
+            : currentDetailEvent.rawDate
+              ? String(currentDetailEvent.rawDate).slice(0, 10)
+              : '',
+          purchaseDate: currentDetailEvent.purchaseDate
+            ? String(currentDetailEvent.purchaseDate).slice(0, 10)
+            : currentDetailEvent.dataCompra
+                ? String(currentDetailEvent.dataCompra).slice(0, 10)
+                : currentDetailEvent.data_compra
+                  ? String(currentDetailEvent.data_compra).slice(0, 10)
+                  : '',
+          monthsOffset:
+            currentDetailEvent.contactMonths ?? currentDetailEvent.monthsOffset ?? null,
+          purchaseId:
+            currentDetailEvent.purchaseId ??
+            currentDetailEvent.compraId ??
+            currentDetailEvent.compra_id ??
+            null,
+        };
+
+        if (calendarContact?.id) {
+          const calendarClient = response?.cliente ?? null;
+          let calendarPurchase = null;
+          const purchaseIdentifier =
+            calendarContact.purchaseId ??
+            calendarContact.compraId ??
+            calendarContact.compra_id ??
+            null;
+
+          if (purchaseIdentifier && Array.isArray(calendarClient?.purchases)) {
+            const normalizedId = String(purchaseIdentifier);
+            calendarPurchase =
+              calendarClient.purchases.find((item) => String(item.id ?? '') === normalizedId) || null;
+          }
+
+          window.updateCalendarContactEvent({
+            contact: calendarContact,
+            client: calendarClient,
+            purchase: calendarPurchase,
+          });
+        }
+      }
+
       if (typeof window.handleContactUpdateResponse === 'function' && response?.cliente) {
         window.handleContactUpdateResponse(response.cliente, {
           contactId: currentDetailEvent.contactId,
+          apiContact,
         });
       }
     } else {

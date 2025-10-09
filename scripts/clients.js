@@ -2177,9 +2177,10 @@ let isSavingQuickSale = false;
       button.disabled = true;
       const response = await window.api.updateContact(contactId, { completed: nextValue });
       const apiClient = response?.cliente;
+      const apiContact = response?.contato ?? null;
 
       if (apiClient) {
-        handleContactUpdateResponse(apiClient, { contactId });
+        handleContactUpdateResponse(apiClient, { contactId, apiContact });
         if (typeof window.showToast === 'function') {
           window.showToast(successMessage, { type: 'success' });
         }
@@ -2405,8 +2406,28 @@ let isSavingQuickSale = false;
     return false;
   }
 
-  function notifyCalendarAboutContactUpdate(context, client) {
-    if (!context?.contact) {
+  function findClientPurchaseById(client, purchaseId) {
+    if (!client || !purchaseId) {
+      return null;
+    }
+
+    const normalizedId = String(purchaseId);
+    if (!normalizedId) {
+      return null;
+    }
+
+    if (!Array.isArray(client.purchases)) {
+      return null;
+    }
+
+    return (
+      client.purchases.find((purchase) => String(purchase.id ?? '') === normalizedId) || null
+    );
+  }
+
+  function notifyCalendarAboutContactUpdate(context, client, fallbackContact = null) {
+    const contact = context?.contact || fallbackContact;
+    if (!contact) {
       return;
     }
 
@@ -2414,14 +2435,19 @@ let isSavingQuickSale = false;
       return;
     }
 
+    let purchase = context?.purchase || null;
+    if (!purchase && contact.purchaseId) {
+      purchase = findClientPurchaseById(client, contact.purchaseId);
+    }
+
     window.updateCalendarContactEvent({
-      contact: context.contact,
+      contact,
       client,
-      purchase: context.purchase || null,
+      purchase: purchase || null,
     });
   }
 
-  function handleContactUpdateResponse(apiClient, { contactId = null } = {}) {
+  function handleContactUpdateResponse(apiClient, { contactId = null, apiContact = null } = {}) {
     if (!apiClient) {
       return null;
     }
@@ -2429,25 +2455,38 @@ let isSavingQuickSale = false;
     const updatedClient = upsertClientFromApi(apiClient);
     setCurrentClient(updatedClient);
     refreshClientInCaches(updatedClient);
-    if (contactId) {
-      state.detail.contacts.focusedContactId = String(contactId);
+    const mappedContact = apiContact ? mapApiContact(apiContact) : null;
+    const providedContactId = contactId ? String(contactId) : mappedContact?.id ?? null;
+
+    if (providedContactId) {
+      state.detail.contacts.focusedContactId = providedContactId;
     }
 
     const effectiveContactId = state.detail.contacts.focusedContactId;
-    const context = effectiveContactId
+    let context = effectiveContactId
       ? updateClientContactHistoryUI(updatedClient, effectiveContactId)
       : null;
 
+    if (!context && effectiveContactId) {
+      context = findClientContactContext(updatedClient, effectiveContactId);
+    }
+
     if (!context) {
       renderClientContacts(updatedClient);
+      if (!context && mappedContact) {
+        const purchase = mappedContact.purchaseId
+          ? findClientPurchaseById(updatedClient, mappedContact.purchaseId)
+          : null;
+        context = { contact: mappedContact, purchase };
+      }
     }
 
     updateClientRow(updatedClient);
     ensureDetailButtonState();
     updateQuickSaleButtonState(updatedClient);
-    const calendarContext = context
-      || (effectiveContactId ? findClientContactContext(updatedClient, effectiveContactId) : null);
-    notifyCalendarAboutContactUpdate(calendarContext, updatedClient);
+    const calendarContext =
+      context || (effectiveContactId ? findClientContactContext(updatedClient, effectiveContactId) : null);
+    notifyCalendarAboutContactUpdate(calendarContext, updatedClient, mappedContact);
     return updatedClient;
   }
 
