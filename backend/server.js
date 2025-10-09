@@ -14,6 +14,21 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(cors(corsOptions));
+app.use(express.json());
+
+// --- SERVE O FRONTEND (index.html, css, js) ---
+const path = require('path');
+
+// Serve os arquivos estáticos da pasta principal (onde está o index.html)
+app.use(express.static(path.join(__dirname, '..')));
+
+// Rota principal: envia o index.html da raiz
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+// --- FIM DO BLOCO ---
+
 
 function toApiEvento(evento) {
   return {
