@@ -215,7 +215,6 @@ let isSavingQuickSale = false;
         scrollTop: 0,
       },
       contacts: {
-        openPurchaseId: null,
         focusedContactId: null,
         scrollTop: 0,
       },
@@ -1065,7 +1064,6 @@ let isSavingQuickSale = false;
   function resetClientDetailState() {
     state.detail.purchases.openId = null;
     state.detail.purchases.scrollTop = 0;
-    state.detail.contacts.openPurchaseId = null;
     state.detail.contacts.focusedContactId = null;
     state.detail.contacts.scrollTop = 0;
   }
@@ -1285,7 +1283,6 @@ let isSavingQuickSale = false;
     }
 
     const storedScrollTop = state.detail.contacts.scrollTop ?? clientContactHistoryContainer.scrollTop;
-    const storedOpenPurchaseId = state.detail.contacts.openPurchaseId;
     const storedFocusedContactId = state.detail.contacts.focusedContactId;
 
     clientContactHistoryContainer.innerHTML = '';
@@ -1364,7 +1361,6 @@ let isSavingQuickSale = false;
       placeholder.className = 'client-card__empty';
       placeholder.textContent = 'Nenhum contato registrado.';
       clientContactHistoryContainer.appendChild(placeholder);
-      state.detail.contacts.openPurchaseId = null;
       state.detail.contacts.focusedContactId = null;
       state.detail.contacts.scrollTop = 0;
       return;
@@ -1372,14 +1368,14 @@ let isSavingQuickSale = false;
 
     let buttonToFocus = null;
 
+    const fragment = document.createDocumentFragment();
+
     purchasesWithContacts
       .slice()
       .sort((a, b) => {
         function resolveDate(source) {
-          const base = source.date
-            || source.contacts?.[0]?.purchaseDate
-            || source.contacts?.[0]?.contactDate
-            || '';
+          const base =
+            source.date || source.contacts?.[0]?.purchaseDate || source.contacts?.[0]?.contactDate || '';
           if (!base) {
             return null;
           }
@@ -1402,39 +1398,35 @@ let isSavingQuickSale = false;
         }
         return 0;
       })
-      .forEach((purchase, index) => {
-        const article = document.createElement('article');
-        article.className = 'client-contact';
+      .forEach((purchase) => {
+        const group = document.createElement('div');
+        group.className = 'client-contact-history__group';
         const purchaseId = purchase.id ? String(purchase.id) : '';
         if (purchaseId) {
-          article.dataset.purchaseId = purchaseId;
-        }
-        if (storedOpenPurchaseId) {
-          if (purchaseId && purchaseId === storedOpenPurchaseId) {
-            article.classList.add('is-open');
-          }
-        } else if (index === 0) {
-          article.classList.add('is-open');
+          group.dataset.purchaseId = purchaseId;
         }
 
         const pendingCount = purchase.contacts.filter((contact) => !contact.completed).length;
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'client-contact__toggle';
-        toggle.dataset.purchaseId = purchase.id;
-        const displayDate = formatFullDate(purchase.date)
-          || formatFullDate(purchase.contacts[0]?.purchaseDate)
-          || 'Contatos';
-        toggle.innerHTML = `
-          <span>${displayDate}</span>
-          <span>${pendingCount === 0 ? 'Todos concluídos' : `${pendingCount} pendente(s)`}</span>
-        `;
+        const displayDate =
+          formatFullDate(purchase.date) || formatFullDate(purchase.contacts[0]?.purchaseDate) || 'Contatos';
 
-        const details = document.createElement('div');
-        details.className = 'client-contact__details';
+        const header = document.createElement('div');
+        header.className = 'client-contact-history__header';
 
-        const list = document.createElement('div');
-        list.className = 'client-contact__list';
+        const headerTitle = document.createElement('div');
+        headerTitle.className = 'client-contact-history__header-title';
+        headerTitle.textContent = displayDate;
+
+        const headerStatus = document.createElement('div');
+        headerStatus.className = 'client-contact-history__header-status';
+        headerStatus.dataset.role = 'contact-history-pending';
+        headerStatus.textContent =
+          pendingCount === 0 ? 'Todos concluídos' : `${pendingCount} pendente(s)`;
+
+        header.append(headerTitle, headerStatus);
+
+        const rows = document.createElement('div');
+        rows.className = 'client-contact-history__rows';
 
         purchase.contacts
           .slice()
@@ -1447,63 +1439,67 @@ let isSavingQuickSale = false;
             return (a.contactDate || '').localeCompare(b.contactDate || '');
           })
           .forEach((contact) => {
-            const item = document.createElement('div');
-            item.className = 'client-contact__item';
+            const row = document.createElement('div');
+            row.className = 'client-contact-history__row';
             if (contact.id) {
-              item.dataset.contactId = String(contact.id);
+              row.dataset.contactId = String(contact.id);
             }
 
-            const label = document.createElement('div');
-            label.className = 'client-contact__label';
-            label.innerHTML = `
-              <span>${formatContactTitle(contact.monthsOffset)}</span>
-              <span>${formatFullDate(contact.contactDate)}</span>
-            `;
+            const titleCell = document.createElement('div');
+            titleCell.className = 'client-contact-history__cell client-contact-history__cell--title';
+            titleCell.textContent = formatContactTitle(contact.monthsOffset);
+
+            const dateCell = document.createElement('div');
+            dateCell.className = 'client-contact-history__cell client-contact-history__cell--date';
+            dateCell.textContent = formatFullDate(contact.contactDate);
+
+            const statusCell = document.createElement('div');
+            statusCell.className = 'client-contact-history__cell client-contact-history__cell--status';
 
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'client-contact__status';
+            button.className = 'client-contact-history__status-button';
             button.dataset.contactId = contact.id;
             button.dataset.completed = contact.completed ? 'true' : 'false';
             button.dataset.status = contact.completed ? 'completed' : 'pending';
-            if (contact.completed) {
-              button.classList.add('is-completed');
-            }
+            button.setAttribute('role', 'switch');
+            button.setAttribute('aria-checked', contact.completed ? 'true' : 'false');
+            button.setAttribute(
+              'aria-label',
+              `Marcar ${formatContactTitle(contact.monthsOffset)} como ${
+                contact.completed ? 'pendente' : 'efetuado'
+              }`,
+            );
+            button.classList.toggle('is-completed', Boolean(contact.completed));
 
-            const buttonLabel = document.createElement('span');
-            buttonLabel.className = 'client-contact__status-label';
-            buttonLabel.textContent = contact.completed ? 'Efetuado' : 'Pendente';
+            const switchTrack = document.createElement('span');
+            switchTrack.className = 'client-contact-history__status-switch';
+            switchTrack.setAttribute('aria-hidden', 'true');
 
-            const statusDot = document.createElement('span');
-            statusDot.className = 'client-contact__status-dot';
-            statusDot.setAttribute('aria-hidden', 'true');
-            if (contact.completed) {
-              statusDot.hidden = true;
-            }
+            const switchHandle = document.createElement('span');
+            switchHandle.className = 'client-contact-history__status-handle';
+            switchTrack.appendChild(switchHandle);
 
-            button.append(buttonLabel, statusDot);
+            const statusText = document.createElement('span');
+            statusText.className = 'client-contact-history__status-text';
+            statusText.textContent = contact.completed ? 'Efetuado' : 'Pendente';
+
+            button.append(switchTrack, statusText);
+
             if (storedFocusedContactId && contact.id && String(contact.id) === storedFocusedContactId) {
               buttonToFocus = button;
             }
 
-            item.append(label, button);
-            list.appendChild(item);
+            statusCell.appendChild(button);
+            row.append(titleCell, dateCell, statusCell);
+            rows.appendChild(row);
           });
 
-        details.appendChild(list);
-        article.append(toggle, details);
-        clientContactHistoryContainer.appendChild(article);
+        group.append(header, rows);
+        fragment.appendChild(group);
       });
 
-    if (!clientContactHistoryContainer.querySelector('.client-contact.is-open')) {
-      const firstArticle = clientContactHistoryContainer.querySelector('.client-contact');
-      if (firstArticle) {
-        firstArticle.classList.add('is-open');
-      }
-    }
-
-    const openArticle = clientContactHistoryContainer.querySelector('.client-contact.is-open');
-    state.detail.contacts.openPurchaseId = openArticle?.dataset.purchaseId ?? null;
+    clientContactHistoryContainer.appendChild(fragment);
 
     const maxScrollTop = Math.max(
       0,
@@ -2122,29 +2118,7 @@ let isSavingQuickSale = false;
       return;
     }
 
-    const toggle = target.closest('.client-contact__toggle');
-    if (toggle) {
-      event.preventDefault();
-      event.stopPropagation();
-      const article = toggle.closest('.client-contact');
-      if (!article) {
-        return;
-      }
-      const isOpen = article.classList.contains('is-open');
-      clientContactHistoryContainer
-        ?.querySelectorAll('.client-contact')
-        .forEach((contact) => contact.classList.remove('is-open'));
-      if (!isOpen) {
-        article.classList.add('is-open');
-        state.detail.contacts.openPurchaseId = article.dataset.purchaseId ?? null;
-      } else {
-        state.detail.contacts.openPurchaseId = null;
-      }
-      state.detail.contacts.scrollTop = clientContactHistoryContainer?.scrollTop ?? 0;
-      return;
-    }
-
-    const statusButton = target.closest('.client-contact__status');
+    const statusButton = target.closest('.client-contact-history__status-button');
     if (statusButton instanceof HTMLButtonElement) {
       event.preventDefault();
       event.stopPropagation();
@@ -2158,12 +2132,7 @@ let isSavingQuickSale = false;
       return;
     }
 
-    const parentContact = button.closest('.client-contact');
     state.detail.contacts.focusedContactId = contactId;
-    if (parentContact instanceof HTMLElement) {
-      state.detail.contacts.openPurchaseId = parentContact.dataset.purchaseId
-        ?? state.detail.contacts.openPurchaseId;
-    }
     state.detail.contacts.scrollTop = clientContactHistoryContainer?.scrollTop ?? 0;
 
     const currentlyCompleted = button.dataset.completed === 'true';
@@ -2243,7 +2212,7 @@ let isSavingQuickSale = false;
     }
 
     const button = clientContactHistoryContainer.querySelector(
-      `.client-contact__status[data-contact-id="${contact.id}"]`,
+      `.client-contact-history__status-button[data-contact-id="${contact.id}"]`,
     );
 
     if (!(button instanceof HTMLButtonElement)) {
@@ -2256,19 +2225,17 @@ let isSavingQuickSale = false;
         completed: isCompleted ? 'true' : 'false',
         status: isCompleted ? 'completed' : 'pending',
       },
+      attributes: {
+        'aria-checked': isCompleted ? 'true' : 'false',
+        'aria-label': `Marcar ${formatContactTitle(contact.monthsOffset)} como ${
+          isCompleted ? 'pendente' : 'efetuado'
+        }`,
+      },
       classList: { toggle: { 'is-completed': isCompleted } },
     });
-    const label = button.querySelector('.client-contact__status-label');
+    const label = button.querySelector('.client-contact-history__status-text');
     if (label) {
       patchElement(label, { text: isCompleted ? 'Efetuado' : 'Pendente' });
-    }
-    const dot = button.querySelector('.client-contact__status-dot');
-    if (dot) {
-      patchElement(dot, {
-        attributes: {
-          hidden: isCompleted ? 'hidden' : null,
-        },
-      });
     }
     return button;
   }
@@ -2279,26 +2246,21 @@ let isSavingQuickSale = false;
     }
 
     const purchaseId = purchase.id ? String(purchase.id) : '';
-    const articleSelector = purchaseId
-      ? `.client-contact[data-purchase-id="${purchaseId}"]`
-      : '.client-contact';
-    const article = clientContactHistoryContainer.querySelector(articleSelector);
+    const groupSelector = purchaseId
+      ? `.client-contact-history__group[data-purchase-id="${purchaseId}"]`
+      : '.client-contact-history__group:not([data-purchase-id])';
+    const group = clientContactHistoryContainer.querySelector(groupSelector);
 
-    if (!(article instanceof HTMLElement)) {
+    if (!(group instanceof HTMLElement)) {
       return;
     }
 
     if (purchaseId) {
-      patchElement(article, { dataset: { purchaseId } });
+      patchElement(group, { dataset: { purchaseId } });
     }
 
-    const toggle = article.querySelector('.client-contact__toggle');
-    if (!toggle) {
-      return;
-    }
-
-    const spans = toggle.querySelectorAll('span');
-    if (spans.length < 2) {
+    const statusLabel = group.querySelector('[data-role="contact-history-pending"]');
+    if (!statusLabel) {
       return;
     }
 
@@ -2306,7 +2268,7 @@ let isSavingQuickSale = false;
       ? purchase.contacts.filter((item) => !item.completed).length
       : 0;
     const pendingText = pendingCount === 0 ? 'Todos concluídos' : `${pendingCount} pendente(s)`;
-    patchElement(spans[1], { text: pendingText });
+    patchElement(statusLabel, { text: pendingText });
   }
 
   function updateClientContactHistoryUI(client, contactId) {

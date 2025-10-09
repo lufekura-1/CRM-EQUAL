@@ -2063,81 +2063,83 @@ body.modal-open {
 .client-contact-history {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.client-contact {
+.client-contact-history__group {
   border: 1px solid rgba(34, 197, 94, 0.2);
   border-radius: 14px;
-  overflow: hidden;
   background-color: rgba(34, 197, 94, 0.08);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.client-contact__toggle {
-  width: 100%;
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 15px;
-  font-weight: 600;
-  padding: 14px 18px;
+.client-contact-history__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  cursor: pointer;
-}
-
-.client-contact__toggle:hover,
-.client-contact__toggle:focus {
-  background-color: rgba(34, 197, 94, 0.12);
-  outline: none;
-}
-
-.client-contact__details {
-  padding: 0 18px 18px;
-  display: none;
-  flex-direction: column;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-.client-contact.is-open .client-contact__details {
-  display: flex;
+.client-contact-history__header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
 }
 
-.client-contact__list {
+.client-contact-history__header-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.client-contact-history__rows {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.client-contact__item {
-  display: flex;
+.client-contact-history__row {
+  display: grid;
+  grid-template-columns: minmax(160px, 2fr) minmax(140px, 1.5fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   padding: 12px 14px;
   border-radius: 12px;
   background-color: rgba(15, 118, 110, 0.15);
 }
 
-.client-contact__label {
+.client-contact-history__cell {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 14px;
+  min-width: 0;
 }
 
-.client-contact__label span:last-child {
+.client-contact-history__cell--title {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.client-contact-history__cell--date {
   color: rgba(255, 255, 255, 0.65);
   font-size: 13px;
 }
 
+.client-contact-history__cell--status {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+}
 
-.client-contact__status {
+.client-contact-history__status-button {
   border: 1px solid rgba(22, 163, 74, 0.25);
   border-radius: 999px;
-  padding: 8px 16px;
+  padding: 6px 12px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -2149,44 +2151,73 @@ body.modal-open {
   gap: 10px;
 }
 
-.client-contact__status:hover,
-.client-contact__status:focus {
+.client-contact-history__status-button:hover,
+.client-contact-history__status-button:focus {
   background-color: #a7f3d0;
   outline: none;
 }
 
-.client-contact__status.is-completed {
+.client-contact-history__status-button.is-completed {
   background-color: #166534;
   border-color: rgba(21, 128, 61, 0.55);
   color: #ecfdf5;
 }
 
-.client-contact__status.is-completed:hover,
-.client-contact__status.is-completed:focus {
+.client-contact-history__status-button.is-completed:hover,
+.client-contact-history__status-button.is-completed:focus {
   background-color: #15803d;
 }
 
-.client-contact__status:disabled {
+.client-contact-history__status-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.client-contact__status-label {
-  display: inline-block;
-}
-
-.client-contact__status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: #22c55e;
-  border: 2px solid #15803d;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.55);
+.client-contact-history__status-switch {
+  width: 36px;
+  height: 18px;
+  border-radius: 999px;
+  background-color: rgba(21, 128, 61, 0.35);
+  position: relative;
+  transition: background-color 0.2s ease;
   flex-shrink: 0;
 }
 
-.client-contact__status[data-status="completed"] .client-contact__status-dot {
-  display: none;
+.client-contact-history__status-button.is-completed .client-contact-history__status-switch {
+  background-color: rgba(21, 128, 61, 0.75);
+}
+
+.client-contact-history__status-handle {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #ecfdf5;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.4);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.client-contact-history__status-button.is-completed .client-contact-history__status-handle {
+  transform: translateX(18px);
+  background-color: #bbf7d0;
+}
+
+.client-contact-history__status-text {
+  min-width: 72px;
+}
+
+@media (max-width: 640px) {
+  .client-contact-history__row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .client-contact-history__cell--status {
+    justify-content: flex-start;
+  }
 }
 
 .client-purchase {
