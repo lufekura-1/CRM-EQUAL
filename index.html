@@ -980,6 +980,57 @@
               <span class="modal__label">Nota Fiscal</span>
               <input class="modal__input" type="text" name="saleInvoice" />
             </label>
+            <fieldset class="modal__fieldset modal__fieldset--quick-sale-dioptry">
+              <legend class="modal__label">Dioptria</legend>
+              <p class="modal__helper-text">Informe os valores de OE e OD (opcional).</p>
+              <div class="client-form__table-wrapper client-quick-sale__table-wrapper">
+                <table
+                  class="client-form__table client-quick-sale__table"
+                  aria-label="Tabela de dioptria da venda"
+                >
+                  <thead>
+                    <tr>
+                      <th scope="col"></th>
+                      <th scope="col">Esférico</th>
+                      <th scope="col">Cilíndrico</th>
+                      <th scope="col">Eixo</th>
+                      <th scope="col">DNP</th>
+                      <th scope="col">Adição</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">OE</th>
+                      <td>
+                        <input type="text" name="saleOeSpherical" inputmode="decimal" step="0.25" />
+                      </td>
+                      <td>
+                        <input type="text" name="saleOeCylindrical" inputmode="decimal" step="0.25" />
+                      </td>
+                      <td><input type="text" name="saleOeAxis" inputmode="numeric" /></td>
+                      <td><input type="text" name="saleOeDnp" inputmode="decimal" step="0.5" /></td>
+                      <td>
+                        <input type="text" name="saleOeAddition" inputmode="decimal" step="0.25" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">OD</th>
+                      <td>
+                        <input type="text" name="saleOdSpherical" inputmode="decimal" step="0.25" />
+                      </td>
+                      <td>
+                        <input type="text" name="saleOdCylindrical" inputmode="decimal" step="0.25" />
+                      </td>
+                      <td><input type="text" name="saleOdAxis" inputmode="numeric" /></td>
+                      <td><input type="text" name="saleOdDnp" inputmode="decimal" step="0.5" /></td>
+                      <td>
+                        <input type="text" name="saleOdAddition" inputmode="decimal" step="0.25" />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </fieldset>
             <div class="modal__footer modal__footer--split">
               <button class="modal__cancel-button" type="button" data-action="cancel-quick-sale">
                 Cancelar

@@ -1290,14 +1290,74 @@ let isSavingQuickSale = false;
 
     clientContactHistoryContainer.innerHTML = '';
 
-    const purchasesWithContacts = Array.isArray(client.purchases)
+    const fallbackContacts = Array.isArray(client.contacts) ? client.contacts : [];
+    const fallbackByPurchase = new Map();
+
+    fallbackContacts.forEach((contact) => {
+      const key = contact.purchaseId ? String(contact.purchaseId) : '__no_purchase__';
+      if (!fallbackByPurchase.has(key)) {
+        fallbackByPurchase.set(key, []);
+      }
+      fallbackByPurchase.get(key).push({ ...contact });
+    });
+
+    function mergeContacts(primary = [], fallback = []) {
+      const merged = [];
+      const seen = new Set();
+
+      primary.forEach((contact) => {
+        const id = contact?.id !== undefined && contact?.id !== null ? String(contact.id) : null;
+        merged.push({ ...contact });
+        if (id) {
+          seen.add(id);
+        }
+      });
+
+      fallback.forEach((contact) => {
+        const id = contact?.id !== undefined && contact?.id !== null ? String(contact.id) : null;
+        if (id && seen.has(id)) {
+          return;
+        }
+        merged.push({ ...contact });
+        if (id) {
+          seen.add(id);
+        }
+      });
+
+      return merged;
+    }
+
+    let purchasesWithContacts = Array.isArray(client.purchases)
       ? client.purchases
-          .map((purchase) => ({
-            ...purchase,
-            contacts: Array.isArray(purchase.contacts) ? purchase.contacts.slice() : [],
-          }))
+          .map((purchase) => {
+            const purchaseId = purchase.id ? String(purchase.id) : '';
+            const key = purchaseId || '__no_purchase__';
+            const primaryContacts = Array.isArray(purchase.contacts) ? purchase.contacts : [];
+            const fallbackList = fallbackByPurchase.get(key) || [];
+            const contacts = mergeContacts(primaryContacts, fallbackList);
+            fallbackByPurchase.delete(key);
+            return {
+              ...purchase,
+              id: purchaseId,
+              contacts,
+              __synthetic: Boolean(purchase.__synthetic),
+            };
+          })
           .filter((purchase) => purchase.contacts.length > 0)
       : [];
+
+    fallbackByPurchase.forEach((contactList, key) => {
+      if (!Array.isArray(contactList) || contactList.length === 0) {
+        return;
+      }
+      const firstContact = contactList[0] || {};
+      purchasesWithContacts.push({
+        id: key,
+        date: firstContact.purchaseDate || firstContact.contactDate || '',
+        contacts: mergeContacts([], contactList),
+        __synthetic: true,
+      });
+    });
 
     if (!purchasesWithContacts.length) {
       const placeholder = document.createElement('div');
@@ -1314,7 +1374,34 @@ let isSavingQuickSale = false;
 
     purchasesWithContacts
       .slice()
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .sort((a, b) => {
+        function resolveDate(source) {
+          const base = source.date
+            || source.contacts?.[0]?.purchaseDate
+            || source.contacts?.[0]?.contactDate
+            || '';
+          if (!base) {
+            return null;
+          }
+          const normalizedBase = /[T\s]/.test(base) ? base : `${base}T00:00:00`;
+          const parsed = new Date(normalizedBase);
+          return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        const dateA = resolveDate(a);
+        const dateB = resolveDate(b);
+
+        if (dateA && dateB) {
+          return dateB.getTime() - dateA.getTime();
+        }
+        if (dateB) {
+          return 1;
+        }
+        if (dateA) {
+          return -1;
+        }
+        return 0;
+      })
       .forEach((purchase, index) => {
         const article = document.createElement('article');
         article.className = 'client-contact';
@@ -1335,8 +1422,11 @@ let isSavingQuickSale = false;
         toggle.type = 'button';
         toggle.className = 'client-contact__toggle';
         toggle.dataset.purchaseId = purchase.id;
+        const displayDate = formatFullDate(purchase.date)
+          || formatFullDate(purchase.contacts[0]?.purchaseDate)
+          || 'Contatos';
         toggle.innerHTML = `
-          <span>${formatFullDate(purchase.date)}</span>
+          <span>${displayDate}</span>
           <span>${pendingCount === 0 ? 'Todos concluídos' : `${pendingCount} pendente(s)`}</span>
         `;
 
@@ -1375,10 +1465,23 @@ let isSavingQuickSale = false;
             button.className = 'client-contact__status';
             button.dataset.contactId = contact.id;
             button.dataset.completed = contact.completed ? 'true' : 'false';
-            button.textContent = contact.completed ? 'Efetuado' : 'Pendente';
+            button.dataset.status = contact.completed ? 'completed' : 'pending';
             if (contact.completed) {
               button.classList.add('is-completed');
             }
+
+            const buttonLabel = document.createElement('span');
+            buttonLabel.className = 'client-contact__status-label';
+            buttonLabel.textContent = contact.completed ? 'Efetuado' : 'Pendente';
+
+            const statusDot = document.createElement('span');
+            statusDot.className = 'client-contact__status-dot';
+            statusDot.setAttribute('aria-hidden', 'true');
+            if (contact.completed) {
+              statusDot.hidden = true;
+            }
+
+            button.append(buttonLabel, statusDot);
             if (storedFocusedContactId && contact.id && String(contact.id) === storedFocusedContactId) {
               buttonToFocus = button;
             }
@@ -1496,6 +1599,30 @@ let isSavingQuickSale = false;
         materialField.value = '';
       }
     }
+
+    const dioptrySource = latestPurchase?.dioptry || {};
+    const oeSource = dioptrySource.oe || {};
+    const odSource = dioptrySource.od || {};
+
+    const dioptryFields = {
+      saleOeSpherical: oeSource.spherical,
+      saleOeCylindrical: oeSource.cylindrical,
+      saleOeAxis: oeSource.axis,
+      saleOeDnp: oeSource.dnp,
+      saleOeAddition: oeSource.addition,
+      saleOdSpherical: odSource.spherical,
+      saleOdCylindrical: odSource.cylindrical,
+      saleOdAxis: odSource.axis,
+      saleOdDnp: odSource.dnp,
+      saleOdAddition: odSource.addition,
+    };
+
+    Object.entries(dioptryFields).forEach(([name, value]) => {
+      const field = clientQuickSaleForm.elements.namedItem(name);
+      if (field instanceof HTMLInputElement) {
+        field.value = value ?? '';
+      }
+    });
   }
 
   function collectQuickSaleFormData() {
@@ -1525,6 +1652,11 @@ let isSavingQuickSale = false;
 
     const frameMaterialRaw = toTrimmed(formData.get('saleFrameMaterial'));
 
+    function toNullableField(value) {
+      const text = toTrimmed(value);
+      return text.length ? text : null;
+    }
+
     return {
       date: dateValue,
       frame: toTrimmed(formData.get('saleFrame')),
@@ -1533,6 +1665,22 @@ let isSavingQuickSale = false;
       lens: toTrimmed(formData.get('saleLens')),
       lensValue: toNumberValue(formData.get('saleLensValue')),
       invoice: toTrimmed(formData.get('saleInvoice')),
+      dioptry: {
+        oe: {
+          spherical: toNullableField(formData.get('saleOeSpherical')),
+          cylindrical: toNullableField(formData.get('saleOeCylindrical')),
+          axis: toNullableField(formData.get('saleOeAxis')),
+          dnp: toNullableField(formData.get('saleOeDnp')),
+          addition: toNullableField(formData.get('saleOeAddition')),
+        },
+        od: {
+          spherical: toNullableField(formData.get('saleOdSpherical')),
+          cylindrical: toNullableField(formData.get('saleOdCylindrical')),
+          axis: toNullableField(formData.get('saleOdAxis')),
+          dnp: toNullableField(formData.get('saleOdDnp')),
+          addition: toNullableField(formData.get('saleOdAddition')),
+        },
+      },
     };
   }
 
@@ -1601,6 +1749,7 @@ let isSavingQuickSale = false;
       lens: data.lens,
       lensValue: data.lensValue,
       invoice: data.invoice,
+      dioptry: data.dioptry,
     };
 
     const successMessage = 'Venda registrada com sucesso.';
@@ -2102,10 +2251,24 @@ let isSavingQuickSale = false;
 
     const isCompleted = Boolean(contact.completed);
     patchElement(button, {
-      dataset: { completed: isCompleted ? 'true' : 'false' },
+      dataset: {
+        completed: isCompleted ? 'true' : 'false',
+        status: isCompleted ? 'completed' : 'pending',
+      },
       classList: { toggle: { 'is-completed': isCompleted } },
-      text: isCompleted ? 'Efetuado' : 'Pendente',
     });
+    const label = button.querySelector('.client-contact__status-label');
+    if (label) {
+      patchElement(label, { text: isCompleted ? 'Efetuado' : 'Pendente' });
+    }
+    const dot = button.querySelector('.client-contact__status-dot');
+    if (dot) {
+      patchElement(dot, {
+        attributes: {
+          hidden: isCompleted ? 'hidden' : null,
+        },
+      });
+    }
     return button;
   }
 
