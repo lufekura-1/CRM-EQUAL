@@ -1459,7 +1459,7 @@ body.modal-open {
   padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   min-height: 220px;
   position: relative;
@@ -1474,19 +1474,26 @@ body.modal-open {
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
 }
 
-.events-manager__card-header {
+.events-manager__card-main {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  text-align: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.events-manager__card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
 }
 
 .events-manager__select-button {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid rgba(148, 163, 184, 0.6);
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
   background: rgba(15, 23, 42, 0.6);
   display: inline-flex;
   align-items: center;
@@ -1511,17 +1518,17 @@ body.modal-open {
 }
 
 .events-manager__select-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
   background: transparent;
-  box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.45);
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .events-manager__select-button[aria-pressed='true'] .events-manager__select-indicator {
   background-color: #0f172a;
-  box-shadow: inset 0 0 0 2px rgba(226, 232, 240, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.9);
 }
 
 .events-manager__card-title {
@@ -1530,19 +1537,28 @@ body.modal-open {
   color: #f8fafc;
   line-height: 1.3;
   word-break: break-word;
+  text-align: center;
 }
 
 .events-manager__card-date {
-  font-size: 13px;
+  font-size: 16px;
   color: #cbd5f5;
   letter-spacing: 0.02em;
+  font-weight: 600;
+  margin-left: auto;
+  text-align: right;
+  display: block;
+}
+
+.events-manager__card-date:empty {
+  visibility: hidden;
 }
 
 .events-manager__card-status {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
   align-self: center;
-  padding: 6px 16px;
+  padding: 2px 8px;
   border-radius: 999px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1565,10 +1581,14 @@ body.modal-open {
 
 .events-manager__card-description {
   color: rgba(226, 232, 240, 0.82);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
   flex: 1;
   white-space: pre-wrap;
+  margin-top: 14px;
+  text-align: left;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .events-manager__empty {
