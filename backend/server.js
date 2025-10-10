@@ -92,6 +92,47 @@ function handleError(res, error) {
   return res.status(500).json({ error: error?.message || 'Erro interno do servidor.' });
 }
 
+const CONTACT_STATUS_LABELS = {
+  completed: 'Efetuado',
+  overdue: 'Atrasado',
+  pending: 'Pendente',
+};
+
+function normalizeDateOnly(value) {
+  if (!value) {
+    return null;
+  }
+
+  const text = String(value).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
+}
+
+function resolveContactStatus(contact) {
+  if (!contact) {
+    return { key: 'pending', label: CONTACT_STATUS_LABELS.pending };
+  }
+
+  const candidateKey = contact.status ?? contact.statusKey ?? contact.situacao ?? null;
+  if (candidateKey && CONTACT_STATUS_LABELS[candidateKey]) {
+    return { key: candidateKey, label: CONTACT_STATUS_LABELS[candidateKey] };
+  }
+
+  const completed = Boolean(contact.completed ?? contact.efetuado);
+  if (completed) {
+    return { key: 'completed', label: CONTACT_STATUS_LABELS.completed };
+  }
+
+  const contactDate = normalizeDateOnly(contact.contactDate ?? contact.data_contato ?? null);
+  if (contactDate) {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    if (contactDate < todayIso) {
+      return { key: 'overdue', label: CONTACT_STATUS_LABELS.overdue };
+    }
+  }
+
+  return { key: 'pending', label: CONTACT_STATUS_LABELS.pending };
+}
+
 const normalizeNullableStringSchema = z
   .union([z.string(), z.number(), z.literal(null)])
   .optional()
@@ -469,6 +510,7 @@ function decorateContactResponse(contact) {
   }
 
   const completed = Boolean(contact.completed);
+  const statusInfo = resolveContactStatus(contact);
 
   return {
     ...contact,
@@ -489,6 +531,9 @@ function decorateContactResponse(contact) {
     efetuado: completed,
     efetuadoEm: contact.completedAt ?? null,
     efetuado_em: contact.completedAt ?? null,
+    status: statusInfo.key,
+    statusLabel: statusInfo.label,
+    status_label: statusInfo.label,
   };
 }
 
@@ -927,7 +972,13 @@ app.get('/api/eventos', async (req, res) => {
         const title = monthsLabel
           ? `Contato pós-venda - ${monthsLabel}`
           : 'Contato pós-venda';
-        const description = contato.completed ? 'Contato efetuado' : 'Contato pendente';
+        const statusInfo = resolveContactStatus(contato);
+        const description =
+          statusInfo.key === 'completed'
+            ? 'Contato efetuado'
+            : statusInfo.key === 'overdue'
+              ? 'Contato atrasado'
+              : 'Contato pendente';
         const client = clientMap.get(Number(contato.clientId)) || null;
         const purchase =
           contato.purchaseId !== undefined && contato.purchaseId !== null
@@ -950,6 +1001,8 @@ app.get('/api/eventos', async (req, res) => {
           contactId: contato.id,
           contactCompleted: Boolean(contato.completed),
           completed: Boolean(contato.completed),
+          status: statusInfo.key,
+          statusLabel: statusInfo.label,
           monthsOffset: contato.monthsOffset ?? null,
           contactMonths: Number.isFinite(months) ? months : null,
           purchaseId: contato.purchaseId ?? null,

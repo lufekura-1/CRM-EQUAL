@@ -2168,6 +2168,17 @@ body.modal-open {
   background-color: #15803d;
 }
 
+.client-contact-history__status-button.is-overdue:not(.is-completed) {
+  background-color: #fee2e2;
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #991b1b;
+}
+
+.client-contact-history__status-button.is-overdue:not(.is-completed):hover,
+.client-contact-history__status-button.is-overdue:not(.is-completed):focus {
+  background-color: #fecaca;
+}
+
 .client-contact-history__status-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -2187,6 +2198,10 @@ body.modal-open {
   background-color: rgba(21, 128, 61, 0.75);
 }
 
+.client-contact-history__status-button.is-overdue:not(.is-completed) .client-contact-history__status-switch {
+  background-color: rgba(220, 38, 38, 0.35);
+}
+
 .client-contact-history__status-handle {
   position: absolute;
   top: 2px;
@@ -2202,6 +2217,11 @@ body.modal-open {
 .client-contact-history__status-button.is-completed .client-contact-history__status-handle {
   transform: translateX(18px);
   background-color: #bbf7d0;
+}
+
+.client-contact-history__status-button.is-overdue:not(.is-completed) .client-contact-history__status-handle {
+  background-color: #fee2e2;
+  box-shadow: 0 2px 6px rgba(185, 28, 28, 0.35);
 }
 
 .client-contact-history__status-text {
