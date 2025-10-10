@@ -445,6 +445,20 @@ body.modal-open {
   background-color: #3a3a3a;
 }
 
+.topbar__button--link {
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: #1d4ed8;
+  text-transform: none;
+}
+
+.topbar__button--link:hover,
+.topbar__button--link:focus {
+  background-color: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+  border-color: transparent;
+}
+
 .topbar__button--advanced {
   background-color: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -1030,6 +1044,11 @@ body.modal-open {
   font-size: 15px;
   font-family: inherit;
   color: #ffffff;
+}
+
+.modal__field--textarea textarea {
+  min-height: 110px;
+  resize: vertical;
 }
 
 .modal__input:focus,
@@ -2505,6 +2524,36 @@ body.modal-open {
   gap: 12px;
 }
 
+.client-contact-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.client-contact-details__item {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background-color: rgba(255, 255, 255, 0.06);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.client-contact-details__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.client-contact-details__description {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .client-contact-history {
   display: flex;
   flex-direction: column;
@@ -2835,11 +2884,34 @@ body.modal-open {
   font-size: 14px;
 }
 
+.client-form__field--full {
+  grid-column: 1 / -1;
+}
+
 .client-form__field--checkbox {
   flex-direction: row;
   align-items: center;
   gap: 10px;
   font-weight: 600;
+}
+
+.client-form__field--textarea textarea {
+  min-height: 112px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background-color: #1f1f1f;
+  color: #ffffff;
+}
+
+.client-form__field--textarea textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .client-form__field input,
@@ -3165,6 +3237,119 @@ body.modal-open {
 
 .calendar__status--error {
   color: #ff8a80;
+}
+
+.calendar-week-contacts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.calendar-week-contacts__table-wrapper {
+  max-height: 60vh;
+  overflow: auto;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+}
+
+.calendar-week-contacts__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.calendar-week-contacts__table th,
+.calendar-week-contacts__table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.calendar-week-contacts__table th {
+  background-color: rgba(37, 99, 235, 0.08);
+  font-weight: 600;
+  color: #1e3a8a;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.calendar-week-contacts__column--actions,
+.calendar-week-contacts__column--status {
+  text-align: center;
+  width: 120px;
+}
+
+.calendar-week-contacts__detail-button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.calendar-week-contacts__detail-button:hover,
+.calendar-week-contacts__detail-button:focus {
+  background-color: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.calendar-week-contacts__detail-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.calendar-week-contacts__empty {
+  text-align: center;
+  color: #4b5563;
+  font-size: 15px;
+  padding: 24px 0;
+}
+
+.calendar-contact-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.calendar-contact-detail__body {
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-contact-detail__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.calendar-contact-detail__row:last-child {
+  border-bottom: none;
+}
+
+.calendar-contact-detail__label {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #2563eb;
+}
+
+.calendar-contact-detail__value {
+  font-size: 15px;
+  color: #111827;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .clients-table__row[data-status] .clients-table__cell {

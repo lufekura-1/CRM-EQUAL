@@ -354,6 +354,13 @@
         lens: normalizeNullable(purchase.lens),
         lensValue: Number.isNaN(lensValue) ? null : lensValue,
         invoice: normalizeNullable(purchase.invoice),
+        detail: normalizeNullable(
+          purchase.detail ??
+            purchase.purchaseDetail ??
+            purchase.purchase_detail ??
+            purchase.detalheCompra ??
+            purchase['detalhe_compra'],
+        ),
         dioptry: {
           oe: {
             spherical: normalizeNullable(purchase.dioptry?.oe?.spherical),

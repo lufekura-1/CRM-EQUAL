@@ -48,6 +48,7 @@ db.exec(`
     lente TEXT,
     valor_lente REAL,
     nota_fiscal TEXT,
+    detalhe_compra TEXT,
     oe_esferico TEXT,
     oe_cilindrico TEXT,
     oe_eixo TEXT,
@@ -104,6 +105,7 @@ ensureColumn('eventos', 'updated_at', 'TEXT');
 ensureColumn('eventos', 'cliente_id', 'INTEGER');
 ensureColumn('eventos', 'completed', 'INTEGER DEFAULT 0');
 ensureColumn('eventos', 'usuario_id', 'TEXT');
+ensureColumn('compras', 'detalhe_compra', 'TEXT');
 
 function migrateContactsTableToAllowStandaloneEntries() {
   const info = db.pragma('table_info(contatos)');
@@ -235,6 +237,7 @@ const listPurchasesStmt = db.prepare(`
     lente,
     valor_lente,
     nota_fiscal,
+    detalhe_compra,
     oe_esferico,
     oe_cilindrico,
     oe_eixo,
@@ -262,6 +265,7 @@ const listPurchasesByClienteStmt = db.prepare(`
     lente,
     valor_lente,
     nota_fiscal,
+    detalhe_compra,
     oe_esferico,
     oe_cilindrico,
     oe_eixo,
@@ -384,6 +388,7 @@ const getPurchaseStmt = db.prepare(`
     lente,
     valor_lente,
     nota_fiscal,
+    detalhe_compra,
     oe_esferico,
     oe_cilindrico,
     oe_eixo,
@@ -410,6 +415,7 @@ const insertPurchaseStmt = db.prepare(`
     lente,
     valor_lente,
     nota_fiscal,
+    detalhe_compra,
     oe_esferico,
     oe_cilindrico,
     oe_eixo,
@@ -423,7 +429,7 @@ const insertPurchaseStmt = db.prepare(`
     created_at,
     updated_at
   )
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const updatePurchaseStmt = db.prepare(`
@@ -436,6 +442,7 @@ const updatePurchaseStmt = db.prepare(`
     lente = ?,
     valor_lente = ?,
     nota_fiscal = ?,
+    detalhe_compra = ?,
     oe_esferico = ?,
     oe_cilindrico = ?,
     oe_eixo = ?,
@@ -751,6 +758,7 @@ function mapPurchaseRow(row) {
         ? null
         : Number(row.valor_lente),
     invoice: row.nota_fiscal ?? '',
+    detail: row.detalhe_compra ?? null,
     dioptry: {
       oe: {
         spherical: row.oe_esferico ?? null,
@@ -865,7 +873,12 @@ function attachContactsToPurchases(purchases, contactsByPurchase) {
     return;
   }
   purchases.forEach((purchase) => {
-    const purchaseContacts = contactsByPurchase.get(purchase.id) || [];
+    const purchaseContacts = (contactsByPurchase.get(purchase.id) || []).map((contact) => {
+      if (contact.purchaseDetail !== undefined && contact.purchaseDetail !== null) {
+        return contact;
+      }
+      return { ...contact, purchaseDetail: purchase.detail ?? null };
+    });
     purchase.contacts = purchaseContacts
       .slice()
       .sort((a, b) => {
@@ -879,23 +892,28 @@ function attachContactsToPurchases(purchases, contactsByPurchase) {
   });
 }
 
-function determineClientState(purchases) {
+function hasPendingContacts(contactList = []) {
+  if (!Array.isArray(contactList)) {
+    return false;
+  }
+  return contactList.some((contact) => !contact?.completed);
+}
+
+function determineClientState(purchases, extraContacts = []) {
   if (!Array.isArray(purchases) || purchases.length === 0) {
-    return 'oferta';
+    return hasPendingContacts(extraContacts) ? 'pos-venda' : 'oferta';
   }
 
-  const sorted = purchases
-    .slice()
-    .sort((a, b) => {
-      const dateA = a.date ? new Date(`${a.date}T00:00:00`).getTime() : 0;
-      const dateB = b.date ? new Date(`${b.date}T00:00:00`).getTime() : 0;
-      return dateB - dateA;
-    });
+  const anyPendingPurchase = purchases.some((purchase) => hasPendingContacts(purchase.contacts));
+  if (anyPendingPurchase) {
+    return 'pos-venda';
+  }
 
-  const latest = sorted[0];
-  const contacts = Array.isArray(latest.contacts) ? latest.contacts : [];
-  const hasPending = contacts.some((contact) => !contact.completed);
-  return hasPending ? 'pos-venda' : 'oferta';
+  if (hasPendingContacts(extraContacts)) {
+    return 'pos-venda';
+  }
+
+  return 'oferta';
 }
 
 function recomputeClientState(clienteId) {
@@ -903,7 +921,9 @@ function recomputeClientState(clienteId) {
   const contactRows = fetchContactRowsForClient(clienteId);
   const contactsByPurchase = groupContactsByPurchase(contactRows);
   attachContactsToPurchases(purchases, contactsByPurchase);
-  const state = determineClientState(purchases);
+  const standaloneKey = `standalone:${clienteId}`;
+  const standaloneContacts = contactsByPurchase.get(standaloneKey) || [];
+  const state = determineClientState(purchases, standaloneContacts);
   const now = new Date().toISOString();
   updateClientStateValueStmt.run(state, now, clienteId);
   return state;
@@ -1002,6 +1022,14 @@ function normalizePurchaseInput(purchase) {
     lens: toNullableText(purchase.lens),
     lensValue: toNumberOrNull(purchase.lensValue),
     invoice: toNullableText(purchase.invoice),
+    detail:
+      toNullableText(
+        purchase.detail ??
+          purchase.purchaseDetail ??
+          purchase.purchase_detail ??
+          purchase.detalheCompra ??
+          purchase['detalhe_compra'],
+      ),
     dioptry: {
       oe: normalizeEye(purchase.dioptry?.oe || {}),
       od: normalizeEye(purchase.dioptry?.od || {}),
@@ -1117,6 +1145,7 @@ function insertPurchaseRecord(clienteId, purchase, timestamp) {
     purchase.lens,
     purchase.lensValue,
     purchase.invoice,
+    purchase.detail,
     purchase.dioptry.oe.spherical,
     purchase.dioptry.oe.cylindrical,
     purchase.dioptry.oe.axis,
@@ -1145,6 +1174,7 @@ function updatePurchaseRecord(clienteId, purchaseId, purchase, timestamp) {
     purchase.lens,
     purchase.lensValue,
     purchase.invoice,
+    purchase.detail,
     purchase.dioptry.oe.spherical,
     purchase.dioptry.oe.cylindrical,
     purchase.dioptry.oe.axis,
@@ -1179,7 +1209,7 @@ function getClienteWithPurchases(clienteId) {
     .flatMap((purchase) => purchase.contacts || [])
     .concat(standaloneContacts);
   cliente.lastPurchase = purchases.length ? purchases[purchases.length - 1].date : null;
-  cliente.state = determineClientState(purchases);
+  cliente.state = determineClientState(purchases, standaloneContacts);
   return cliente;
 }
 
@@ -1205,7 +1235,7 @@ function listClientes() {
     cliente.lastPurchase = clientPurchases.length
       ? clientPurchases[clientPurchases.length - 1].date
       : null;
-    cliente.state = determineClientState(clientPurchases);
+    cliente.state = determineClientState(clientPurchases, standaloneContacts);
     return cliente;
   });
 }

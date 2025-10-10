@@ -113,7 +113,13 @@
               >
                 Eventos
               </button>
-              <button class="topbar__button" type="button">Contatos</button>
+              <button
+                class="topbar__button topbar__button--link"
+                type="button"
+                data-role="calendar-contacts-button"
+              >
+                Contatos
+              </button>
             </div>
           </div>
           <div class="topbar__menu" data-page="clientes" data-label="Clientes">
@@ -628,6 +634,14 @@
                 </header>
                 <div class="client-purchases" data-role="client-purchases"></div>
               </article>
+              <article class="client-card client-card--contact-details">
+                <header class="client-card__header">
+                  <h2 class="client-card__title">Detalhes do contato</h2>
+                </header>
+                <div class="client-contact-details" data-role="client-contact-details">
+                  <div class="client-card__empty">Nenhum detalhe cadastrado.</div>
+                </div>
+              </article>
               <article class="client-card client-card--contact-history">
                 <header class="client-card__header">
                   <h2 class="client-card__title">Histórico de contato</h2>
@@ -734,6 +748,10 @@
                 <label class="client-form__field">
                   <span class="client-form__label">Nota Fiscal</span>
                   <input type="text" name="invoice" required />
+                </label>
+                <label class="client-form__field client-form__field--full client-form__field--textarea">
+                  <span class="client-form__label">Detalhe da compra</span>
+                  <textarea name="purchaseDetail" rows="4" placeholder="Observações complementares sobre a venda"></textarea>
                 </label>
               </div>
 
@@ -987,6 +1005,10 @@
             <label class="modal__field">
               <span class="modal__label">Nota Fiscal</span>
               <input class="modal__input" type="text" name="saleInvoice" />
+            </label>
+            <label class="modal__field modal__field--textarea">
+              <span class="modal__label">Detalhe da compra</span>
+              <textarea class="modal__input" name="saleDetail" rows="4"></textarea>
             </label>
             <fieldset class="modal__fieldset modal__fieldset--quick-sale-dioptry">
               <legend class="modal__label">Dioptria</legend>
@@ -1307,6 +1329,64 @@
           <div class="events-manager__list-card">
             <div class="events-manager__grid" data-role="events-manager-grid" aria-live="polite"></div>
           </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" data-modal="calendar-week-contacts" aria-hidden="true">
+      <div
+        class="modal modal--wide"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="calendar-week-contacts-title"
+      >
+        <div class="modal__header">
+          <h2 class="modal__title" id="calendar-week-contacts-title">Contatos da semana</h2>
+          <button class="modal__close" type="button" data-action="close-week-contacts" aria-label="Fechar modal">
+            &times;
+          </button>
+        </div>
+        <div class="modal__content calendar-week-contacts">
+          <div class="calendar-week-contacts__table-wrapper">
+            <table class="calendar-week-contacts__table" aria-label="Contatos da semana">
+              <thead>
+                <tr>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Telefone</th>
+                  <th scope="col">Data do contato</th>
+                  <th scope="col">Tipo do contato</th>
+                  <th scope="col" class="calendar-week-contacts__column--actions">Detalhes</th>
+                  <th scope="col" class="calendar-week-contacts__column--status">Estado</th>
+                </tr>
+              </thead>
+              <tbody data-role="calendar-week-contacts-body"></tbody>
+            </table>
+          </div>
+          <div class="calendar-week-contacts__empty" data-role="calendar-week-contacts-empty" hidden>
+            Nenhum contato agendado para esta semana.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" data-modal="calendar-contact-detail" aria-hidden="true">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="calendar-contact-detail-title"
+      >
+        <div class="modal__header">
+          <h2 class="modal__title" id="calendar-contact-detail-title">Informações da compra</h2>
+          <button
+            class="modal__close"
+            type="button"
+            data-action="close-contact-detail"
+            aria-label="Fechar modal"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal__content calendar-contact-detail">
+          <div class="calendar-contact-detail__body" data-role="calendar-contact-detail-body"></div>
         </div>
       </div>
     </div>

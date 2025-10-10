@@ -761,6 +761,11 @@ let isSavingQuickSale = false;
       purchaseId: rawPurchaseId ? String(rawPurchaseId) : '',
       clientId: contact.clientId ?? contact.cliente_id ?? '',
       purchaseDate,
+      purchaseDetail:
+        contact.purchaseDetail ??
+        contact.detalheCompra ??
+        contact['detalhe_compra'] ??
+        null,
       contactDate,
       monthsOffset: Number.isFinite(monthsOffset) ? monthsOffset : null,
       completed,
@@ -826,6 +831,14 @@ let isSavingQuickSale = false;
       : Array.isArray(purchase.contatos)
         ? purchase.contatos
         : [];
+    const detail =
+      purchase.detail ??
+      purchase.purchaseDetail ??
+      purchase.purchase_detail ??
+      purchase.detalheCompra ??
+      purchase['detalhe_compra'] ??
+      '';
+
     const contacts = contactsSource
       .map((item) => mapApiContact(item))
       .filter((item) => Boolean(item))
@@ -836,6 +849,12 @@ let isSavingQuickSale = false;
           return monthsA - monthsB;
         }
         return (a.contactDate || '').localeCompare(b.contactDate || '');
+      })
+      .map((contact) => {
+        if (contact.purchaseDetail !== null && contact.purchaseDetail !== undefined) {
+          return contact;
+        }
+        return { ...contact, purchaseDetail: detail || null };
       });
 
     return {
@@ -849,6 +868,7 @@ let isSavingQuickSale = false;
       lensValue:
         toNumber(purchase.lensValue ?? purchase.valorLente ?? purchase.valor_lente) ?? 0,
       invoice: purchase.invoice ?? purchase.notaFiscal ?? purchase.nota_fiscal ?? '',
+      detail: detail ? String(detail) : '',
       dioptry: {
         oe: normalizeEye(oeSource),
         od: normalizeEye(odSource),
@@ -1181,6 +1201,7 @@ let isSavingQuickSale = false;
 
     renderClientInterests(client);
     renderPurchaseHistory(client);
+    renderClientContactDetails(client);
     renderClientContacts(client);
   }
 
@@ -1257,6 +1278,68 @@ let isSavingQuickSale = false;
       tag.textContent = interest;
       clientInterestsContainer.appendChild(tag);
     });
+  }
+
+  function renderClientContactDetails(client) {
+    if (!clientContactDetailsContainer) {
+      return;
+    }
+
+    clientContactDetailsContainer.innerHTML = '';
+
+    const entries = [];
+    if (Array.isArray(client?.purchases)) {
+      client.purchases.forEach((purchase) => {
+        const rawDetail =
+          purchase?.detail ??
+          purchase?.purchaseDetail ??
+          purchase?.purchase_detail ??
+          purchase?.detalheCompra ??
+          (purchase ? purchase['detalhe_compra'] : undefined);
+        const text = rawDetail === undefined || rawDetail === null ? '' : String(rawDetail).trim();
+        if (!text) {
+          return;
+        }
+        entries.push({
+          purchaseId: purchase?.id ? String(purchase.id) : '',
+          date: purchase?.date ?? '',
+          detail: text,
+        });
+      });
+    }
+
+    if (!entries.length) {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'client-card__empty';
+      placeholder.textContent = 'Nenhum detalhe cadastrado.';
+      clientContactDetailsContainer.appendChild(placeholder);
+      return;
+    }
+
+    entries
+      .sort((a, b) => {
+        const dateA = a.date ? new Date(`${a.date}T00:00:00`).getTime() : 0;
+        const dateB = b.date ? new Date(`${b.date}T00:00:00`).getTime() : 0;
+        return dateB - dateA;
+      })
+      .forEach((entry) => {
+        const item = document.createElement('div');
+        item.className = 'client-contact-details__item';
+        if (entry.purchaseId) {
+          item.dataset.purchaseId = entry.purchaseId;
+        }
+
+        const title = document.createElement('h3');
+        title.className = 'client-contact-details__title';
+        title.textContent = formatFullDate(entry.date) || 'Data não informada';
+
+        const description = document.createElement('p');
+        description.className = 'client-contact-details__description';
+        description.textContent = entry.detail;
+
+        item.append(title, description);
+        clientContactDetailsContainer.appendChild(item);
+      });
   }
 
   function formatFrameMaterial(material) {
@@ -1702,6 +1785,11 @@ let isSavingQuickSale = false;
       invoiceField.value = '';
     }
 
+    const detailField = clientQuickSaleForm.elements.namedItem('saleDetail');
+    if (detailField instanceof HTMLTextAreaElement || detailField instanceof HTMLInputElement) {
+      detailField.value = '';
+    }
+
     const materialField = clientQuickSaleForm.elements.namedItem('saleFrameMaterial');
     if (materialField instanceof HTMLSelectElement) {
       const preferred = latestPurchase?.frameMaterial || '';
@@ -1780,6 +1868,7 @@ let isSavingQuickSale = false;
       lens: toTrimmed(formData.get('saleLens')),
       lensValue: toNumberValue(formData.get('saleLensValue')),
       invoice: toTrimmed(formData.get('saleInvoice')),
+      detail: toTrimmed(formData.get('saleDetail')),
       dioptry: {
         oe: {
           spherical: toNullableField(formData.get('saleOeSpherical')),
@@ -1864,6 +1953,7 @@ let isSavingQuickSale = false;
       lens: data.lens,
       lensValue: data.lensValue,
       invoice: data.invoice,
+      detail: data.detail,
       dioptry: data.dioptry,
     };
 
@@ -2570,6 +2660,7 @@ let isSavingQuickSale = false;
 
     if (!context) {
       renderClientContacts(updatedClient);
+      renderClientContactDetails(updatedClient);
       if (!context && mappedContact) {
         const purchase = mappedContact.purchaseId
           ? findClientPurchaseById(updatedClient, mappedContact.purchaseId)
@@ -2650,6 +2741,7 @@ let isSavingQuickSale = false;
       lens: latestPurchase?.lens ?? '',
       lensValue: latestPurchase?.lensValue ?? '',
       invoice: latestPurchase?.invoice ?? '',
+      purchaseDetail: latestPurchase?.detail ?? '',
       oeSpherical: latestPurchase?.dioptry?.oe?.spherical ?? '',
       oeCylindrical: latestPurchase?.dioptry?.oe?.cylindrical ?? '',
       oeAxis: latestPurchase?.dioptry?.oe?.axis ?? '',
@@ -2667,7 +2759,11 @@ let isSavingQuickSale = false;
       if (!input) {
         return;
       }
-      if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) {
+      if (
+        input instanceof HTMLInputElement
+        || input instanceof HTMLSelectElement
+        || input instanceof HTMLTextAreaElement
+      ) {
         if (input.type === 'checkbox') {
           input.checked = Boolean(value);
         } else {
@@ -2693,6 +2789,7 @@ let isSavingQuickSale = false;
     const purchaseDate = formData.get('purchaseDate');
     const userType = formData.get('userType')?.toString().toUpperCase() ?? '';
     const frameMaterial = formData.get('frameMaterial')?.toString().toUpperCase() ?? '';
+    const purchaseDetail = formData.get('purchaseDetail');
 
     return {
       name: formData.get('name')?.toString().trim() ?? '',
@@ -2710,6 +2807,7 @@ let isSavingQuickSale = false;
         lens: formData.get('lens')?.toString().trim() ?? '',
         lensValue: Number(formData.get('lensValue')) || 0,
         invoice: formData.get('invoice')?.toString().trim() ?? '',
+        detail: purchaseDetail ? purchaseDetail.toString().trim() : '',
         dioptry: {
           oe: {
             spherical: formData.get('oeSpherical')?.toString() ?? '',
@@ -2760,6 +2858,7 @@ let isSavingQuickSale = false;
       lens: data.purchase.lens,
       lensValue: data.purchase.lensValue,
       invoice: data.purchase.invoice,
+      detail: data.purchase.detail,
       dioptry: {
         oe: { ...data.purchase.dioptry.oe },
         od: { ...data.purchase.dioptry.od },
