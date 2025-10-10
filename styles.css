@@ -1289,6 +1289,25 @@ body.modal-open {
 }
 
 .events-manager__header-top .modal__close {
+  gap: 24px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+}
+
+.events-manager__title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.events-manager__header .modal__title {
+  flex: 0 1 auto;
+  margin-right: 0;
+}
+
+.events-manager__header .modal__close {
+  align-self: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1306,6 +1325,8 @@ body.modal-open {
   gap: 16px;
   flex-wrap: nowrap;
   width: 100%;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -1646,6 +1667,13 @@ body.modal-open {
     justify-content: flex-start;
     flex-wrap: wrap;
     flex: 1 1 100%;
+  .events-manager__header {
+    flex-wrap: wrap;
+  }
+
+  .events-manager__title-group {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 
