@@ -1268,13 +1268,13 @@
     <div class="modal-overlay" data-modal="events-manager" aria-hidden="true">
       <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="events-manager-title">
         <div class="modal__header events-manager__header">
-          <div class="events-manager__title-group">
+          <div class="events-manager__header-top">
             <h2 class="modal__title" id="events-manager-title">Gerenciar eventos</h2>
             <button class="modal__close" type="button" data-action="close" aria-label="Fechar modal">
               &times;
             </button>
           </div>
-          <div class="events-manager__header-actions">
+          <div class="events-manager__controls" role="group" aria-label="Opções do gerenciador de eventos">
             <div class="events-manager__filters" role="group" aria-label="Filtrar por status">
               <button class="events-manager__filter" type="button" data-filter-status="pending" aria-pressed="true">
                 Pendente
@@ -1290,17 +1290,17 @@
               <span class="events-manager__date-filter-label">Mês</span>
               <input class="events-manager__date-input" type="month" data-role="events-manager-month" />
             </label>
-          </div>
-          <div class="events-manager__actions" role="group" aria-label="Ações dos eventos">
-            <button class="events-manager__action-button events-manager__action-button--edit" type="button" data-action="edit-event" disabled>
-              Editar
-            </button>
-            <button class="events-manager__action-button events-manager__action-button--delete" type="button" data-action="delete-events" disabled>
-              Excluir
-            </button>
-            <button class="events-manager__action-button events-manager__action-button--add" type="button" data-action="add-event">
-              Adicionar
-            </button>
+            <div class="events-manager__actions" role="group" aria-label="Ações dos eventos">
+              <button class="events-manager__action-button events-manager__action-button--edit" type="button" data-action="edit-event" disabled>
+                Editar
+              </button>
+              <button class="events-manager__action-button events-manager__action-button--delete" type="button" data-action="delete-events" disabled>
+                Excluir
+              </button>
+              <button class="events-manager__action-button events-manager__action-button--add" type="button" data-action="add-event">
+                Adicionar
+              </button>
+            </div>
           </div>
         </div>
         <div class="modal__content events-manager__content">
