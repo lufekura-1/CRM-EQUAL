@@ -253,6 +253,16 @@
     }
 
     const result = {};
+    function normalizeNullable(value) {
+      if (value === undefined) {
+        return undefined;
+      }
+      if (value === null) {
+        return null;
+      }
+      const text = String(value).trim();
+      return text.length === 0 ? null : text;
+    }
 
     if (payload.date !== undefined) {
       result.date = payload.date;
@@ -272,6 +282,30 @@
 
     if (payload.clientId !== undefined) {
       result.clientId = payload.clientId ?? null;
+    }
+
+    const userIdCandidates = [
+      payload.userId,
+      payload.user_id,
+      payload.usuarioId,
+      payload.usuario_id,
+      payload.user,
+      payload.usuario,
+      payload.ownerId,
+      payload.owner_id,
+      payload.responsavelId,
+      payload['responsavel_id'],
+      payload.responsavel,
+      payload.responsibleId,
+      payload['responsible_id'],
+      payload.responsible,
+    ];
+    for (let index = 0; index < userIdCandidates.length; index += 1) {
+      const normalizedUserId = normalizeNullable(userIdCandidates[index]);
+      if (normalizedUserId !== undefined) {
+        result.userId = normalizedUserId;
+        break;
+      }
     }
 
     if (payload.completed !== undefined) {
@@ -387,6 +421,38 @@
     if (userTypeValue !== undefined) {
       const normalizedUserType = normalizeNullable(userTypeValue);
       result.userType = normalizedUserType ? normalizedUserType.toUpperCase() : normalizedUserType;
+    }
+
+    const userIdValue =
+      payload.userId !== undefined
+        ? payload.userId
+        : payload.user_id !== undefined
+          ? payload.user_id
+          : payload.usuarioId !== undefined
+            ? payload.usuarioId
+            : payload['usuario_id'] !== undefined
+              ? payload['usuario_id']
+              : payload.usuario !== undefined
+                ? payload.usuario
+                : payload.user !== undefined
+                  ? payload.user
+                  : payload.ownerId !== undefined
+                    ? payload.ownerId
+                    : payload['owner_id'] !== undefined
+                      ? payload['owner_id']
+                      : payload.responsavelId !== undefined
+                        ? payload.responsavelId
+                        : payload['responsavel_id'] !== undefined
+                          ? payload['responsavel_id']
+                          : payload.responsavel !== undefined
+                            ? payload.responsavel
+                            : payload.responsibleId !== undefined
+                              ? payload.responsibleId
+                              : payload['responsible_id'] !== undefined
+                                ? payload['responsible_id']
+                                : payload.responsible;
+    if (userIdValue !== undefined) {
+      result.userId = normalizeNullable(userIdValue);
     }
 
     if (Array.isArray(payload.interests)) {

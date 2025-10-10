@@ -17,6 +17,7 @@ function seedClientes() {
       birthDate: '1987-03-14',
       acceptsContact: true,
       userType: 'MF',
+      userId: 'exotica',
       state: 'pos-venda',
       interests: ['Multifocal', 'Solar'],
       purchases: [
@@ -57,6 +58,7 @@ function seedClientes() {
       birthDate: '1979-11-22',
       acceptsContact: false,
       userType: 'VS',
+      userId: 'jorel-avenida',
       state: 'oferta',
       interests: ['Visão Simples', 'Relógios'],
       purchases: [
@@ -97,6 +99,7 @@ function seedClientes() {
       birthDate: '1992-06-08',
       acceptsContact: true,
       userType: 'BF',
+      userId: 'jorel-chicuta',
       state: 'nao-contatar',
       interests: ['Bifocal', 'Jóias'],
       purchases: [
@@ -151,6 +154,7 @@ function seedEventos(clientes) {
       descricao: 'Agendamento da entrega e ajuste dos óculos multifocais de Juliana Carmen.',
       cor: '#FF5733',
       clienteNome: 'Juliana Carmen',
+      usuario_id: 'exotica',
     },
     {
       data: '2024-05-18',
@@ -158,6 +162,7 @@ function seedEventos(clientes) {
       descricao: 'Ligação para apresentar armações metálicas premium para Carlos Andrade.',
       cor: '#33C1FF',
       clienteNome: 'Carlos Andrade',
+      usuario_id: 'jorel-avenida',
     },
     {
       data: '2024-06-12',
@@ -165,6 +170,7 @@ function seedEventos(clientes) {
       descricao: 'Revisar adaptação das lentes progressivas de Marina Lopes após 4 meses.',
       cor: '#8E44AD',
       clienteNome: 'Marina Lopes',
+      usuario_id: 'jorel-chicuta',
     },
   ];
 

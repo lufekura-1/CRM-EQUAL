@@ -40,6 +40,20 @@ function toApiEvento(evento) {
     clientId: evento.cliente_id,
     completed: Boolean(evento.completed),
     createdAt: evento.created_at,
+    userId: evento.usuario_id ?? evento.user_id ?? null,
+    user_id: evento.usuario_id ?? evento.user_id ?? null,
+    usuarioId: evento.usuario_id ?? evento.user_id ?? null,
+    usuario_id: evento.usuario_id ?? evento.user_id ?? null,
+    user: evento.usuario_id ?? evento.user_id ?? null,
+    usuario: evento.usuario_id ?? evento.user_id ?? null,
+    ownerId: evento.usuario_id ?? evento.user_id ?? null,
+    owner_id: evento.usuario_id ?? evento.user_id ?? null,
+    responsavelId: evento.usuario_id ?? evento.user_id ?? null,
+    responsavel_id: evento.usuario_id ?? evento.user_id ?? null,
+    responsavel: evento.usuario_id ?? evento.user_id ?? null,
+    responsibleId: evento.usuario_id ?? evento.user_id ?? null,
+    responsible_id: evento.usuario_id ?? evento.user_id ?? null,
+    responsible: evento.usuario_id ?? evento.user_id ?? null,
   };
 }
 
@@ -64,6 +78,23 @@ function fromApiEvento(payload, { defaultNull = false } = {}) {
         : payload.completed
           ? 1
           : 0,
+    usuario_id: normalize(
+      payload.userId ??
+        payload.user_id ??
+        payload.usuarioId ??
+        payload.usuario_id ??
+        payload.usuario ??
+        payload.user ??
+        payload.ownerId ??
+        payload.owner_id ??
+        payload.responsavelId ??
+        payload.responsavel_id ??
+        payload.responsavel ??
+        payload.responsibleId ??
+        payload.responsible_id ??
+        payload.responsible ??
+        null
+    ),
   };
 }
 
@@ -368,6 +399,7 @@ const clienteCreateSchema = z.object({
   birthDate: optionalBirthDateSchema,
   acceptsContact: optionalBooleanSchema,
   userType: normalizeNullableStringSchema,
+  userId: normalizeNullableStringSchema,
   state: normalizeNullableStringSchema,
   interests: optionalInterestsSchema,
   purchase: purchaseSchema.optional(),
@@ -386,6 +418,7 @@ const clienteUpdateSchema = clienteCreateSchema
       value.birthDate !== undefined ||
       value.acceptsContact !== undefined ||
       value.userType !== undefined ||
+      value.userId !== undefined ||
       value.state !== undefined ||
       value.interests !== undefined ||
       value.purchase !== undefined ||
@@ -422,6 +455,45 @@ function normalizeClientRequestBody(body) {
   }
   if (normalized['tipo_usuario'] !== undefined && normalized.userType === undefined) {
     normalized.userType = normalized['tipo_usuario'];
+  }
+  if (normalized.user_id !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized.user_id;
+  }
+  if (normalized.usuarioId !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized.usuarioId;
+  }
+  if (normalized['usuario_id'] !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized['usuario_id'];
+  }
+  if (normalized.usuario !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized.usuario;
+  }
+  if (normalized.user !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized.user;
+  }
+  if (normalized.ownerId !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized.ownerId;
+  }
+  if (normalized['owner_id'] !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized['owner_id'];
+  }
+  if (normalized.responsavelId !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized.responsavelId;
+  }
+  if (normalized['responsavel_id'] !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized['responsavel_id'];
+  }
+  if (normalized.responsavel !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized.responsavel;
+  }
+  if (normalized.responsibleId !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized.responsibleId;
+  }
+  if (normalized['responsible_id'] !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized['responsible_id'];
+  }
+  if (normalized.responsible !== undefined && normalized.userId === undefined) {
+    normalized.userId = normalized.responsible;
   }
   if (normalized.estadoCliente !== undefined && normalized.state === undefined) {
     normalized.state = normalized.estadoCliente;
@@ -561,6 +633,20 @@ function decorateClientResponse(cliente) {
 
   return {
     ...cliente,
+    userId: cliente.userId ?? null,
+    user_id: cliente.userId ?? null,
+    usuarioId: cliente.userId ?? null,
+    usuario_id: cliente.userId ?? null,
+    user: cliente.userId ?? null,
+    usuario: cliente.userId ?? null,
+    ownerId: cliente.userId ?? null,
+    owner_id: cliente.userId ?? null,
+    responsavelId: cliente.userId ?? null,
+    responsavel_id: cliente.userId ?? null,
+    responsavel: cliente.userId ?? null,
+    responsibleId: cliente.userId ?? null,
+    responsible_id: cliente.userId ?? null,
+    responsible: cliente.userId ?? null,
     gender: cliente.gender ?? null,
     birthDate: cliente.birthDate ?? null,
     acceptsContact: Boolean(cliente.acceptsContact),
@@ -658,6 +744,7 @@ const eventoCreateSchema = z.object({
   description: normalizeNullableStringSchema,
   color: normalizeNullableStringSchema,
   clientId: clientIdSchema,
+  userId: normalizeNullableStringSchema,
   completed: optionalBooleanSchema.transform((value) => {
     if (value === undefined) {
       return false;
@@ -676,6 +763,7 @@ const eventoUpdateSchema = eventoCreateSchema
       value.description !== undefined ||
       value.color !== undefined ||
       value.clientId !== undefined ||
+      value.userId !== undefined ||
       value.completed !== undefined,
     { message: 'Informe ao menos um campo para atualizar.' }
   );

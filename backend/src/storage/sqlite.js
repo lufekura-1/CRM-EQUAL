@@ -95,6 +95,7 @@ ensureColumn('clientes', 'genero', 'TEXT');
 ensureColumn('clientes', 'data_nascimento', 'TEXT');
 ensureColumn('clientes', 'aceita_contato', 'INTEGER DEFAULT 0');
 ensureColumn('clientes', 'tipo_usuario', 'TEXT');
+ensureColumn('clientes', 'usuario_id', 'TEXT');
 ensureColumn('clientes', 'estado_cliente', 'TEXT');
 ensureColumn('clientes', 'interesses', 'TEXT');
 ensureColumn('clientes', 'updated_at', 'TEXT');
@@ -102,6 +103,7 @@ ensureColumn('clientes', 'updated_at', 'TEXT');
 ensureColumn('eventos', 'updated_at', 'TEXT');
 ensureColumn('eventos', 'cliente_id', 'INTEGER');
 ensureColumn('eventos', 'completed', 'INTEGER DEFAULT 0');
+ensureColumn('eventos', 'usuario_id', 'TEXT');
 
 function migrateContactsTableToAllowStandaloneEntries() {
   const info = db.pragma('table_info(contatos)');
@@ -213,6 +215,7 @@ const listClientesStmt = db.prepare(`
     data_nascimento,
     aceita_contato,
     tipo_usuario,
+    usuario_id,
     estado_cliente,
     interesses,
     created_at,
@@ -288,6 +291,7 @@ const getClienteStmt = db.prepare(`
     data_nascimento,
     aceita_contato,
     tipo_usuario,
+    usuario_id,
     estado_cliente,
     interesses,
     created_at,
@@ -307,12 +311,13 @@ const insertClienteStmt = db.prepare(`
     data_nascimento,
     aceita_contato,
     tipo_usuario,
+    usuario_id,
     estado_cliente,
     interesses,
     created_at,
     updated_at
   )
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const updateClienteStmt = db.prepare(`
@@ -327,6 +332,7 @@ const updateClienteStmt = db.prepare(`
     data_nascimento = ?,
     aceita_contato = ?,
     tipo_usuario = ?,
+    usuario_id = ?,
     estado_cliente = ?,
     interesses = ?,
     updated_at = ?
@@ -572,25 +578,25 @@ const updateContactCompletionStmt = db.prepare(`
 `);
 
 const listEventosStmt = db.prepare(`
-  SELECT id, data, titulo, descricao, cor, cliente_id, completed, created_at, updated_at
+  SELECT id, data, titulo, descricao, cor, cliente_id, completed, usuario_id, created_at, updated_at
   FROM eventos
   ORDER BY data DESC, id DESC
 `);
 
 const getEventoStmt = db.prepare(`
-  SELECT id, data, titulo, descricao, cor, cliente_id, completed, created_at, updated_at
+  SELECT id, data, titulo, descricao, cor, cliente_id, completed, usuario_id, created_at, updated_at
   FROM eventos
   WHERE id = ?
 `);
 
 const insertEventoStmt = db.prepare(`
-  INSERT INTO eventos (data, titulo, descricao, cor, cliente_id, completed, created_at, updated_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO eventos (data, titulo, descricao, cor, cliente_id, completed, usuario_id, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const updateEventoStmt = db.prepare(`
   UPDATE eventos
-  SET data = ?, titulo = ?, descricao = ?, cor = ?, cliente_id = ?, completed = ?, updated_at = ?
+  SET data = ?, titulo = ?, descricao = ?, cor = ?, cliente_id = ?, completed = ?, usuario_id = ?, updated_at = ?
   WHERE id = ?
 `);
 
@@ -720,6 +726,7 @@ function mapClienteRow(row) {
     birthDate: row.data_nascimento ?? null,
     acceptsContact: Boolean(row.aceita_contato),
     userType: row.tipo_usuario ?? null,
+    userId: row.usuario_id ?? null,
     state: row.estado_cliente ?? null,
     interests: parseInterests(row.interesses),
     createdAt: row.created_at ?? null,
@@ -1222,6 +1229,7 @@ const createClienteTransaction = db.transaction((payload) => {
   const gender = normalizeGender(payload.gender);
   const birthDate = normalizeBirthDate(payload.birthDate);
   const userType = normalizeUserType(payload.userType);
+  const userId = toNullableText(payload.userId);
   const state = 'pos-venda';
   const acceptsContact = Boolean(payload.acceptsContact);
 
@@ -1235,6 +1243,7 @@ const createClienteTransaction = db.transaction((payload) => {
     birthDate,
     acceptsContact ? 1 : 0,
     userType,
+    userId,
     state,
     JSON.stringify(interests),
     now,
@@ -1323,6 +1332,10 @@ const updateClienteTransaction = db.transaction((id, payload) => {
       payload.userType === undefined
         ? current.userType
         : normalizeUserType(payload.userType),
+    userId:
+      payload.userId === undefined
+        ? current.userId
+        : toNullableText(payload.userId),
     state: current.state,
   };
 
@@ -1343,6 +1356,7 @@ const updateClienteTransaction = db.transaction((id, payload) => {
     toNullableText(updatedFields.birthDate),
     updatedFields.acceptsContact ? 1 : 0,
     toNullableText(updatedFields.userType),
+    toNullableText(updatedFields.userId),
     toNullableText(updatedFields.state),
     JSON.stringify(interests),
     now,
@@ -1427,12 +1441,16 @@ function createEvento({
   cor = null,
   cliente_id = null,
   completed = 0,
+  usuario_id = null,
+  user_id = null,
+  userId = null,
 }) {
   if (!data || !titulo) {
     throw new Error('Campos "data" e "titulo" são obrigatórios.');
   }
 
   const now = new Date().toISOString();
+  const normalizedUserId = toNullableText(userId ?? usuario_id ?? user_id);
   const result = insertEventoStmt.run(
     data,
     titulo,
@@ -1440,6 +1458,7 @@ function createEvento({
     cor,
     cliente_id,
     normalizeCompletedFlag(completed),
+    normalizedUserId,
     now,
     now
   );
@@ -1447,7 +1466,10 @@ function createEvento({
   return getEventoStmt.get(result.lastInsertRowid);
 }
 
-function updateEvento(id, { data, titulo, descricao, cor, cliente_id, completed }) {
+function updateEvento(
+  id,
+  { data, titulo, descricao, cor, cliente_id, completed, usuario_id, user_id, userId }
+) {
   const eventoId = Number(id);
   if (Number.isNaN(eventoId)) {
     return null;
@@ -1458,6 +1480,7 @@ function updateEvento(id, { data, titulo, descricao, cor, cliente_id, completed 
     return null;
   }
 
+  const userIdInput = userId ?? usuario_id ?? user_id;
   const updated = {
     data: data ?? existing.data,
     titulo: titulo ?? existing.titulo,
@@ -1468,6 +1491,8 @@ function updateEvento(id, { data, titulo, descricao, cor, cliente_id, completed 
       completed === undefined
         ? normalizeCompletedFlag(existing.completed)
         : normalizeCompletedFlag(completed, existing.completed),
+    usuario_id:
+      userIdInput === undefined ? existing.usuario_id ?? null : toNullableText(userIdInput),
   };
 
   updateEventoStmt.run(
@@ -1477,6 +1502,7 @@ function updateEvento(id, { data, titulo, descricao, cor, cliente_id, completed 
     updated.cor,
     updated.cliente_id,
     updated.completed,
+    updated.usuario_id,
     new Date().toISOString(),
     eventoId
   );
