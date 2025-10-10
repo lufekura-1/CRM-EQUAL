@@ -893,8 +893,8 @@ function determineClientState(purchases) {
 
 function recomputeClientState(clienteId) {
   const purchases = listPurchasesByClienteStmt.all(clienteId).map(mapPurchaseRow);
-  const contacts = listContactsByClienteStmt.all(clienteId).map(mapContactRow);
-  const contactsByPurchase = groupContactsByPurchase(contacts);
+  const contactRows = fetchContactRowsForClient(clienteId);
+  const contactsByPurchase = groupContactsByPurchase(contactRows);
   attachContactsToPurchases(purchases, contactsByPurchase);
   const state = determineClientState(purchases);
   const now = new Date().toISOString();
@@ -929,6 +929,20 @@ const updateContactStatusTransaction = db.transaction((contactId, completed) => 
 
 function updateContactStatus(contactId, completed) {
   return updateContactStatusTransaction(contactId, completed);
+}
+
+function fetchContactRowsForClient(clienteId) {
+  if (!clienteId) {
+    return [];
+  }
+
+  const directRows = listContactsByClienteStmt.all(clienteId);
+  if (directRows.length > 0) {
+    return directRows;
+  }
+
+  const fallbackRows = listContactsStmt.all().filter((row) => row.cliente_id === clienteId);
+  return fallbackRows;
 }
 
 function listContacts() {
@@ -1148,8 +1162,8 @@ function getClienteWithPurchases(clienteId) {
   }
   const cliente = mapClienteRow(row);
   const purchases = listPurchasesByClienteStmt.all(clienteId).map(mapPurchaseRow);
-  const contacts = listContactsByClienteStmt.all(clienteId).map(mapContactRow);
-  const contactsByPurchase = groupContactsByPurchase(contacts);
+  const contactRows = fetchContactRowsForClient(clienteId);
+  const contactsByPurchase = groupContactsByPurchase(contactRows);
   attachContactsToPurchases(purchases, contactsByPurchase);
   const standaloneKey = `standalone:${clienteId}`;
   const standaloneContacts = contactsByPurchase.get(standaloneKey) || [];
@@ -1254,13 +1268,18 @@ const createClienteTransaction = db.transaction((payload) => {
     ensureContactsForClient(clienteId, now, now);
   }
 
-  recomputeClientState(clienteId);
-
-  return getClienteWithPurchases(clienteId);
+  return { clienteId, createdAt: now };
 });
 
 function createCliente(payload) {
-  return createClienteTransaction(payload);
+  const result = createClienteTransaction(payload);
+  const clienteId = result?.clienteId;
+  if (!clienteId) {
+    return null;
+  }
+
+  recomputeClientState(clienteId);
+  return getClienteWithPurchases(clienteId);
 }
 
 const updateClienteTransaction = db.transaction((id, payload) => {
@@ -1366,13 +1385,18 @@ const updateClienteTransaction = db.transaction((id, payload) => {
     ensureContactsForClient(clienteId, current.createdAt ?? now, now);
   }
 
-  recomputeClientState(clienteId);
-
-  return getClienteWithPurchases(clienteId);
+  return { clienteId, updatedAt: now };
 });
 
 function updateCliente(id, payload) {
-  return updateClienteTransaction(id, payload);
+  const result = updateClienteTransaction(id, payload);
+  const clienteId = result?.clienteId;
+  if (!clienteId) {
+    return null;
+  }
+
+  recomputeClientState(clienteId);
+  return getClienteWithPurchases(clienteId);
 }
 
 function deleteCliente(id) {
