@@ -268,6 +268,17 @@ function ensureModalButton(button) {
   }
 }
 
+const EVENTS_MANAGER_DEFAULT_FILTERS = ['pending', 'overdue', 'completed'];
+
+const eventsManagerState = {
+  isVisible: false,
+  statusFilters: new Set(EVENTS_MANAGER_DEFAULT_FILTERS),
+  selectedKeys: new Set(),
+  monthFilter: '',
+  isProcessingDelete: false,
+  visibleEvents: new Map(),
+};
+
 function resetAddEventForm() {
   if (!addEventForm) {
     return;
@@ -447,6 +458,506 @@ async function handleSaveEvent() {
     }
     isSavingEvent = false;
   }
+}
+
+function normalizeEventsManagerMonth(value) {
+  if (!value) {
+    return '';
+  }
+
+  const text = String(value).trim();
+  if (!text) {
+    return '';
+  }
+
+  if (/^\d{4}-\d{2}$/.test(text)) {
+    return text;
+  }
+
+  const normalized = normalizeDateKey(text);
+  return normalized ? normalized.slice(0, 7) : '';
+}
+
+function formatEventsManagerDate(value) {
+  const normalized = normalizeDateKey(value);
+  if (!normalized) {
+    return 'Sem data definida';
+  }
+
+  const [year, month, day] = normalized.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function getEventsManagerKey(event) {
+  if (!event) {
+    return '';
+  }
+
+  if (typeof window.getCalendarEventKey === 'function') {
+    try {
+      const key = window.getCalendarEventKey(event);
+      if (key) {
+        return String(key);
+      }
+    } catch (error) {
+      console.warn('[modals] Falha ao obter identificador do evento.', error);
+    }
+  }
+
+  const identifier = event.id ?? event.evento_id ?? null;
+  return identifier != null ? `event:${String(identifier)}` : '';
+}
+
+function syncEventsManagerFilterButtons() {
+  if (!eventsManagerFilterButtons) {
+    return;
+  }
+
+  eventsManagerFilterButtons.forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    const statusKey = button.dataset.filterStatus;
+    if (!statusKey) {
+      return;
+    }
+
+    const isActive = eventsManagerState.statusFilters.has(statusKey);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
+function collectEventsManagerItems() {
+  const allEvents =
+    typeof window.getAllCalendarEvents === 'function' ? window.getAllCalendarEvents() : [];
+
+  if (!Array.isArray(allEvents) || allEvents.length === 0) {
+    return [];
+  }
+
+  const normalizedMonth = normalizeEventsManagerMonth(eventsManagerState.monthFilter);
+  if (normalizedMonth !== eventsManagerState.monthFilter) {
+    eventsManagerState.monthFilter = normalizedMonth;
+    if (eventsManagerMonthInput) {
+      eventsManagerMonthInput.value = normalizedMonth;
+    }
+  }
+
+  const items = [];
+
+  allEvents.forEach((event) => {
+    if (!event || (event.type && event.type !== 'event')) {
+      return;
+    }
+
+    const status =
+      typeof getEventStatus === 'function'
+        ? getEventStatus(event)
+        : { key: 'pending', label: 'Pendente' };
+
+    if (eventsManagerState.statusFilters.size > 0 && !eventsManagerState.statusFilters.has(status.key)) {
+      return;
+    }
+
+    const dateKey = normalizeDateKey(event.date ?? event.rawDate ?? '');
+    if (normalizedMonth && (!dateKey || !dateKey.startsWith(normalizedMonth))) {
+      return;
+    }
+
+    const key = getEventsManagerKey(event);
+    if (!key) {
+      return;
+    }
+
+    items.push({
+      event,
+      status,
+      key,
+      dateKey,
+    });
+  });
+
+  return items;
+}
+
+function buildEventsManagerCard(item) {
+  const { event, status, key, dateKey } = item;
+  const card = document.createElement('article');
+  card.className = 'events-manager__card';
+  card.dataset.eventKey = key;
+  card.dataset.statusKey = status.key;
+  card.dataset.eventType = event.type || 'event';
+  card.dataset.eventId = event.id != null ? String(event.id) : '';
+  card.dataset.eventDate = dateKey || '';
+
+  const isSelected = eventsManagerState.selectedKeys.has(key);
+  if (isSelected) {
+    card.classList.add('is-selected');
+  }
+
+  const header = document.createElement('div');
+  header.className = 'events-manager__card-header';
+  card.appendChild(header);
+
+  const selectButton = document.createElement('button');
+  selectButton.className = 'events-manager__select-button';
+  selectButton.type = 'button';
+  selectButton.dataset.role = 'events-manager-select';
+  selectButton.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+  selectButton.setAttribute('aria-label', isSelected ? 'Desmarcar evento' : 'Selecionar evento');
+  header.appendChild(selectButton);
+
+  const indicator = document.createElement('span');
+  indicator.className = 'events-manager__select-indicator';
+  selectButton.appendChild(indicator);
+
+  const titleElement = document.createElement('div');
+  titleElement.className = 'events-manager__card-title';
+  titleElement.textContent = event.title ? String(event.title) : 'Sem título';
+  header.appendChild(titleElement);
+
+  const dateElement = document.createElement('span');
+  dateElement.className = 'events-manager__card-date';
+  dateElement.textContent = formatEventsManagerDate(dateKey || event.date || event.rawDate);
+  header.appendChild(dateElement);
+
+  const statusElement = document.createElement('span');
+  statusElement.className = `events-manager__card-status events-manager__card-status--${status.key}`;
+  statusElement.textContent = status.label;
+  card.appendChild(statusElement);
+
+  const descriptionElement = document.createElement('p');
+  descriptionElement.className = 'events-manager__card-description';
+  const description = event.description ? String(event.description).trim() : '';
+  descriptionElement.textContent = description || 'Sem descrição cadastrada.';
+  card.appendChild(descriptionElement);
+
+  return card;
+}
+
+function renderEventsManagerCards() {
+  if (!eventsManagerGrid) {
+    return;
+  }
+
+  eventsManagerState.visibleEvents.clear();
+
+  while (eventsManagerGrid.firstChild) {
+    eventsManagerGrid.removeChild(eventsManagerGrid.firstChild);
+  }
+
+  const items = collectEventsManagerItems();
+
+  if (items.length === 0) {
+    eventsManagerState.selectedKeys.clear();
+    const emptyElement = document.createElement('div');
+    emptyElement.className = 'events-manager__empty';
+    emptyElement.textContent = eventsManagerState.monthFilter
+      ? 'Nenhum evento encontrado para o mês selecionado.'
+      : 'Nenhum evento encontrado para os filtros selecionados.';
+    eventsManagerGrid.appendChild(emptyElement);
+    updateEventsManagerActionButtons();
+    return;
+  }
+
+  items.forEach((item) => {
+    eventsManagerState.visibleEvents.set(item.key, item);
+  });
+
+  Array.from(eventsManagerState.selectedKeys).forEach((key) => {
+    if (!eventsManagerState.visibleEvents.has(key)) {
+      eventsManagerState.selectedKeys.delete(key);
+    }
+  });
+
+  items.forEach((item) => {
+    const card = buildEventsManagerCard(item);
+    eventsManagerGrid.appendChild(card);
+  });
+
+  updateEventsManagerActionButtons();
+}
+
+function updateEventsManagerActionButtons() {
+  const selectedKeys = Array.from(eventsManagerState.selectedKeys);
+  const selectedCount = selectedKeys.length;
+  const singleSelectionKey = selectedCount === 1 ? selectedKeys[0] : '';
+  const selectedItem = singleSelectionKey
+    ? eventsManagerState.visibleEvents.get(singleSelectionKey)
+    : null;
+  const canEdit = Boolean(
+    selectedItem && selectedItem.event && (selectedItem.event.type || 'event') === 'event',
+  );
+
+  if (eventsManagerEditButton) {
+    eventsManagerEditButton.disabled = !canEdit;
+    eventsManagerEditButton.classList.toggle('is-active', canEdit);
+  }
+
+  const canDelete = selectedCount > 0 && !eventsManagerState.isProcessingDelete;
+  if (eventsManagerDeleteButton) {
+    eventsManagerDeleteButton.disabled = !canDelete;
+    eventsManagerDeleteButton.classList.toggle('is-active', canDelete);
+  }
+}
+
+function openEventsManagerModal() {
+  if (!eventsManagerOverlay) {
+    return;
+  }
+
+  eventsManagerState.isVisible = true;
+  eventsManagerState.isProcessingDelete = false;
+  eventsManagerState.selectedKeys.clear();
+
+  if (eventsManagerState.statusFilters.size === 0) {
+    eventsManagerState.statusFilters = new Set(EVENTS_MANAGER_DEFAULT_FILTERS);
+  }
+
+  syncEventsManagerFilterButtons();
+
+  if (eventsManagerMonthInput) {
+    eventsManagerMonthInput.value = normalizeEventsManagerMonth(eventsManagerState.monthFilter);
+  }
+
+  renderEventsManagerCards();
+  openOverlay(eventsManagerOverlay);
+}
+
+function closeEventsManagerModal() {
+  if (!eventsManagerOverlay) {
+    return;
+  }
+
+  closeOverlay(eventsManagerOverlay);
+  eventsManagerState.isVisible = false;
+  eventsManagerState.isProcessingDelete = false;
+  eventsManagerState.selectedKeys.clear();
+  eventsManagerState.visibleEvents.clear();
+  updateEventsManagerActionButtons();
+}
+
+function handleEventsManagerOverlayClick(event) {
+  if (!(event.target instanceof Element)) {
+    return;
+  }
+
+  if (!event.target.closest('.modal')) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}
+
+function handleEventsManagerFilterClick(event) {
+  const button = event.target instanceof Element
+    ? event.target.closest('[data-filter-status]')
+    : null;
+
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const statusKey = button.dataset.filterStatus;
+  if (!statusKey) {
+    return;
+  }
+
+  const isActive = eventsManagerState.statusFilters.has(statusKey);
+  if (isActive && eventsManagerState.statusFilters.size === 1) {
+    if (typeof window.showToast === 'function') {
+      window.showToast('Selecione pelo menos um status.', { type: 'info' });
+    }
+    return;
+  }
+
+  if (isActive) {
+    eventsManagerState.statusFilters.delete(statusKey);
+  } else {
+    eventsManagerState.statusFilters.add(statusKey);
+  }
+
+  syncEventsManagerFilterButtons();
+  renderEventsManagerCards();
+}
+
+function handleEventsManagerMonthChange(event) {
+  const input = event.target instanceof HTMLInputElement ? event.target : null;
+  if (!input) {
+    return;
+  }
+
+  eventsManagerState.monthFilter = normalizeEventsManagerMonth(input.value);
+  if (eventsManagerState.monthFilter !== input.value) {
+    input.value = eventsManagerState.monthFilter;
+  }
+
+  renderEventsManagerCards();
+}
+
+function toggleEventsManagerSelection(button) {
+  if (!(button instanceof HTMLButtonElement) || eventsManagerState.isProcessingDelete) {
+    return;
+  }
+
+  const card = button.closest('.events-manager__card');
+  if (!(card instanceof HTMLElement)) {
+    return;
+  }
+
+  const key = card.dataset.eventKey;
+  if (!key) {
+    return;
+  }
+
+  if (eventsManagerState.selectedKeys.has(key)) {
+    eventsManagerState.selectedKeys.delete(key);
+  } else {
+    eventsManagerState.selectedKeys.add(key);
+  }
+
+  const isSelected = eventsManagerState.selectedKeys.has(key);
+  button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+  button.setAttribute('aria-label', isSelected ? 'Desmarcar evento' : 'Selecionar evento');
+  card.classList.toggle('is-selected', isSelected);
+  updateEventsManagerActionButtons();
+}
+
+function handleEventsManagerGridClick(event) {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) {
+    return;
+  }
+
+  const toggleButton = target.closest('[data-role="events-manager-select"]');
+  if (toggleButton instanceof HTMLButtonElement) {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleEventsManagerSelection(toggleButton);
+  }
+}
+
+async function handleEventsManagerDelete() {
+  if (!eventsManagerDeleteButton || eventsManagerState.isProcessingDelete) {
+    return;
+  }
+
+  const selectedKeys = Array.from(eventsManagerState.selectedKeys);
+  if (selectedKeys.length === 0) {
+    return;
+  }
+
+  const targets = selectedKeys
+    .map((key) => {
+      const item = eventsManagerState.visibleEvents.get(key);
+      if (!item || !item.event || item.event.id == null) {
+        return null;
+      }
+      return { key, event: item.event };
+    })
+    .filter(Boolean);
+
+  if (targets.length === 0) {
+    if (typeof window.showToast === 'function') {
+      window.showToast('Não foi possível identificar os eventos selecionados.', {
+        type: 'error',
+      });
+    }
+    return;
+  }
+
+  if (!(window.api && typeof window.api.deleteEvent === 'function')) {
+    if (typeof window.showToast === 'function') {
+      window.showToast('A exclusão de eventos não está disponível no momento.', {
+        type: 'error',
+      });
+    }
+    return;
+  }
+
+  const confirmationMessage =
+    targets.length > 1
+      ? `Deseja excluir ${targets.length} eventos selecionados?`
+      : 'Deseja excluir o evento selecionado?';
+
+  const confirmed = typeof window.confirm === 'function' ? window.confirm(confirmationMessage) : true;
+  if (!confirmed) {
+    return;
+  }
+
+  eventsManagerState.isProcessingDelete = true;
+  updateEventsManagerActionButtons();
+
+  const deletedKeys = [];
+  const errors = [];
+
+  for (const target of targets) {
+    try {
+      await window.api.deleteEvent(target.event.id);
+      deletedKeys.push(target.key);
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+
+  if (deletedKeys.length > 0) {
+    if (typeof window.removeCalendarEvents === 'function') {
+      window.removeCalendarEvents(deletedKeys);
+    }
+    deletedKeys.forEach((key) => eventsManagerState.selectedKeys.delete(key));
+  }
+
+  renderEventsManagerCards();
+
+  eventsManagerState.isProcessingDelete = false;
+  updateEventsManagerActionButtons();
+
+  if (errors.length > 0) {
+    const message = window.api?.getErrorMessage
+      ? window.api.getErrorMessage(errors[0], 'Erro ao excluir evento.')
+      : 'Erro ao excluir evento.';
+    if (typeof window.showToast === 'function') {
+      window.showToast(message, { type: 'error' });
+    }
+    return;
+  }
+
+  if (deletedKeys.length > 0 && typeof window.showToast === 'function') {
+    const successMessage =
+      deletedKeys.length > 1 ? 'Eventos excluídos com sucesso.' : 'Evento excluído com sucesso.';
+    window.showToast(successMessage, { type: 'success' });
+  }
+}
+
+function handleEventsManagerEdit() {
+  const selectedKeys = Array.from(eventsManagerState.selectedKeys);
+  if (selectedKeys.length !== 1) {
+    return;
+  }
+
+  const item = eventsManagerState.visibleEvents.get(selectedKeys[0]);
+  if (!item || !item.event || (item.event.type || 'event') !== 'event') {
+    return;
+  }
+
+  closeEventsManagerModal();
+  openAddEventModal(item.event);
+}
+
+function handleEventsManagerAdd() {
+  closeEventsManagerModal();
+  openAddEventModal();
+}
+
+function handleEventsManagerExternalUpdate() {
+  if (!eventsManagerState.isVisible || eventsManagerState.isProcessingDelete) {
+    return;
+  }
+
+  renderEventsManagerCards();
 }
 
 function closeEventDetailsModal() {
@@ -914,6 +1425,10 @@ function initializeModalInteractions() {
   ensureModalButton(addEventSaveButton);
   ensureModalButton(eventDetailsCloseButton);
   ensureModalButton(eventDetailsToggleStatusButton);
+  ensureModalButton(eventsManagerCloseButton);
+  ensureModalButton(eventsManagerEditButton);
+  ensureModalButton(eventsManagerDeleteButton);
+  ensureModalButton(eventsManagerAddButton);
 
   addEventOverlay?.addEventListener('click', handleAddEventOverlayClick);
   addEventCloseButton?.addEventListener('click', (event) => {
@@ -935,6 +1450,42 @@ function initializeModalInteractions() {
     closeEventDetailsModal();
   });
   eventDetailsToggleStatusButton?.addEventListener('click', handleEventDetailsToggleClick);
+
+  eventsManagerOverlay?.addEventListener('click', handleEventsManagerOverlayClick);
+  eventsManagerCloseButton?.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeEventsManagerModal();
+  });
+  eventsManagerGrid?.addEventListener('click', handleEventsManagerGridClick);
+  eventsManagerEditButton?.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleEventsManagerEdit();
+  });
+  eventsManagerDeleteButton?.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleEventsManagerDelete();
+  });
+  eventsManagerAddButton?.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleEventsManagerAdd();
+  });
+
+  if (eventsManagerFilterButtons) {
+    eventsManagerFilterButtons.forEach((button) => {
+      button.addEventListener('click', handleEventsManagerFilterClick);
+    });
+  }
+
+  if (eventsManagerMonthInput) {
+    eventsManagerMonthInput.addEventListener('change', handleEventsManagerMonthChange);
+    eventsManagerMonthInput.addEventListener('input', handleEventsManagerMonthChange);
+  }
+
+  syncEventsManagerFilterButtons();
 }
 
 Array.from(document.querySelectorAll('.modal-overlay')).forEach((overlay) => {
@@ -946,5 +1497,14 @@ window.ModalOverlayManager = {
   restoreState: restoreActiveOverlayState,
   isAnyModalVisible,
 };
+
+window.openAddEventModal = openAddEventModal;
+window.closeAddEventModal = closeAddEventModal;
+window.openEventDetailsModal = openEventDetailsModal;
+window.closeEventDetailsModal = closeEventDetailsModal;
+window.openEventsManagerModal = openEventsManagerModal;
+window.closeEventsManagerModal = closeEventsManagerModal;
+
+document.addEventListener('calendar:events-updated', handleEventsManagerExternalUpdate);
 
 initializeModalInteractions();

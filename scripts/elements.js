@@ -22,6 +22,15 @@ const eventDetailsTitleEntity = eventDetailsOverlay?.querySelector('[data-detail
 const eventDetailsTitleStatus = eventDetailsOverlay?.querySelector('[data-details="status-label"]');
 const eventDetailsToggleStatusButton = eventDetailsOverlay?.querySelector('[data-action="toggle-status"]');
 const eventDetailsModal = eventDetailsOverlay?.querySelector('.modal');
+const eventsManagerOverlay = document.querySelector('[data-modal="events-manager"]');
+const eventsManagerGrid = eventsManagerOverlay?.querySelector('[data-role="events-manager-grid"]');
+const eventsManagerFilterButtons = eventsManagerOverlay?.querySelectorAll('[data-filter-status]');
+const eventsManagerMonthInput = eventsManagerOverlay?.querySelector('[data-role="events-manager-month"]');
+const eventsManagerEditButton = eventsManagerOverlay?.querySelector('[data-action="edit-event"]');
+const eventsManagerDeleteButton = eventsManagerOverlay?.querySelector('[data-action="delete-events"]');
+const eventsManagerAddButton = eventsManagerOverlay?.querySelector('[data-action="add-event"]');
+const eventsManagerCloseButton = eventsManagerOverlay?.querySelector('[data-action="close"]');
+const calendarEventsButton = document.querySelector('[data-role="calendar-events-button"]');
 const userSelectorButton = document.querySelector('[data-role="user-selector"]');
 const userSelectorOverlay = document.querySelector('[data-modal="user-selector"]');
 const userSelectorForm = userSelectorOverlay?.querySelector('.modal__form--user-selector');

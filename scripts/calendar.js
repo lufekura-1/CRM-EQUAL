@@ -357,6 +357,22 @@ function resetEvents() {
   });
 }
 
+function notifyEventsChanged({ reason = '', keys = [] } = {}) {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  document.dispatchEvent(
+    new CustomEvent('calendar:events-updated', {
+      detail: {
+        reason,
+        keys,
+        timestamp: Date.now(),
+      },
+    }),
+  );
+}
+
 function normalizeEventData(rawEvent) {
   if (!rawEvent) {
     return null;
@@ -425,6 +441,103 @@ function populateEvents(eventList) {
   Object.keys(events).forEach((dateKey) => {
     sortEventsForDate(events[dateKey]);
   });
+
+  notifyEventsChanged({ reason: 'populate' });
+}
+
+function getAllCalendarEvents({ clone = true } = {}) {
+  const sortedKeys = Object.keys(events).sort();
+  const collected = [];
+
+  sortedKeys.forEach((dateKey) => {
+    const list = events[dateKey];
+    if (!Array.isArray(list)) {
+      return;
+    }
+
+    list.forEach((event) => {
+      if (!event) {
+        return;
+      }
+      collected.push(clone ? { ...event } : event);
+    });
+  });
+
+  collected.sort((a, b) => {
+    const normalizedA = normalizeDateForStorage(a?.rawDate ?? a?.date ?? '');
+    const normalizedB = normalizeDateForStorage(b?.rawDate ?? b?.date ?? '');
+    const timeA = normalizedA.dateKey ? new Date(`${normalizedA.dateKey}T00:00:00`).getTime() : Number.NaN;
+    const timeB = normalizedB.dateKey ? new Date(`${normalizedB.dateKey}T00:00:00`).getTime() : Number.NaN;
+
+    if (!Number.isNaN(timeA) && !Number.isNaN(timeB) && timeA !== timeB) {
+      return timeA - timeB;
+    }
+
+    const titleA = a?.title ? String(a.title) : '';
+    const titleB = b?.title ? String(b.title) : '';
+    return titleA.localeCompare(titleB, 'pt-BR', { sensitivity: 'base' });
+  });
+
+  return collected;
+}
+
+function removeCalendarEventsByKey(keys = []) {
+  if (!Array.isArray(keys) || keys.length === 0) {
+    return [];
+  }
+
+  const normalizedKeys = keys
+    .map((key) => (key == null ? '' : String(key)))
+    .filter((key) => key);
+
+  if (normalizedKeys.length === 0) {
+    return [];
+  }
+
+  const lookup = new Set(normalizedKeys);
+  const removedEvents = [];
+  const affectedKeys = new Set();
+
+  Object.keys(events).forEach((dateKey) => {
+    const list = events[dateKey];
+    if (!Array.isArray(list) || list.length === 0) {
+      return;
+    }
+
+    const remaining = [];
+
+    list.forEach((event) => {
+      if (!event) {
+        return;
+      }
+
+      const eventKey = getEventKey(event);
+      if (eventKey && lookup.has(eventKey)) {
+        removedEvents.push(event);
+        affectedKeys.add(dateKey);
+      } else {
+        remaining.push(event);
+      }
+    });
+
+    if (remaining.length > 0) {
+      events[dateKey] = remaining;
+    } else {
+      delete events[dateKey];
+    }
+  });
+
+  if (removedEvents.length > 0) {
+    affectedKeys.forEach((dateKey) => {
+      if (dateKey) {
+        renderCalendarCell(dateKey);
+      }
+    });
+
+    notifyEventsChanged({ reason: 'remove', keys: normalizedKeys });
+  }
+
+  return removedEvents;
 }
 
 function getCalendarRange() {
@@ -664,6 +777,11 @@ function applyEventUpdate(event, { previousDateKey = null } = {}) {
       updated = true;
     }
   });
+
+  if (updated) {
+    const changedKeys = Array.from(affectedKeys).filter((key) => key);
+    notifyEventsChanged({ reason: 'update', keys: changedKeys });
+  }
 
   return updated;
 }
@@ -1230,6 +1348,9 @@ function setCalendarView(view) {
 
 window.refreshCalendar = refreshCalendar;
 window.updateCalendarEvent = synchronizeCalendarEvent;
+window.getAllCalendarEvents = getAllCalendarEvents;
+window.removeCalendarEvents = removeCalendarEventsByKey;
+window.getCalendarEventKey = getEventKey;
 
 function updateCalendarContactEvent({ contact, client, purchase } = {}) {
   if (!contact || !contact.id) {
@@ -1316,6 +1437,14 @@ function updateCalendarContactEvent({ contact, client, purchase } = {}) {
       renderCalendarCell(key);
     }
   });
+
+  if (affectedKeys.size > 0) {
+    const changedKeys = Array.from(affectedKeys).filter((key) => key);
+    notifyEventsChanged({
+      reason: 'contact-update',
+      keys: changedKeys,
+    });
+  }
 }
 
 window.updateCalendarContactEvent = updateCalendarContactEvent;

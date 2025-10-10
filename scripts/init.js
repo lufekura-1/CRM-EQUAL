@@ -63,6 +63,10 @@ if (addEventButton) {
   addEventButton.addEventListener('click', () => openAddEventModal());
 }
 
+calendarEventsButton?.addEventListener('click', () => {
+  openEventsManagerModal();
+});
+
 homeAddEventCardButton?.addEventListener('click', () => {
   openAddEventModal();
 });
@@ -71,7 +75,9 @@ document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') {
     return;
   }
-  if (eventDetailsOverlay?.classList.contains('is-visible')) {
+  if (eventsManagerOverlay?.classList.contains('is-visible')) {
+    closeEventsManagerModal();
+  } else if (eventDetailsOverlay?.classList.contains('is-visible')) {
     closeEventDetailsModal();
   } else if (addEventOverlay?.classList.contains('is-visible')) {
     closeAddEventModal();
