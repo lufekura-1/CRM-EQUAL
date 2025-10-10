@@ -15,8 +15,13 @@ function setCurrentUser(userId) {
   if (!selectedUser) {
     return;
   }
+  if (selectedUser.id === currentUserId) {
+    return;
+  }
+  const previousUserId = currentUserId;
   currentUserId = selectedUser.id;
   updateUserSelectorButton();
+  dispatchUserChange(previousUserId, selectedUser);
 }
 
 function updateUserSelectorButton() {
@@ -67,6 +72,17 @@ function createUserOption(user) {
   option.appendChild(details);
 
   return option;
+}
+
+function dispatchUserChange(previousUserId, nextUser) {
+  const detail = {
+    previousUserId: previousUserId || null,
+    previousUser: USERS.find((user) => user.id === previousUserId) || null,
+    userId: nextUser?.id || null,
+    user: nextUser || null,
+  };
+
+  document.dispatchEvent(new CustomEvent('userchange', { detail }));
 }
 
 function renderUserSelectorOptions() {
@@ -163,3 +179,7 @@ function initializeUserSelector() {
 
   userSelectorForm.addEventListener('submit', handleUserSelectorSubmit);
 }
+
+window.getCurrentUser = getCurrentUser;
+window.setCurrentUser = setCurrentUser;
+window.closeUserSelectorModal = closeUserSelectorModal;

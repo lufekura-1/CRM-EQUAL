@@ -37,6 +37,12 @@ const CLIENTS_PER_PAGE = 25;
 
 const CLIENTS = [];
 
+function triggerDashboardRefresh() {
+  if (typeof window.requestDashboardRefresh === 'function') {
+    window.requestDashboardRefresh({ force: true });
+  }
+}
+
 (function normalizeClientData() {
   const now = new Date();
 
@@ -2568,6 +2574,7 @@ let isSavingQuickSale = false;
     const calendarContext =
       context || (effectiveContactId ? findClientContactContext(updatedClient, effectiveContactId) : null);
     notifyCalendarAboutContactUpdate(calendarContext, updatedClient, mappedContact);
+    triggerDashboardRefresh();
     return updatedClient;
   }
 
@@ -2816,6 +2823,7 @@ let isSavingQuickSale = false;
 
       ensureDetailButtonState();
       updateQuickSaleButtonState(getCurrentClientData());
+      triggerDashboardRefresh();
     } catch (error) {
       const message = getApiErrorMessage(error, errorMessage);
       if (typeof window.showToast === 'function') {
@@ -2892,6 +2900,7 @@ let isSavingQuickSale = false;
       if (typeof window.showToast === 'function') {
         window.showToast('Cliente excluído com sucesso.', { type: 'success' });
       }
+      triggerDashboardRefresh();
     } catch (error) {
       const message = getApiErrorMessage(error, 'Erro ao excluir o cliente.');
       if (typeof window.showToast === 'function') {

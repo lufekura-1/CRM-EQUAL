@@ -1,5 +1,5 @@
 const sidebarButtons = document.querySelectorAll('.icon-button[data-page]');
-const titleElement = document.querySelector('.topbar__title');
+const titleElement = document.querySelector('[data-role="page-title"]');
 const menus = document.querySelectorAll('.topbar__menu');
 const contentPages = document.querySelectorAll('.content__page');
 const homeShortcuts = document.querySelectorAll('[data-page-target]');

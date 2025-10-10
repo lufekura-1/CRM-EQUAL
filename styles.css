@@ -156,6 +156,19 @@ body.modal-open {
   margin-left: 90px;
 }
 
+.workspace__page-header {
+  display: flex;
+  align-items: flex-end;
+  min-height: 32px;
+}
+
+.workspace__page-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .topbar {
   height: 50px;
   background-color: #141414;
@@ -165,14 +178,6 @@ body.modal-open {
   width: 100%;
   padding: 0 20px;
   gap: 24px;
-}
-
-.topbar__title {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
 }
 
 .topbar__menus {
@@ -200,7 +205,7 @@ body.modal-open {
 
 .topbar__group--full {
   width: 100%;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .contacts-topbar {
@@ -211,7 +216,8 @@ body.modal-open {
 
 .topbar__group--left {
   flex: 1;
-  justify-content: center;
+  justify-content: flex-start;
+  margin-right: auto;
 }
 
 .topbar__group--right {
