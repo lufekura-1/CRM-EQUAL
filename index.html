@@ -1268,7 +1268,12 @@
     <div class="modal-overlay" data-modal="events-manager" aria-hidden="true">
       <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="events-manager-title">
         <div class="modal__header events-manager__header">
-          <h2 class="modal__title" id="events-manager-title">Gerenciar eventos</h2>
+          <div class="events-manager__title-group">
+            <h2 class="modal__title" id="events-manager-title">Gerenciar eventos</h2>
+            <button class="modal__close" type="button" data-action="close" aria-label="Fechar modal">
+              &times;
+            </button>
+          </div>
           <div class="events-manager__header-actions">
             <div class="events-manager__filters" role="group" aria-label="Filtrar por status">
               <button class="events-manager__filter" type="button" data-filter-status="pending" aria-pressed="true">
@@ -1297,7 +1302,6 @@
               Adicionar
             </button>
           </div>
-          <button class="modal__close" type="button" data-action="close" aria-label="Fechar modal">&times;</button>
         </div>
         <div class="modal__content events-manager__content">
           <div class="events-manager__list-card">
