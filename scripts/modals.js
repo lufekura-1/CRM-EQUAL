@@ -596,9 +596,13 @@ function buildEventsManagerCard(item) {
     card.classList.add('is-selected');
   }
 
+  const mainContent = document.createElement('div');
+  mainContent.className = 'events-manager__card-main';
+  card.appendChild(mainContent);
+
   const header = document.createElement('div');
   header.className = 'events-manager__card-header';
-  card.appendChild(header);
+  mainContent.appendChild(header);
 
   const selectButton = document.createElement('button');
   selectButton.className = 'events-manager__select-button';
@@ -615,7 +619,7 @@ function buildEventsManagerCard(item) {
   const titleElement = document.createElement('div');
   titleElement.className = 'events-manager__card-title';
   titleElement.textContent = event.title ? String(event.title) : 'Sem título';
-  header.appendChild(titleElement);
+  mainContent.appendChild(titleElement);
 
   const dateElement = document.createElement('span');
   dateElement.className = 'events-manager__card-date';
@@ -625,7 +629,7 @@ function buildEventsManagerCard(item) {
   const statusElement = document.createElement('span');
   statusElement.className = `events-manager__card-status events-manager__card-status--${status.key}`;
   statusElement.textContent = status.label;
-  card.appendChild(statusElement);
+  mainContent.appendChild(statusElement);
 
   const descriptionElement = document.createElement('p');
   descriptionElement.className = 'events-manager__card-description';
