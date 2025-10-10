@@ -951,6 +951,27 @@ const updateContactStatusTransaction = db.transaction((contactId, completed) => 
   recomputeClientState(updated.cliente_id);
   const mappedContact = mapContactRow(updated);
   const cliente = getClienteWithPurchases(updated.cliente_id);
+
+  if (mappedContact && cliente && Array.isArray(cliente.contacts)) {
+    const contactIdKey = String(mappedContact.id ?? contactIdNumber);
+    const enrichedContact = cliente.contacts.find((item) => {
+      if (!item) {
+        return false;
+      }
+      const itemId = item.id ?? item.contactId ?? item.contato_id;
+      return itemId !== undefined && itemId !== null && String(itemId) === contactIdKey;
+    });
+
+    if (
+      enrichedContact
+      && enrichedContact.purchaseDetail !== undefined
+      && enrichedContact.purchaseDetail !== null
+    ) {
+      const detailText = enrichedContact.purchaseDetail;
+      mappedContact.purchaseDetail = detailText === '' ? '' : String(detailText);
+    }
+  }
+
   return { contact: mappedContact, cliente };
 });
 
