@@ -25,6 +25,12 @@ const FRAME_MATERIAL_VALUES = Object.keys(FRAME_MATERIAL_LABELS);
 const USER_TYPE_VALUES = Object.keys(USER_TYPE_LABELS);
 const CLIENT_STATE_VALUES = Object.keys(CLIENT_STATE_LABELS);
 
+const CONTACT_STATUS_LABELS = {
+  completed: 'Efetuado',
+  overdue: 'Atrasado',
+  pending: 'Pendente',
+};
+
 const CLIENTS_PER_PAGE = 25;
 
 const CLIENTS = [];
@@ -675,6 +681,45 @@ let isSavingQuickSale = false;
     return row;
   }
 
+  function normalizeDateOnly(value) {
+    if (!value) {
+      return '';
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString().slice(0, 10);
+    }
+
+    const text = String(value).trim();
+    if (!text) {
+      return '';
+    }
+
+    const normalized = text.slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : '';
+  }
+
+  function resolveContactStatus({ status = '', completed = false, contactDate = '' } = {}) {
+    const normalizedStatus = typeof status === 'string' ? status.trim().toLowerCase() : '';
+    if (normalizedStatus && CONTACT_STATUS_LABELS[normalizedStatus]) {
+      return { key: normalizedStatus, label: CONTACT_STATUS_LABELS[normalizedStatus] };
+    }
+
+    if (completed) {
+      return { key: 'completed', label: CONTACT_STATUS_LABELS.completed };
+    }
+
+    const normalizedDate = normalizeDateOnly(contactDate);
+    if (normalizedDate) {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      if (normalizedDate < todayIso) {
+        return { key: 'overdue', label: CONTACT_STATUS_LABELS.overdue };
+      }
+    }
+
+    return { key: 'pending', label: CONTACT_STATUS_LABELS.pending };
+  }
+
   function mapApiContact(contact) {
     if (!contact) {
       return null;
@@ -691,9 +736,17 @@ let isSavingQuickSale = false;
     const rawPurchaseDate = contact.purchaseDate ?? contact.dataCompra ?? contact.data_compra ?? null;
     const monthsRaw = contact.monthsOffset ?? contact.prazoMeses ?? contact.prazo_meses ?? contact.meses;
 
-    const contactDate = rawContactDate ? String(rawContactDate).slice(0, 10) : '';
-    const purchaseDate = rawPurchaseDate ? String(rawPurchaseDate).slice(0, 10) : '';
+    const contactDate = normalizeDateOnly(rawContactDate);
+    const purchaseDate = normalizeDateOnly(rawPurchaseDate);
     const monthsOffset = Number(monthsRaw);
+    const completed = Boolean(contact.completed ?? contact.efetuado ?? contact.realizado);
+
+    const statusSource = contact.status ?? contact.statusKey ?? contact.situacao ?? null;
+    const statusInfo = resolveContactStatus({
+      status: statusSource,
+      completed,
+      contactDate,
+    });
 
     return {
       id: String(rawId),
@@ -702,10 +755,12 @@ let isSavingQuickSale = false;
       purchaseDate,
       contactDate,
       monthsOffset: Number.isFinite(monthsOffset) ? monthsOffset : null,
-      completed: Boolean(contact.completed ?? contact.efetuado ?? contact.realizado),
+      completed,
       completedAt: contact.completedAt ?? contact.efetuadoEm ?? contact.efetuado_em ?? null,
       createdAt: contact.createdAt ?? contact.created_at ?? null,
       updatedAt: contact.updatedAt ?? contact.updated_at ?? null,
+      status: statusInfo.key,
+      statusLabel: statusInfo.label,
     };
   }
 
@@ -1406,7 +1461,7 @@ let isSavingQuickSale = false;
           group.dataset.purchaseId = purchaseId;
         }
 
-        const pendingCount = purchase.contacts.filter((contact) => !contact.completed).length;
+        const pendingCount = purchase.contacts.filter((contact) => contact.status !== 'completed').length;
         const displayDate =
           formatFullDate(purchase.date) || formatFullDate(purchase.contacts[0]?.purchaseDate) || 'Contatos';
 
@@ -1460,8 +1515,10 @@ let isSavingQuickSale = false;
             button.type = 'button';
             button.className = 'client-contact-history__status-button';
             button.dataset.contactId = contact.id;
+            const statusKey = contact.status || (contact.completed ? 'completed' : 'pending');
+            const statusLabel = contact.statusLabel || CONTACT_STATUS_LABELS[statusKey] || (contact.completed ? 'Efetuado' : 'Pendente');
             button.dataset.completed = contact.completed ? 'true' : 'false';
-            button.dataset.status = contact.completed ? 'completed' : 'pending';
+            button.dataset.status = statusKey;
             button.setAttribute('role', 'switch');
             button.setAttribute('aria-checked', contact.completed ? 'true' : 'false');
             button.setAttribute(
@@ -1471,6 +1528,7 @@ let isSavingQuickSale = false;
               }`,
             );
             button.classList.toggle('is-completed', Boolean(contact.completed));
+            button.classList.toggle('is-overdue', statusKey === 'overdue');
 
             const switchTrack = document.createElement('span');
             switchTrack.className = 'client-contact-history__status-switch';
@@ -1482,7 +1540,7 @@ let isSavingQuickSale = false;
 
             const statusText = document.createElement('span');
             statusText.className = 'client-contact-history__status-text';
-            statusText.textContent = contact.completed ? 'Efetuado' : 'Pendente';
+            statusText.textContent = statusLabel;
 
             button.append(switchTrack, statusText);
 
@@ -2194,6 +2252,16 @@ let isSavingQuickSale = false;
 
     if (!matchedContact && Array.isArray(client.contacts)) {
       matchedContact = client.contacts.find((contact) => String(contact.id) === normalizedId) || null;
+      if (matchedContact && (!matchedContact.purchaseId || matchedContact.purchaseId === '')) {
+        const standaloneContacts = client.contacts.filter(
+          (contactItem) => !contactItem.purchaseId || contactItem.purchaseId === ''
+        );
+        matchedPurchase = {
+          id: '__no_purchase__',
+          contacts: standaloneContacts,
+          __synthetic: true,
+        };
+      }
     }
 
     if (!matchedContact) {
@@ -2220,10 +2288,12 @@ let isSavingQuickSale = false;
     }
 
     const isCompleted = Boolean(contact.completed);
+    const statusKey = contact.status || (isCompleted ? 'completed' : 'pending');
+    const statusLabel = contact.statusLabel || CONTACT_STATUS_LABELS[statusKey] || (isCompleted ? 'Efetuado' : 'Pendente');
     patchElement(button, {
       dataset: {
         completed: isCompleted ? 'true' : 'false',
-        status: isCompleted ? 'completed' : 'pending',
+        status: statusKey,
       },
       attributes: {
         'aria-checked': isCompleted ? 'true' : 'false',
@@ -2231,11 +2301,11 @@ let isSavingQuickSale = false;
           isCompleted ? 'pendente' : 'efetuado'
         }`,
       },
-      classList: { toggle: { 'is-completed': isCompleted } },
+      classList: { toggle: { 'is-completed': isCompleted, 'is-overdue': statusKey === 'overdue' } },
     });
     const label = button.querySelector('.client-contact-history__status-text');
     if (label) {
-      patchElement(label, { text: isCompleted ? 'Efetuado' : 'Pendente' });
+      patchElement(label, { text: statusLabel });
     }
     return button;
   }
@@ -2265,7 +2335,7 @@ let isSavingQuickSale = false;
     }
 
     const pendingCount = Array.isArray(purchase.contacts)
-      ? purchase.contacts.filter((item) => !item.completed).length
+      ? purchase.contacts.filter((item) => item.status !== 'completed').length
       : 0;
     const pendingText = pendingCount === 0 ? 'Todos concluídos' : `${pendingCount} pendente(s)`;
     patchElement(statusLabel, { text: pendingText });

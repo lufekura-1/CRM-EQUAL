@@ -68,8 +68,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS contatos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     cliente_id INTEGER NOT NULL,
-    compra_id INTEGER NOT NULL,
-    data_compra TEXT NOT NULL,
+    compra_id INTEGER,
+    data_compra TEXT,
     data_contato TEXT NOT NULL,
     prazo_meses INTEGER NOT NULL,
     efetuado INTEGER NOT NULL DEFAULT 0,
@@ -103,6 +103,72 @@ ensureColumn('eventos', 'updated_at', 'TEXT');
 ensureColumn('eventos', 'cliente_id', 'INTEGER');
 ensureColumn('eventos', 'completed', 'INTEGER DEFAULT 0');
 
+function migrateContactsTableToAllowStandaloneEntries() {
+  const info = db.pragma('table_info(contatos)');
+  const compraIdColumn = info.find((entry) => entry.name === 'compra_id');
+  const dataCompraColumn = info.find((entry) => entry.name === 'data_compra');
+
+  const needsMigration =
+    (compraIdColumn && compraIdColumn.notnull === 1) ||
+    (dataCompraColumn && dataCompraColumn.notnull === 1);
+
+  if (!needsMigration) {
+    return;
+  }
+
+  db.exec('PRAGMA foreign_keys=OFF;');
+
+  db.exec(`
+    CREATE TABLE contatos_tmp (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cliente_id INTEGER NOT NULL,
+      compra_id INTEGER,
+      data_compra TEXT,
+      data_contato TEXT NOT NULL,
+      prazo_meses INTEGER NOT NULL,
+      efetuado INTEGER NOT NULL DEFAULT 0,
+      efetuado_em TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE,
+      FOREIGN KEY (compra_id) REFERENCES compras(id) ON DELETE CASCADE
+    );
+  `);
+
+  db.exec(`
+    INSERT INTO contatos_tmp (
+      id,
+      cliente_id,
+      compra_id,
+      data_compra,
+      data_contato,
+      prazo_meses,
+      efetuado,
+      efetuado_em,
+      created_at,
+      updated_at
+    )
+    SELECT
+      id,
+      cliente_id,
+      compra_id,
+      data_compra,
+      data_contato,
+      prazo_meses,
+      efetuado,
+      efetuado_em,
+      created_at,
+      updated_at
+    FROM contatos;
+  `);
+
+  db.exec('DROP TABLE contatos;');
+  db.exec('ALTER TABLE contatos_tmp RENAME TO contatos;');
+  db.exec('PRAGMA foreign_keys=ON;');
+}
+
+migrateContactsTableToAllowStandaloneEntries();
+
 const purchaseColumns = [
   ['armacao', 'TEXT'],
   ['material_armacao', 'TEXT'],
@@ -129,6 +195,11 @@ purchaseColumns.forEach(([column, definition]) => {
 });
 
 const CONTACT_SCHEDULE_OFFSETS = [1, 3, 6, 12];
+const CONTACT_STATUS_LABELS = {
+  completed: 'Efetuado',
+  overdue: 'Atrasado',
+  pending: 'Pendente',
+};
 
 const listClientesStmt = db.prepare(`
   SELECT
@@ -456,6 +527,23 @@ const getContactByPurchaseAndMonthsStmt = db.prepare(`
   LIMIT 1
 `);
 
+const getStandaloneContactByClientAndMonthsStmt = db.prepare(`
+  SELECT
+    id,
+    cliente_id,
+    compra_id,
+    data_compra,
+    data_contato,
+    prazo_meses,
+    efetuado,
+    efetuado_em,
+    created_at,
+    updated_at
+  FROM contatos
+  WHERE cliente_id = ? AND compra_id IS NULL AND prazo_meses = ?
+  LIMIT 1
+`);
+
 const insertContactStmt = db.prepare(`
   INSERT INTO contatos (
     cliente_id,
@@ -678,18 +766,60 @@ function mapPurchaseRow(row) {
   };
 }
 
+function normalizeToIsoDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  const text = String(value).trim();
+  if (!text) {
+    return null;
+  }
+
+  const normalized = text.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : null;
+}
+
+function resolveContactStatus(contactDate, completed) {
+  if (completed) {
+    return { key: 'completed', label: CONTACT_STATUS_LABELS.completed };
+  }
+
+  const normalizedDate = normalizeToIsoDate(contactDate);
+  if (!normalizedDate) {
+    return { key: 'pending', label: CONTACT_STATUS_LABELS.pending };
+  }
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  if (normalizedDate < todayIso) {
+    return { key: 'overdue', label: CONTACT_STATUS_LABELS.overdue };
+  }
+
+  return { key: 'pending', label: CONTACT_STATUS_LABELS.pending };
+}
+
 function mapContactRow(row) {
+  const contactDate = row.data_contato ?? null;
+  const completed = Boolean(row.efetuado);
+  const { key: statusKey, label: statusLabel } = resolveContactStatus(contactDate, completed);
+
   return {
     id: row.id,
     clientId: row.cliente_id,
     purchaseId: row.compra_id,
     purchaseDate: row.data_compra ?? null,
-    contactDate: row.data_contato ?? null,
+    contactDate,
     monthsOffset: row.prazo_meses ?? null,
-    completed: Boolean(row.efetuado),
+    completed,
     completedAt: row.efetuado_em ?? null,
     createdAt: row.created_at ?? null,
     updatedAt: row.updated_at ?? null,
+    status: statusKey,
+    statusLabel,
   };
 }
 
@@ -710,7 +840,11 @@ function groupContactsByPurchase(rows) {
   const grouped = new Map();
   rows.forEach((row) => {
     const contact = mapContactRow(row);
-    const key = row.compra_id;
+    const purchaseId = row.compra_id;
+    const key =
+      purchaseId === null || purchaseId === undefined
+        ? `standalone:${row.cliente_id}`
+        : purchaseId;
     if (!grouped.has(key)) {
       grouped.set(key, []);
     }
@@ -810,6 +944,10 @@ function listContacts() {
 
   const clients = listClientesStmt.all();
   clients.forEach((clientRow) => {
+    const clientPurchases = listPurchasesByClienteStmt.all(clientRow.id);
+    if (!clientPurchases.length) {
+      ensureContactsForClient(clientRow.id, clientRow.created_at ?? now, now);
+    }
     recomputeClientState(clientRow.id);
   });
 })();
@@ -910,6 +1048,44 @@ function ensureContactsForPurchase(clienteId, purchaseId, purchaseDate, timestam
   });
 }
 
+function ensureContactsForClient(clienteId, baseDate, timestamp) {
+  if (!clienteId) {
+    return;
+  }
+
+  const normalizedBaseDate = normalizeToIsoDate(baseDate) || normalizeToIsoDate(timestamp);
+  if (!normalizedBaseDate) {
+    return;
+  }
+
+  const effectiveTimestamp = timestamp || new Date().toISOString();
+
+  CONTACT_SCHEDULE_OFFSETS.forEach((months) => {
+    const contactDate = addMonthsToIsoDate(normalizedBaseDate, months);
+    if (!contactDate) {
+      return;
+    }
+
+    const existing = getStandaloneContactByClientAndMonthsStmt.get(clienteId, months);
+    if (existing) {
+      updateContactScheduleStmt.run(normalizedBaseDate, contactDate, effectiveTimestamp, existing.id);
+      return;
+    }
+
+    insertContactStmt.run(
+      clienteId,
+      null,
+      normalizedBaseDate,
+      contactDate,
+      months,
+      0,
+      null,
+      effectiveTimestamp,
+      effectiveTimestamp
+    );
+  });
+}
+
 function insertPurchaseRecord(clienteId, purchase, timestamp) {
   const result = insertPurchaseStmt.run(
     clienteId,
@@ -975,8 +1151,12 @@ function getClienteWithPurchases(clienteId) {
   const contacts = listContactsByClienteStmt.all(clienteId).map(mapContactRow);
   const contactsByPurchase = groupContactsByPurchase(contacts);
   attachContactsToPurchases(purchases, contactsByPurchase);
+  const standaloneKey = `standalone:${clienteId}`;
+  const standaloneContacts = contactsByPurchase.get(standaloneKey) || [];
   cliente.purchases = purchases;
-  cliente.contacts = purchases.flatMap((purchase) => purchase.contacts || []);
+  cliente.contacts = purchases
+    .flatMap((purchase) => purchase.contacts || [])
+    .concat(standaloneContacts);
   cliente.lastPurchase = purchases.length ? purchases[purchases.length - 1].date : null;
   cliente.state = determineClientState(purchases);
   return cliente;
@@ -995,8 +1175,12 @@ function listClientes() {
     const cliente = mapClienteRow(row);
     const clientPurchases = groupedPurchases.get(cliente.id) || [];
     attachContactsToPurchases(clientPurchases, contactsByPurchase);
+    const standaloneKey = `standalone:${cliente.id}`;
+    const standaloneContacts = contactsByPurchase.get(standaloneKey) || [];
     cliente.purchases = clientPurchases;
-    cliente.contacts = clientPurchases.flatMap((purchase) => purchase.contacts || []);
+    cliente.contacts = clientPurchases
+      .flatMap((purchase) => purchase.contacts || [])
+      .concat(standaloneContacts);
     cliente.lastPurchase = clientPurchases.length
       ? clientPurchases[clientPurchases.length - 1].date
       : null;
@@ -1064,6 +1248,11 @@ const createClienteTransaction = db.transaction((payload) => {
   purchasesInput.forEach((purchase) => {
     insertPurchaseRecord(clienteId, purchase, now);
   });
+
+  const purchasesAfterCreate = listPurchasesByClienteStmt.all(clienteId);
+  if (!purchasesAfterCreate.length) {
+    ensureContactsForClient(clienteId, now, now);
+  }
 
   recomputeClientState(clienteId);
 
@@ -1171,6 +1360,11 @@ const updateClienteTransaction = db.transaction((id, payload) => {
 
     insertPurchaseRecord(clienteId, purchase, now);
   });
+
+  const purchasesAfterUpdate = listPurchasesByClienteStmt.all(clienteId);
+  if (!purchasesAfterUpdate.length) {
+    ensureContactsForClient(clienteId, current.createdAt ?? now, now);
+  }
 
   recomputeClientState(clienteId);
 
