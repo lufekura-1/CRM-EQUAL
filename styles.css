@@ -1667,6 +1667,8 @@ body.modal-open {
     justify-content: flex-start;
     flex-wrap: wrap;
     flex: 1 1 100%;
+  }
+
   .events-manager__header {
     flex-wrap: wrap;
   }
