@@ -969,21 +969,53 @@ function openCalendarContactDetail(contact) {
   calendarContactDetailBody.innerHTML = '';
 
   const purchaseParts = [];
-  if (contact?.purchaseFrame) {
-    purchaseParts.push(`Armação: ${contact.purchaseFrame}`);
+
+  const purchaseFrame = [
+    contact?.purchaseFrame,
+    contact?.purchase?.frame,
+    contact?.purchase?.armacao,
+    contact?.frame,
+    contact?.armacao,
+  ].find((value) => value !== undefined && value !== null && String(value).trim());
+
+  if (purchaseFrame) {
+    purchaseParts.push(`Armação: ${String(purchaseFrame).trim()}`);
   }
-  if (contact?.purchaseLens) {
-    purchaseParts.push(`Lente: ${contact.purchaseLens}`);
+
+  const purchaseLens = [
+    contact?.purchaseLens,
+    contact?.purchase?.lens,
+    contact?.purchase?.lente,
+    contact?.lens,
+    contact?.lente,
+  ].find((value) => value !== undefined && value !== null && String(value).trim());
+
+  if (purchaseLens) {
+    purchaseParts.push(`Lente: ${String(purchaseLens).trim()}`);
   }
+
   const purchaseInfo = purchaseParts.length ? purchaseParts.join(' · ') : 'Não informado';
 
-  const detailText = contact?.purchaseDetail && String(contact.purchaseDetail).trim().length
-    ? String(contact.purchaseDetail).trim()
-    : 'Sem detalhes registrados.';
+  const detailSource = [
+    contact?.purchaseDetail,
+    contact?.detalheCompra,
+    contact?.detalhe_compra,
+    contact?.purchase?.detail,
+    contact?.purchase?.detalheCompra,
+    contact?.purchase?.detalhe_compra,
+    contact?.purchase?.purchaseDetail,
+    contact?.purchase?.purchase_detail,
+  ].find((value) => value !== undefined && value !== null && String(value).trim());
+
+  const detailText = detailSource ? String(detailSource).trim() : 'Sem detalhes registrados.';
+
+  const formattedPhone = typeof window.formatPhoneNumber === 'function'
+    ? window.formatPhoneNumber(contact?.clientPhone)
+    : contact?.clientPhone || 'Não informado';
 
   const rows = [
     { label: 'Cliente', value: contact?.clientName || 'Não informado' },
-    { label: 'Telefone', value: formatPhoneNumber(contact?.clientPhone) },
+    { label: 'Telefone', value: formattedPhone },
     { label: 'Data do contato', value: formatLongDate(contact?.date ?? contact?.rawDate ?? contact?.contactDate) || 'Não informado' },
     { label: 'Tipo do contato', value: formatContactTypeLabel(contact?.contactMonths ?? contact?.monthsOffset) },
     { label: 'Data da compra', value: formatLongDate(contact?.purchaseDate) || 'Não informada' },
@@ -1430,23 +1462,6 @@ function formatShortDate(dateKey) {
   }
   const [year, month, day] = parts;
   return `${day}/${month}/${year.slice(-2)}`;
-}
-
-function formatPhoneNumber(phone) {
-  if (!phone) {
-    return 'Não informado';
-  }
-  const digits = String(phone).replace(/\D/g, '');
-  if (digits.length === 11) {
-    return digits.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-  }
-  if (digits.length === 10) {
-    return digits.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-  }
-  if (digits.length === 0) {
-    return 'Não informado';
-  }
-  return String(phone);
 }
 
 function renderEventDetailsView() {

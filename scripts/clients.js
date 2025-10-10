@@ -129,6 +129,13 @@ function triggerDashboardRefresh() {
   }
 
   CLIENTS.forEach((client, index) => {
+    if (client && typeof window.normalizePhoneDigits === 'function') {
+      client.phone = window.normalizePhoneDigits(client.phone);
+    } else if (client) {
+      const digits = client.phone ? String(client.phone).replace(/\D/g, '') : '';
+      client.phone = digits.slice(-11);
+    }
+
     if (!client.birthDate) {
       client.birthDate = generateBirthDate(client.age, index);
     }
@@ -266,6 +273,43 @@ let isSavingQuickSale = false;
     return value ? value.replace(/\D/g, '') : '';
   }
 
+  function normalizePhoneDigits(value) {
+    if (typeof window.normalizePhoneDigits === 'function') {
+      return window.normalizePhoneDigits(value);
+    }
+    return value ? value.toString().replace(/\D/g, '').slice(-11) : '';
+  }
+
+  function formatClientPhone(value) {
+    if (typeof window.formatPhoneNumber === 'function') {
+      try {
+        return window.formatPhoneNumber(value);
+      } catch (error) {
+        // Ignore formatting errors and fall back to raw value below.
+      }
+    }
+    const digits = normalizePhoneDigits(value);
+    return digits || 'Não informado';
+  }
+
+  function formatPhoneForInputValue(value) {
+    if (typeof window.formatPhoneForInput === 'function') {
+      return window.formatPhoneForInput(value);
+    }
+    if (typeof window.formatPhoneNumber === 'function') {
+      const formatted = window.formatPhoneNumber(value);
+      return formatted === 'Não informado' ? '' : formatted;
+    }
+    const digits = normalizePhoneDigits(value);
+    if (!digits) {
+      return '';
+    }
+    const prefixLength = Math.max(digits.length - 4, 0);
+    const prefix = prefixLength > 0 ? digits.slice(0, prefixLength) : '';
+    const suffix = digits.slice(-4);
+    return prefix ? `${prefix}-${suffix}` : suffix;
+  }
+
   function parseFilterDate(value) {
     const trimmed = normalizeText(value);
     if (!trimmed) {
@@ -386,7 +430,9 @@ let isSavingQuickSale = false;
   function getFilteredClients() {
     const nameFilter = normalizeText(state.filters.name);
     const cpfFilter = sanitizeNumbers(state.filters.cpf);
-    const phoneFilter = normalizeText(state.filters.phone);
+    const phoneFilterRaw = state.filters.phone;
+    const phoneFilterDigits = normalizePhoneDigits(phoneFilterRaw);
+    const phoneFilterText = normalizeText(phoneFilterRaw);
     const genderFilter = normalizeText(state.filters.gender);
     const ageMin = state.filters.ageMin !== '' ? Number(state.filters.ageMin) : null;
     const ageMax = state.filters.ageMax !== '' ? Number(state.filters.ageMax) : null;
@@ -414,8 +460,16 @@ let isSavingQuickSale = false;
           return false;
         }
       }
-      if (phoneFilter && !normalizeText(client.phone).includes(phoneFilter)) {
-        return false;
+      if (phoneFilterDigits) {
+        const clientDigits = normalizePhoneDigits(client.phone);
+        if (!clientDigits.includes(phoneFilterDigits)) {
+          return false;
+        }
+      } else if (phoneFilterText) {
+        const formattedPhone = formatClientPhone(client.phone);
+        if (!normalizeText(formattedPhone).includes(phoneFilterText)) {
+          return false;
+        }
       }
       if (genderFilter) {
         const target = genderFilter[0];
@@ -578,7 +632,7 @@ let isSavingQuickSale = false;
       createSelectionCell(client),
       createNameCell(client),
       createTextCell('cpf', client.cpf),
-      createTextCell('phone', client.phone),
+      createTextCell('phone', formatClientPhone(client.phone)),
       createTextCell('gender', client.gender),
       createTextCell('age', String(client.age)),
       createTextCell('lastPurchase', formatDisplayDate(client.lastPurchase)),
@@ -921,7 +975,14 @@ let isSavingQuickSale = false;
       id,
       name: apiClient.nome ?? apiClient.name ?? '',
       cpf: apiClient.cpf ?? apiClient.documento ?? '',
-      phone: apiClient.telefone ?? apiClient.phone ?? '',
+      phone: normalizePhoneDigits(
+        apiClient.telefone ??
+          apiClient.phone ??
+          apiClient.celular ??
+          apiClient.telefoneCliente ??
+          apiClient['telefone_cliente'] ??
+          ''
+      ),
       gender: apiClient.gender ?? apiClient.genero ?? '',
       birthDate:
         apiClient.birthDate ?? apiClient.dataNascimento ?? apiClient.data_nascimento ?? '',
@@ -1175,7 +1236,7 @@ let isSavingQuickSale = false;
     const detailMap = {
       name: client.name,
       cpf: client.cpf,
-      phone: client.phone,
+      phone: formatClientPhone(client.phone),
       gender: genderLabel,
       birthDate: formatFullDate(client.birthDate),
       age: age ? `${age} anos` : '-',
@@ -2557,7 +2618,7 @@ let isSavingQuickSale = false;
     };
 
     updateText('cpf', client.cpf);
-    updateText('phone', client.phone);
+    updateText('phone', formatClientPhone(client.phone));
     updateText('gender', client.gender);
     updateText('age', String(client.age));
     updateText('lastPurchase', formatDisplayDate(client.lastPurchase));
@@ -2729,7 +2790,7 @@ let isSavingQuickSale = false;
     const fields = {
       name: client?.name ?? '',
       cpf: client?.cpf ?? '',
-      phone: client?.phone ?? '',
+      phone: formatPhoneForInputValue(client?.phone ?? ''),
       gender: client?.gender ?? '',
       userType: client?.userType ?? USER_TYPE_VALUES[0] ?? 'VS',
       birthDate: client?.birthDate ?? defaultBirthDate,
@@ -2790,11 +2851,12 @@ let isSavingQuickSale = false;
     const userType = formData.get('userType')?.toString().toUpperCase() ?? '';
     const frameMaterial = formData.get('frameMaterial')?.toString().toUpperCase() ?? '';
     const purchaseDetail = formData.get('purchaseDetail');
+    const phoneDigits = normalizePhoneDigits(formData.get('phone'));
 
     return {
       name: formData.get('name')?.toString().trim() ?? '',
       cpf: formData.get('cpf')?.toString().trim() ?? '',
-      phone: formData.get('phone')?.toString().trim() ?? '',
+      phone: phoneDigits,
       gender: formData.get('gender')?.toString() ?? '',
       userType,
       birthDate: birthDate ? birthDate.toString() : '',
@@ -3312,6 +3374,15 @@ let isSavingQuickSale = false;
     prepareClientForm('create');
     setActivePage('cadastro-cliente');
   });
+  const clientFormPhoneInput = clientFormElement
+    ? clientFormElement.elements.namedItem('phone')
+    : null;
+  if (
+    clientFormPhoneInput instanceof HTMLInputElement
+    && typeof window.attachPhoneInputMask === 'function'
+  ) {
+    window.attachPhoneInputMask(clientFormPhoneInput);
+  }
   clientFormElement?.addEventListener('submit', handleClientFormSubmit);
   attachButtonHandler(clientFormCancelButton, handleClientDetailBack);
   attachButtonHandler(clientFormSaveButton, () => {

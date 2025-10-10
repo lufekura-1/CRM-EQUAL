@@ -682,7 +682,14 @@
                 </label>
                 <label class="client-form__field">
                   <span class="client-form__label">Telefone</span>
-                  <input type="tel" name="phone" required />
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    inputmode="tel"
+                    autocomplete="tel"
+                    placeholder="(00) 00000-0000"
+                  />
                 </label>
                 <label class="client-form__field">
                   <span class="client-form__label">Gênero</span>
@@ -1436,6 +1443,7 @@
     <script src="scripts/core/net.js"></script>
     <script src="scripts/elements.js"></script>
     <script src="scripts/form-guards.js"></script>
+    <script src="scripts/core/phone.js"></script>
     <script src="scripts/state.js"></script>
     <script src="scripts/users.js"></script>
     <script src="scripts/calendar.js"></script>
