@@ -406,6 +406,12 @@ function normalizeEventData(rawEvent) {
     clientPhone: rawEvent.clientPhone ?? rawEvent.telefoneCliente ?? rawEvent.telefone ?? rawEvent.phone ?? '',
     purchaseFrame: rawEvent.purchaseFrame ?? rawEvent.frame ?? rawEvent.armacao ?? '',
     purchaseLens: rawEvent.purchaseLens ?? rawEvent.lens ?? rawEvent.lente ?? '',
+    purchaseDetail:
+      rawEvent.purchaseDetail ??
+      rawEvent.purchase_detail ??
+      rawEvent.detalheCompra ??
+      rawEvent['detalhe_compra'] ??
+      '',
     userId:
       rawEvent.userId ??
       rawEvent.user_id ??
@@ -1401,6 +1407,12 @@ function updateCalendarContactEvent({ contact, client, purchase } = {}) {
     eventToUpdate.purchaseDate = String(purchase.date).slice(0, 10);
   }
 
+  if (contact.purchaseDetail !== undefined && contact.purchaseDetail !== null) {
+    eventToUpdate.purchaseDetail = String(contact.purchaseDetail);
+  } else if (purchase?.detail) {
+    eventToUpdate.purchaseDetail = String(purchase.detail);
+  }
+
   if (Number.isFinite(contact.monthsOffset)) {
     eventToUpdate.contactMonths = contact.monthsOffset;
   }
@@ -1448,3 +1460,67 @@ function updateCalendarContactEvent({ contact, client, purchase } = {}) {
 }
 
 window.updateCalendarContactEvent = updateCalendarContactEvent;
+
+function getWeekRangeForDate(date = currentCalendarDate) {
+  const baseDate = date instanceof Date ? new Date(date) : new Date();
+  const start = getStartOfWeek(baseDate);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return {
+    from: formatDateKey(start),
+    to: formatDateKey(end),
+    start,
+    end,
+    label: formatWeekRangeLabel(start, end),
+  };
+}
+
+function getCalendarContactsForRange(range) {
+  if (!range || !range.from || !range.to) {
+    return [];
+  }
+
+  const collected = [];
+
+  Object.keys(events)
+    .sort()
+    .forEach((dateKey) => {
+      if (dateKey < range.from || dateKey > range.to) {
+        return;
+      }
+      const dayEvents = events[dateKey];
+      if (!Array.isArray(dayEvents)) {
+        return;
+      }
+      dayEvents.forEach((event) => {
+        if (!event || event.type !== 'contact') {
+          return;
+        }
+        collected.push({ ...event });
+      });
+    });
+
+  collected.sort((a, b) => {
+    const dateA = a.date ? new Date(`${a.date}T00:00:00`).getTime() : 0;
+    const dateB = b.date ? new Date(`${b.date}T00:00:00`).getTime() : 0;
+    if (dateA !== dateB) {
+      return dateA - dateB;
+    }
+    return (a.clientName || '').localeCompare(b.clientName || '');
+  });
+
+  return collected;
+}
+
+function getCurrentWeekRange() {
+  return getWeekRangeForDate(currentCalendarDate);
+}
+
+function getCurrentWeekContacts() {
+  const range = getCurrentWeekRange();
+  return getCalendarContactsForRange(range);
+}
+
+window.getCalendarContactsForRange = getCalendarContactsForRange;
+window.getCurrentWeekContacts = getCurrentWeekContacts;
+window.getCurrentWeekRange = getCurrentWeekRange;

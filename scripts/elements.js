@@ -31,6 +31,15 @@ const eventsManagerDeleteButton = eventsManagerOverlay?.querySelector('[data-act
 const eventsManagerAddButton = eventsManagerOverlay?.querySelector('[data-action="add-event"]');
 const eventsManagerCloseButton = eventsManagerOverlay?.querySelector('[data-action="close"]');
 const calendarEventsButton = document.querySelector('[data-role="calendar-events-button"]');
+const calendarContactsButton = document.querySelector('[data-role="calendar-contacts-button"]');
+const calendarContactsOverlay = document.querySelector('[data-modal="calendar-week-contacts"]');
+const calendarContactsCloseButton = calendarContactsOverlay?.querySelector('[data-action="close-week-contacts"]');
+const calendarContactsTableBody = calendarContactsOverlay?.querySelector('[data-role="calendar-week-contacts-body"]');
+const calendarContactsEmptyState = calendarContactsOverlay?.querySelector('[data-role="calendar-week-contacts-empty"]');
+const calendarContactsTitle = calendarContactsOverlay?.querySelector('#calendar-week-contacts-title');
+const calendarContactDetailOverlay = document.querySelector('[data-modal="calendar-contact-detail"]');
+const calendarContactDetailCloseButton = calendarContactDetailOverlay?.querySelector('[data-action="close-contact-detail"]');
+const calendarContactDetailBody = calendarContactDetailOverlay?.querySelector('[data-role="calendar-contact-detail-body"]');
 const userSelectorButton = document.querySelector('[data-role="user-selector"]');
 const userSelectorOverlay = document.querySelector('[data-modal="user-selector"]');
 const userSelectorForm = userSelectorOverlay?.querySelector('.modal__form--user-selector');
@@ -46,6 +55,7 @@ const clientDetailElement = document.querySelector('[data-role="client-detail"]'
 const clientDetailFields = clientDetailElement?.querySelectorAll('[data-client-field]');
 const clientPurchasesContainer = clientDetailElement?.querySelector('[data-role="client-purchases"]');
 const clientContactHistoryContainer = clientDetailElement?.querySelector('[data-role="client-contact-history"]');
+const clientContactDetailsContainer = clientDetailElement?.querySelector('[data-role="client-contact-details"]');
 const clientInterestsContainer = clientDetailElement?.querySelector('[data-role="client-interests"]');
 const clientInterestsEditButton = document.querySelector('[data-role="client-interests-edit"]');
 const clientFormElement = document.querySelector('#client-registration-form');

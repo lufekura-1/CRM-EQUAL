@@ -561,6 +561,10 @@ function decoratePurchaseResponse(purchase) {
   return {
     ...purchase,
     dioptry,
+    detail: purchase.detail ?? null,
+    purchaseDetail: purchase.detail ?? null,
+    detalheCompra: purchase.detail ?? null,
+    detalhe_compra: purchase.detail ?? null,
     armacao: purchase.frame ?? '',
     materialArmacao: purchase.frameMaterial ?? '',
     material_armacao: purchase.frameMaterial ?? '',
@@ -590,6 +594,9 @@ function decorateContactResponse(contact) {
     contactDate: contact.contactDate ?? null,
     purchaseDate: contact.purchaseDate ?? null,
     monthsOffset: contact.monthsOffset ?? null,
+    purchaseDetail: contact.purchaseDetail ?? null,
+    detalheCompra: contact.purchaseDetail ?? null,
+    detalhe_compra: contact.purchaseDetail ?? null,
     clienteId: contact.clientId ?? null,
     cliente_id: contact.clientId ?? null,
     compraId: contact.purchaseId ?? null,
@@ -1077,6 +1084,12 @@ app.get('/api/eventos', async (req, res) => {
         const clientPhone = client?.telefone ?? client?.phone ?? null;
         const purchaseFrame = purchase?.frame ?? purchase?.armacao ?? '';
         const purchaseLens = purchase?.lens ?? purchase?.lente ?? '';
+        const purchaseDetail =
+          contato.purchaseDetail ??
+          purchase?.detail ??
+          purchase?.purchaseDetail ??
+          purchase?.detalhe_compra ??
+          null;
 
         return {
           id: `contact-${contato.id}`,
@@ -1099,6 +1112,7 @@ app.get('/api/eventos', async (req, res) => {
           clientPhone,
           purchaseFrame,
           purchaseLens,
+          purchaseDetail,
         };
       });
 

@@ -279,6 +279,18 @@ const eventsManagerState = {
   visibleEvents: new Map(),
 };
 
+const WEEK_CONTACT_STATUS_LABELS = {
+  completed: 'Efetuado',
+  overdue: 'Atrasado',
+  pending: 'Pendente',
+};
+
+const weekContactsState = {
+  list: [],
+  range: null,
+  isVisible: false,
+};
+
 function resetAddEventForm() {
   if (!addEventForm) {
     return;
@@ -742,6 +754,348 @@ function closeEventsManagerModal() {
   updateEventsManagerActionButtons();
 }
 
+function formatLongDate(dateKey) {
+  if (!dateKey) {
+    return '';
+  }
+  const normalized = String(dateKey).slice(0, 10);
+  const [year, month, day] = normalized.split('-');
+  if (!year || !month || !day) {
+    return normalized;
+  }
+  return `${day}/${month}/${year}`;
+}
+
+function formatContactTypeLabel(months) {
+  const numeric = Number(months);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return numeric === 1 ? 'Contato 1 mês' : `Contato ${numeric} meses`;
+  }
+  return 'Contato';
+}
+
+function updateWeekContactsTitle(range) {
+  if (!calendarContactsTitle) {
+    return;
+  }
+  const label = range?.label ? `Contatos da semana · ${range.label}` : 'Contatos da semana';
+  patchElement(calendarContactsTitle, { text: label });
+}
+
+function findWeekContactById(contactId) {
+  if (!contactId) {
+    return null;
+  }
+  const normalized = String(contactId);
+  return (
+    weekContactsState.list.find((item) => {
+      const id = item?.contactId ?? item?.id;
+      return id !== undefined && id !== null && String(id) === normalized;
+    }) || null
+  );
+}
+
+function renderWeekContactsTable({ focusContactId = null } = {}) {
+  if (!calendarContactsTableBody) {
+    return;
+  }
+
+  calendarContactsTableBody.innerHTML = '';
+
+  if (calendarContactsEmptyState) {
+    calendarContactsEmptyState.hidden = weekContactsState.list.length > 0;
+  }
+
+  if (!weekContactsState.list.length) {
+    return;
+  }
+
+  let buttonToFocus = null;
+
+  weekContactsState.list.forEach((contact) => {
+    const contactId = contact?.contactId ?? contact?.id;
+    const contactKey = contactId !== undefined && contactId !== null ? String(contactId) : '';
+
+    const row = document.createElement('tr');
+    if (contactKey) {
+      row.dataset.contactId = contactKey;
+    }
+
+    const nameCell = document.createElement('td');
+    nameCell.textContent = contact?.clientName || 'Cliente não informado';
+    row.appendChild(nameCell);
+
+    const phoneCell = document.createElement('td');
+    phoneCell.textContent = formatPhoneNumber(contact?.clientPhone);
+    row.appendChild(phoneCell);
+
+    const dateCell = document.createElement('td');
+    const contactDate = contact?.date ?? contact?.rawDate ?? contact?.contactDate;
+    dateCell.textContent = formatLongDate(contactDate) || '—';
+    row.appendChild(dateCell);
+
+    const typeCell = document.createElement('td');
+    typeCell.textContent = formatContactTypeLabel(contact?.contactMonths ?? contact?.monthsOffset);
+    row.appendChild(typeCell);
+
+    const detailCell = document.createElement('td');
+    detailCell.className = 'calendar-week-contacts__column--actions';
+    const detailButton = document.createElement('button');
+    detailButton.type = 'button';
+    detailButton.className = 'calendar-week-contacts__detail-button';
+    detailButton.dataset.contactId = contactKey;
+    detailButton.setAttribute('aria-label', 'Ver detalhes da compra');
+    detailButton.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a9 9 0 1 0 9 9 9.01 9.01 0 0 0-9-9Zm.75 13.5h-1.5v-1.5h1.5Zm0-3h-1.5v-6h1.5Z"></path></svg>';
+    detailCell.appendChild(detailButton);
+    row.appendChild(detailCell);
+
+    const statusCell = document.createElement('td');
+    statusCell.className = 'calendar-week-contacts__column--status';
+    const statusButton = document.createElement('button');
+    statusButton.type = 'button';
+    statusButton.className = 'client-contact-history__status-button calendar-week-contacts__status-button';
+    if (contactKey) {
+      statusButton.dataset.contactId = contactKey;
+    }
+
+    const statusInfo = typeof getEventStatus === 'function'
+      ? getEventStatus(contact)
+      : { key: contact?.contactCompleted ? 'completed' : 'pending', label: WEEK_CONTACT_STATUS_LABELS.completed };
+
+    const isCompleted = statusInfo.key === 'completed';
+    statusButton.dataset.completed = isCompleted ? 'true' : 'false';
+    statusButton.dataset.status = statusInfo.key;
+    statusButton.setAttribute('role', 'switch');
+    statusButton.setAttribute('aria-checked', isCompleted ? 'true' : 'false');
+    statusButton.setAttribute(
+      'aria-label',
+      `Marcar ${formatContactTypeLabel(contact?.contactMonths ?? contact?.monthsOffset)} como ${
+        isCompleted ? 'pendente' : 'efetuado'
+      }`,
+    );
+    statusButton.setAttribute('title', statusInfo.label || WEEK_CONTACT_STATUS_LABELS[statusInfo.key] || 'Status');
+    statusButton.classList.toggle('is-completed', isCompleted);
+    statusButton.classList.toggle('is-overdue', statusInfo.key === 'overdue');
+
+    const switchTrack = document.createElement('span');
+    switchTrack.className = 'client-contact-history__status-switch';
+    const switchHandle = document.createElement('span');
+    switchHandle.className = 'client-contact-history__status-handle';
+    switchTrack.appendChild(switchHandle);
+    statusButton.appendChild(switchTrack);
+    statusCell.appendChild(statusButton);
+    row.appendChild(statusCell);
+
+    calendarContactsTableBody.appendChild(row);
+
+    if (focusContactId && contactKey && contactKey === focusContactId) {
+      buttonToFocus = statusButton;
+    }
+  });
+
+  if (buttonToFocus) {
+    try {
+      buttonToFocus.focus({ preventScroll: true });
+    } catch (error) {
+      buttonToFocus.focus();
+    }
+  }
+}
+
+function refreshWeekContacts({ focusContactId = null } = {}) {
+  if (weekContactsState.isVisible && typeof window.getCurrentWeekRange === 'function') {
+    weekContactsState.range = window.getCurrentWeekRange();
+  } else if (!weekContactsState.range) {
+    weekContactsState.range = typeof window.getCurrentWeekRange === 'function'
+      ? window.getCurrentWeekRange()
+      : null;
+  }
+
+  if (!weekContactsState.range) {
+    weekContactsState.list = [];
+    renderWeekContactsTable();
+    return;
+  }
+
+  updateWeekContactsTitle(weekContactsState.range);
+
+  weekContactsState.list = typeof window.getCalendarContactsForRange === 'function'
+    ? window.getCalendarContactsForRange(weekContactsState.range)
+    : [];
+
+  renderWeekContactsTable({ focusContactId });
+}
+
+function openWeekContactsModal() {
+  if (!calendarContactsOverlay) {
+    return;
+  }
+
+  weekContactsState.isVisible = true;
+  weekContactsState.range = typeof window.getCurrentWeekRange === 'function'
+    ? window.getCurrentWeekRange()
+    : null;
+
+  refreshWeekContacts();
+  openOverlay(calendarContactsOverlay);
+}
+
+function closeWeekContactsModal() {
+  if (!calendarContactsOverlay) {
+    return;
+  }
+  closeOverlay(calendarContactsOverlay);
+  weekContactsState.isVisible = false;
+  weekContactsState.range = null;
+  weekContactsState.list = [];
+}
+
+function handleWeekContactsOverlayClick(event) {
+  if (!(event.target instanceof Element)) {
+    return;
+  }
+
+  if (!event.target.closest('.modal')) {
+    closeWeekContactsModal();
+  }
+}
+
+function openCalendarContactDetail(contact) {
+  if (!calendarContactDetailOverlay || !calendarContactDetailBody) {
+    return;
+  }
+
+  calendarContactDetailBody.innerHTML = '';
+
+  const purchaseParts = [];
+  if (contact?.purchaseFrame) {
+    purchaseParts.push(`Armação: ${contact.purchaseFrame}`);
+  }
+  if (contact?.purchaseLens) {
+    purchaseParts.push(`Lente: ${contact.purchaseLens}`);
+  }
+  const purchaseInfo = purchaseParts.length ? purchaseParts.join(' · ') : 'Não informado';
+
+  const detailText = contact?.purchaseDetail && String(contact.purchaseDetail).trim().length
+    ? String(contact.purchaseDetail).trim()
+    : 'Sem detalhes registrados.';
+
+  const rows = [
+    { label: 'Cliente', value: contact?.clientName || 'Não informado' },
+    { label: 'Telefone', value: formatPhoneNumber(contact?.clientPhone) },
+    { label: 'Data do contato', value: formatLongDate(contact?.date ?? contact?.rawDate ?? contact?.contactDate) || 'Não informado' },
+    { label: 'Tipo do contato', value: formatContactTypeLabel(contact?.contactMonths ?? contact?.monthsOffset) },
+    { label: 'Data da compra', value: formatLongDate(contact?.purchaseDate) || 'Não informada' },
+    { label: 'Produtos', value: purchaseInfo },
+    { label: 'Detalhe da compra', value: detailText },
+  ];
+
+  rows.forEach(({ label, value }) => {
+    const row = document.createElement('div');
+    row.className = 'calendar-contact-detail__row';
+
+    const labelElement = document.createElement('span');
+    labelElement.className = 'calendar-contact-detail__label';
+    labelElement.textContent = label;
+
+    const valueElement = document.createElement('p');
+    valueElement.className = 'calendar-contact-detail__value';
+    valueElement.textContent = value;
+
+    row.append(labelElement, valueElement);
+    calendarContactDetailBody.appendChild(row);
+  });
+
+  openOverlay(calendarContactDetailOverlay);
+}
+
+function closeCalendarContactDetail() {
+  if (!calendarContactDetailOverlay) {
+    return;
+  }
+  closeOverlay(calendarContactDetailOverlay);
+  if (calendarContactDetailBody) {
+    calendarContactDetailBody.innerHTML = '';
+  }
+}
+
+function handleCalendarContactDetailOverlayClick(event) {
+  if (!(event.target instanceof Element)) {
+    return;
+  }
+  if (!event.target.closest('.modal')) {
+    closeCalendarContactDetail();
+  }
+}
+
+async function handleWeekContactStatusToggle(button) {
+  const contactId = button.dataset.contactId;
+  if (!contactId || !window.api?.updateContact) {
+    return;
+  }
+
+  const isCompleted = button.dataset.completed === 'true';
+  const nextValue = !isCompleted;
+  const successMessage = nextValue
+    ? 'Contato marcado como efetuado.'
+    : 'Contato marcado como pendente.';
+  const errorMessage = 'Erro ao atualizar o contato.';
+
+  try {
+    button.disabled = true;
+    const response = await window.api.updateContact(contactId, { completed: nextValue });
+    const apiClient = response?.cliente;
+    const apiContact = response?.contato ?? null;
+
+    if (apiClient && typeof window.handleContactUpdateResponse === 'function') {
+      window.handleContactUpdateResponse(apiClient, { contactId, apiContact });
+    }
+
+    if (typeof window.showToast === 'function') {
+      window.showToast(successMessage, { type: 'success' });
+    }
+
+    refreshWeekContacts({ focusContactId: contactId });
+  } catch (error) {
+    const message = window.api?.getErrorMessage
+      ? window.api.getErrorMessage(error, errorMessage)
+      : errorMessage;
+    if (typeof window.showToast === 'function') {
+      window.showToast(message, { type: 'error' });
+    }
+    refreshWeekContacts({ focusContactId: contactId });
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function handleWeekContactsTableClick(event) {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) {
+    return;
+  }
+
+  const detailButton = target.closest('.calendar-week-contacts__detail-button');
+  if (detailButton instanceof HTMLButtonElement) {
+    event.preventDefault();
+    event.stopPropagation();
+    const contactId = detailButton.dataset.contactId;
+    const contact = findWeekContactById(contactId);
+    if (contact) {
+      openCalendarContactDetail(contact);
+    }
+    return;
+  }
+
+  const statusButton = target.closest('.calendar-week-contacts__status-button');
+  if (statusButton instanceof HTMLButtonElement) {
+    event.preventDefault();
+    event.stopPropagation();
+    handleWeekContactStatusToggle(statusButton);
+  }
+}
+
 function handleEventsManagerOverlayClick(event) {
   if (!(event.target instanceof Element)) {
     return;
@@ -983,6 +1337,7 @@ const EVENT_DETAILS_ROW_KEYS = [
   'clientPhone',
   'purchaseDate',
   'purchaseInfo',
+  'purchaseDetail',
   'eventTitle',
   'relatedClient',
   'observation',
@@ -1185,6 +1540,16 @@ function renderEventDetailsView() {
       label: 'Compra do cliente',
       value: purchaseText,
       isEmpty: !purchaseParts.length,
+      visible: true,
+    });
+
+    const purchaseDetailText = event.purchaseDetail
+      ? String(event.purchaseDetail).trim()
+      : '';
+    updateDetailRow('purchaseDetail', {
+      label: 'Detalhe da compra',
+      value: purchaseDetailText || 'Sem detalhes registrados.',
+      isEmpty: !purchaseDetailText,
       visible: true,
     });
   } else {
@@ -1492,6 +1857,30 @@ function initializeModalInteractions() {
   syncEventsManagerFilterButtons();
 }
 
+if (calendarContactsButton) {
+  calendarContactsButton.addEventListener('click', openWeekContactsModal);
+}
+
+if (calendarContactsCloseButton) {
+  calendarContactsCloseButton.addEventListener('click', closeWeekContactsModal);
+}
+
+if (calendarContactsOverlay) {
+  calendarContactsOverlay.addEventListener('click', handleWeekContactsOverlayClick);
+}
+
+if (calendarContactsTableBody) {
+  calendarContactsTableBody.addEventListener('click', handleWeekContactsTableClick);
+}
+
+if (calendarContactDetailCloseButton) {
+  calendarContactDetailCloseButton.addEventListener('click', closeCalendarContactDetail);
+}
+
+if (calendarContactDetailOverlay) {
+  calendarContactDetailOverlay.addEventListener('click', handleCalendarContactDetailOverlayClick);
+}
+
 Array.from(document.querySelectorAll('.modal-overlay')).forEach((overlay) => {
   watchOverlayPersistence(overlay);
 });
@@ -1508,6 +1897,12 @@ window.openEventDetailsModal = openEventDetailsModal;
 window.closeEventDetailsModal = closeEventDetailsModal;
 window.openEventsManagerModal = openEventsManagerModal;
 window.closeEventsManagerModal = closeEventsManagerModal;
+
+document.addEventListener('calendar:events-updated', () => {
+  if (weekContactsState.isVisible) {
+    refreshWeekContacts();
+  }
+});
 
 document.addEventListener('calendar:events-updated', handleEventsManagerExternalUpdate);
 
