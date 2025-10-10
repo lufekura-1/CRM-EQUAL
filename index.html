@@ -106,7 +106,13 @@
           <div class="topbar__menu" data-page="calendario">
             <div class="topbar__group topbar__group--right">
               <button class="topbar__button" type="button">Folgas</button>
-              <button class="topbar__button topbar__button--orange" type="button">Eventos</button>
+              <button
+                class="topbar__button topbar__button--orange"
+                type="button"
+                data-role="calendar-events-button"
+              >
+                Eventos
+              </button>
               <button class="topbar__button" type="button">Contatos</button>
             </div>
           </div>
@@ -1256,6 +1262,47 @@
           >
             Marcar como Efetuado
           </button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" data-modal="events-manager" aria-hidden="true">
+      <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="events-manager-title">
+        <div class="modal__header events-manager__header">
+          <h2 class="modal__title" id="events-manager-title">Gerenciar eventos</h2>
+          <div class="events-manager__header-actions">
+            <div class="events-manager__filters" role="group" aria-label="Filtrar por status">
+              <button class="events-manager__filter" type="button" data-filter-status="pending" aria-pressed="true">
+                Pendente
+              </button>
+              <button class="events-manager__filter" type="button" data-filter-status="overdue" aria-pressed="true">
+                Atrasado
+              </button>
+              <button class="events-manager__filter" type="button" data-filter-status="completed" aria-pressed="true">
+                Concluído
+              </button>
+            </div>
+            <label class="events-manager__date-filter">
+              <span class="events-manager__date-filter-label">Mês</span>
+              <input class="events-manager__date-input" type="month" data-role="events-manager-month" />
+            </label>
+          </div>
+          <div class="events-manager__actions" role="group" aria-label="Ações dos eventos">
+            <button class="events-manager__action-button events-manager__action-button--edit" type="button" data-action="edit-event" disabled>
+              Editar
+            </button>
+            <button class="events-manager__action-button events-manager__action-button--delete" type="button" data-action="delete-events" disabled>
+              Excluir
+            </button>
+            <button class="events-manager__action-button events-manager__action-button--add" type="button" data-action="add-event">
+              Adicionar
+            </button>
+          </div>
+          <button class="modal__close" type="button" data-action="close" aria-label="Fechar modal">&times;</button>
+        </div>
+        <div class="modal__content events-manager__content">
+          <div class="events-manager__list-card">
+            <div class="events-manager__grid" data-role="events-manager-grid" aria-live="polite"></div>
+          </div>
         </div>
       </div>
     </div>
