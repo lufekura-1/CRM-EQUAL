@@ -390,6 +390,19 @@ function normalizeEventData(rawEvent) {
     clientPhone: rawEvent.clientPhone ?? rawEvent.telefoneCliente ?? rawEvent.telefone ?? rawEvent.phone ?? '',
     purchaseFrame: rawEvent.purchaseFrame ?? rawEvent.frame ?? rawEvent.armacao ?? '',
     purchaseLens: rawEvent.purchaseLens ?? rawEvent.lens ?? rawEvent.lente ?? '',
+    userId:
+      rawEvent.userId ??
+      rawEvent.user_id ??
+      rawEvent.usuarioId ??
+      rawEvent['usuario_id'] ??
+      rawEvent.user ??
+      rawEvent.usuario ??
+      rawEvent.owner ??
+      rawEvent.ownerId ??
+      rawEvent['owner_id'] ??
+      rawEvent.responsavel ??
+      rawEvent.responsible ??
+      '',
   };
 }
 

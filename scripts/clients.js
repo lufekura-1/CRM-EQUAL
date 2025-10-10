@@ -915,6 +915,15 @@ let isSavingQuickSale = false;
         apiClient['tipo_usuario'] ??
         USER_TYPE_VALUES[0] ??
         'VS',
+      userId:
+        apiClient.userId ??
+        apiClient.user_id ??
+        apiClient.usuarioId ??
+        apiClient['usuario_id'] ??
+        apiClient.usuario ??
+        apiClient.ownerId ??
+        apiClient['owner_id'] ??
+        '',
       state:
         apiClient.state ??
         apiClient.estadoCliente ??
@@ -941,6 +950,7 @@ let isSavingQuickSale = false;
     client.gender = client.gender ? client.gender.toUpperCase() : '';
     client.userType = client.userType ? client.userType.toUpperCase() : USER_TYPE_VALUES[0] ?? 'VS';
     client.state = client.state ? client.state.toLowerCase() : CLIENT_STATE_VALUES[0] ?? 'pos-venda';
+    client.userId = client.userId ? String(client.userId).trim() : '';
     client.interests = Array.from(
       new Set(
         (client.interests || [])
@@ -2740,6 +2750,7 @@ let isSavingQuickSale = false;
 
     const mode = clientFormElement?.dataset.mode === 'edit' ? 'edit' : 'create';
     const clientId = clientFormElement?.dataset.clientId;
+    const currentClient = mode === 'edit' ? getCurrentClientData() : null;
     const birthDateIso = data.birthDate || new Date().toISOString().slice(0, 10);
     const purchasePayload = {
       date: data.purchase.date,
@@ -2755,6 +2766,16 @@ let isSavingQuickSale = false;
       },
     };
 
+    let selectedUserId = '';
+    if (currentClient?.userId) {
+      selectedUserId = currentClient.userId;
+    } else if (typeof window.getCurrentUserId === 'function') {
+      const resolved = window.getCurrentUserId();
+      if (resolved) {
+        selectedUserId = String(resolved);
+      }
+    }
+
     const purchaseId = clientFormElement?.dataset.purchaseId || null;
     const apiPayload = {
       nome: data.name,
@@ -2764,6 +2785,7 @@ let isSavingQuickSale = false;
       birthDate: birthDateIso,
       acceptsContact: data.acceptsContact,
       userType: data.userType,
+      userId: selectedUserId || null,
       purchase: {
         ...purchasePayload,
         id: purchaseId,

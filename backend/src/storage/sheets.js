@@ -84,6 +84,7 @@ function cloneClient(client) {
     birthDate: client.birthDate,
     acceptsContact: client.acceptsContact,
     userType: client.userType,
+    userId: client.userId ?? null,
     state: client.state,
     interests: client.interests.slice(),
     purchases: client.purchases.map((purchase) => clonePurchase(purchase)),
@@ -295,6 +296,10 @@ function createCliente(payload) {
     birthDate: payload.birthDate ?? null,
     acceptsContact: Boolean(payload.acceptsContact),
     userType: payload.userType ? String(payload.userType).toUpperCase() : null,
+    userId:
+      payload.userId === undefined || payload.userId === null
+        ? null
+        : String(payload.userId).trim() || null,
     state: payload.state ? String(payload.state).toLowerCase() : null,
     interests: normalizeInterests(payload.interests),
     purchases: [],
@@ -345,6 +350,13 @@ function updateCliente(id, payload) {
   if (payload.userType !== undefined) {
     client.userType = payload.userType ? String(payload.userType).toUpperCase() : null;
   }
+  if (payload.userId !== undefined) {
+    const normalizedUserId =
+      payload.userId === null || payload.userId === undefined
+        ? null
+        : String(payload.userId).trim();
+    client.userId = normalizedUserId && normalizedUserId.length > 0 ? normalizedUserId : null;
+  }
   if (payload.state !== undefined) {
     client.state = payload.state ? String(payload.state).toLowerCase() : null;
   }
@@ -386,12 +398,20 @@ function createEvento({
   cor = null,
   cliente_id = null,
   completed = false,
+  usuario_id = null,
+  user_id = null,
+  userId = null,
 }) {
   if (!data || !titulo) {
     throw new Error('Campos "data" e "titulo" são obrigatórios.');
   }
 
   const timestamp = new Date().toISOString();
+  const userIdInput = userId ?? usuario_id ?? user_id;
+  const normalizedUserId =
+    userIdInput === undefined || userIdInput === null
+      ? null
+      : String(userIdInput).trim() || null;
   const evento = {
     id: nextEventoId++,
     data,
@@ -402,13 +422,17 @@ function createEvento({
     completed: Boolean(completed),
     created_at: timestamp,
     updated_at: timestamp,
+    usuario_id: normalizedUserId,
   };
 
   eventos.push(evento);
   return { ...evento };
 }
 
-function updateEvento(id, { data, titulo, descricao, cor, cliente_id, completed }) {
+function updateEvento(
+  id,
+  { data, titulo, descricao, cor, cliente_id, completed, usuario_id, user_id, userId }
+) {
   const eventoId = Number(id);
   if (Number.isNaN(eventoId)) {
     return null;
@@ -426,6 +450,14 @@ function updateEvento(id, { data, titulo, descricao, cor, cliente_id, completed 
   evento.cliente_id = cliente_id === undefined ? evento.cliente_id : cliente_id;
   if (completed !== undefined) {
     evento.completed = Boolean(completed);
+  }
+  if (usuario_id !== undefined || user_id !== undefined || userId !== undefined) {
+    const userInput = userId ?? usuario_id ?? user_id;
+    const normalizedUserId =
+      userInput === undefined || userInput === null
+        ? null
+        : String(userInput).trim();
+    evento.usuario_id = normalizedUserId && normalizedUserId.length > 0 ? normalizedUserId : null;
   }
   evento.updated_at = new Date().toISOString();
 

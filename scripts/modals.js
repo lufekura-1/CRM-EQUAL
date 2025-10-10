@@ -363,6 +363,11 @@ async function handleSaveEvent() {
     date: dateValue,
     title: titleValue,
     description: descriptionValue || null,
+    userId:
+      (editingEvent?.userId && String(editingEvent.userId)) ||
+      (typeof window.getCurrentUserId === 'function'
+        ? String(window.getCurrentUserId() || '')
+        : '') || null,
   };
 
   const isEditing = Boolean(editingEvent);
