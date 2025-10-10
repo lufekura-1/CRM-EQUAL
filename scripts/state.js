@@ -98,3 +98,14 @@ function getEventStatus(event) {
 
 window.getEventStatus = getEventStatus;
 window.formatPostSaleLabel = formatPostSaleLabel;
+
+function getUsersList() {
+  return USERS.map((user) => ({ ...user }));
+}
+
+function getCurrentUserIdValue() {
+  return currentUserId;
+}
+
+window.getUsers = getUsersList;
+window.getCurrentUserId = getCurrentUserIdValue;

@@ -95,8 +95,10 @@
     </aside>
 
     <div class="workspace">
+      <div class="workspace__page-header">
+        <div class="workspace__page-title" aria-live="polite" data-role="page-title">HOME</div>
+      </div>
       <header class="topbar">
-        <div class="topbar__title" aria-live="polite">HOME</div>
         <div class="topbar__menus">
           <div class="topbar__menu is-active" data-page="home">
             <div class="topbar__group topbar__group--left home-topbar__group"></div>
@@ -245,7 +247,7 @@
                 <div class="home-card" role="group" aria-label="Eventos pendentes">
                   <span class="home-card__label">Eventos pendentes</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">0</span></span
+                    ><span class="home-card__value-bubble" data-role="dashboard-events-pending">0</span></span
                   >
                 </div>
                 <button
@@ -279,13 +281,13 @@
                 <div class="home-card" role="group" aria-label="Clientes cadastrados">
                   <span class="home-card__label">Clientes cadastrados</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">0</span></span
+                    ><span class="home-card__value-bubble" data-role="dashboard-clients-total">0</span></span
                   >
                 </div>
                 <div class="home-card" role="group" aria-label="Clientes essa semana">
                   <span class="home-card__label">Clientes essa semana</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">0</span></span
+                    ><span class="home-card__value-bubble" data-role="dashboard-clients-week">0</span></span
                   >
                 </div>
                 <button
@@ -317,25 +319,25 @@
                 <div class="home-card" role="group" aria-label="Para essa semana">
                   <span class="home-card__label">Para essa semana</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">0</span></span
+                    ><span class="home-card__value-bubble" data-role="dashboard-contacts-week">0</span></span
                   >
                 </div>
                 <div class="home-card" role="group" aria-label="Para esse mês">
                   <span class="home-card__label">Para esse mês</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">0</span></span
+                    ><span class="home-card__value-bubble" data-role="dashboard-contacts-month">0</span></span
                   >
                 </div>
                 <div class="home-card" role="group" aria-label="Concluídos esse mês">
                   <span class="home-card__label">Concluídos esse mês</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">0</span></span
+                    ><span class="home-card__value-bubble" data-role="dashboard-contacts-completed-month">0</span></span
                   >
                 </div>
                 <div class="home-card home-card--delayed" role="group" aria-label="Contatos atrasados">
                   <span class="home-card__label">Contatos atrasados</span>
                   <span class="home-card__value"
-                    ><span class="home-card__value-bubble">0</span></span
+                    ><span class="home-card__value-bubble" data-role="dashboard-contacts-overdue">0</span></span
                   >
                 </div>
               </div>
@@ -1310,6 +1312,7 @@
     <script src="scripts/navigation.js"></script>
     <script src="scripts/clients.js"></script>
     <script src="scripts/contacts.js"></script>
+    <script src="scripts/dashboard.js"></script>
     <script src="scripts/init.js"></script>
   </body>
 </html>
