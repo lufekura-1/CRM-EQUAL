@@ -3279,13 +3279,13 @@ body.modal-open {
 .calendar-week-contacts__table td {
   padding: 12px 16px;
   text-align: left;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  border-bottom: 1px solid #2b2b2b;
   font-size: 14px;
   color: #ffffff;
 }
 
 .calendar-week-contacts__table th {
-  background-color: rgba(63, 63, 70, 0.9);
+  background-color: #2b3646;
   font-weight: 600;
   color: #ffffff;
   position: sticky;
@@ -3301,12 +3301,9 @@ body.modal-open {
   border-top-right-radius: 16px;
 }
 
-.calendar-week-contacts__table tbody tr:nth-child(odd) td {
-  background-color: rgba(39, 39, 42, 0.85);
-}
-
+.calendar-week-contacts__table tbody tr:nth-child(odd) td,
 .calendar-week-contacts__table tbody tr:nth-child(even) td {
-  background-color: rgba(24, 24, 27, 0.85);
+  background-color: #1f1f1f;
 }
 
 .calendar-week-contacts__table tbody tr:last-child td:first-child {
@@ -3327,7 +3324,7 @@ body.modal-open {
   border: none;
   background: transparent;
   cursor: pointer;
-  color: #2563eb;
+  color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3339,8 +3336,8 @@ body.modal-open {
 
 .calendar-week-contacts__detail-button:hover,
 .calendar-week-contacts__detail-button:focus {
-  background-color: rgba(37, 99, 235, 0.12);
-  color: #1d4ed8;
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
 }
 
 .calendar-week-contacts__detail-button svg {
