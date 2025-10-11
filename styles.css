@@ -935,7 +935,7 @@ body.modal-open {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.65);
+  background-color: rgba(0, 0, 0, 0.72);
   display: none;
   align-items: center;
   justify-content: center;
@@ -2687,7 +2687,8 @@ body.modal-open {
 .client-contact-history__status-button {
   border: 1px solid rgba(59, 130, 246, 0.35);
   border-radius: 999px;
-  padding: 6px;
+  height: 32px;
+  padding: 0 12px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -3277,8 +3278,10 @@ body.modal-open {
 
 .calendar-week-contacts__table th,
 .calendar-week-contacts__table td {
-  padding: 12px 16px;
+  height: 50px;
+  padding: 0 16px;
   text-align: left;
+  vertical-align: middle;
   border-bottom: 1px solid #2b2b2b;
   font-size: 14px;
   color: #ffffff;
@@ -3329,8 +3332,8 @@ body.modal-open {
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
