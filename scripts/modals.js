@@ -816,12 +816,26 @@ function renderWeekContactsTable({ focusContactId = null } = {}) {
     const contactKey = contactId !== undefined && contactId !== null ? String(contactId) : '';
 
     const row = document.createElement('tr');
+    const clientId = contact?.clientId ?? contact?.cliente_id ?? null;
     if (contactKey) {
       row.dataset.contactId = contactKey;
     }
+    if (clientId) {
+      row.dataset.clientId = String(clientId);
+    }
 
     const nameCell = document.createElement('td');
-    nameCell.textContent = contact?.clientName || 'Cliente não informado';
+    const clientName = contact?.clientName || 'Cliente não informado';
+    if (clientId) {
+      const nameButton = document.createElement('button');
+      nameButton.type = 'button';
+      nameButton.className = 'calendar-week-contacts__client-link';
+      nameButton.dataset.clientId = String(clientId);
+      nameButton.textContent = clientName;
+      nameCell.appendChild(nameButton);
+    } else {
+      nameCell.textContent = clientName;
+    }
     row.appendChild(nameCell);
 
     const phoneCell = document.createElement('td');
@@ -1104,6 +1118,18 @@ async function handleWeekContactStatusToggle(button) {
 function handleWeekContactsTableClick(event) {
   const target = event.target instanceof Element ? event.target : null;
   if (!target) {
+    return;
+  }
+
+  const clientLink = target.closest('.calendar-week-contacts__client-link');
+  if (clientLink instanceof HTMLButtonElement) {
+    event.preventDefault();
+    event.stopPropagation();
+    const clientId = clientLink.dataset.clientId;
+    if (clientId && typeof window.navigateToClientDetail === 'function') {
+      window.navigateToClientDetail(clientId);
+      closeWeekContactsModal();
+    }
     return;
   }
 
