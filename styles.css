@@ -3322,27 +3322,30 @@ body.modal-open {
 
 .calendar-week-contacts__detail-button {
   border: none;
-  background: transparent;
+  background-color: #ffffff;
   cursor: pointer;
-  color: #ffffff;
+  color: #0c0c0c;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  width: 36px;
-  height: 36px;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  border-radius: 12px;
+  width: 42px;
+  height: 42px;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .calendar-week-contacts__detail-button:hover,
 .calendar-week-contacts__detail-button:focus {
-  background-color: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.85);
+  color: #0c0c0c;
+  transform: translateY(-1px);
 }
 
 .calendar-week-contacts__detail-button svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
+  color: inherit;
+  fill: currentColor;
 }
 
 .calendar-week-contacts__empty {
