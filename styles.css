@@ -3256,15 +3256,16 @@ body.modal-open {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  color: #ffffff;
 }
 
 .calendar-week-contacts__table-wrapper {
   max-height: 60vh;
   overflow: auto;
   border-radius: 16px;
-  border: 1px solid rgba(249, 115, 22, 0.35);
-  background: #1f2937;
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  background: #262626;
+  box-shadow: inset 0 0 0 1px rgba(15, 15, 15, 0.6);
 }
 
 .calendar-week-contacts__table {
@@ -3280,13 +3281,13 @@ body.modal-open {
   text-align: left;
   border-bottom: 1px solid rgba(148, 163, 184, 0.22);
   font-size: 14px;
-  color: #e2e8f0;
+  color: #ffffff;
 }
 
 .calendar-week-contacts__table th {
-  background-color: rgba(249, 115, 22, 0.16);
+  background-color: rgba(63, 63, 70, 0.9);
   font-weight: 600;
-  color: #fb923c;
+  color: #ffffff;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -3301,11 +3302,11 @@ body.modal-open {
 }
 
 .calendar-week-contacts__table tbody tr:nth-child(odd) td {
-  background-color: rgba(17, 24, 39, 0.75);
+  background-color: rgba(39, 39, 42, 0.85);
 }
 
 .calendar-week-contacts__table tbody tr:nth-child(even) td {
-  background-color: rgba(15, 23, 42, 0.7);
+  background-color: rgba(24, 24, 27, 0.85);
 }
 
 .calendar-week-contacts__table tbody tr:last-child td:first-child {
@@ -3349,9 +3350,29 @@ body.modal-open {
 
 .calendar-week-contacts__empty {
   text-align: center;
-  color: rgba(226, 232, 240, 0.85);
+  color: #ffffff;
   font-size: 15px;
   padding: 24px 0;
+}
+
+[data-modal="calendar-week-contacts"] .modal__header {
+  justify-content: center;
+  position: relative;
+}
+
+[data-modal="calendar-week-contacts"] .modal__title {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+[data-modal="calendar-week-contacts"] .modal__close {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  font-size: 60px;
+  line-height: 1;
 }
 
 .calendar-contact-detail {
