@@ -774,12 +774,11 @@ function formatContactTypeLabel(months) {
   return 'Contato';
 }
 
-function updateWeekContactsTitle(range) {
+function updateWeekContactsTitle() {
   if (!calendarContactsTitle) {
     return;
   }
-  const label = range?.label ? `Contatos da semana · ${range.label}` : 'Contatos da semana';
-  patchElement(calendarContactsTitle, { text: label });
+  patchElement(calendarContactsTitle, { text: 'Contatos da semana' });
 }
 
 function findWeekContactById(contactId) {
