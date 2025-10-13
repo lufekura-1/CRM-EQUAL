@@ -148,6 +148,18 @@
 
     const requestHeaders = new Headers(headers);
     const hasBody = body !== undefined && body !== null;
+    if (!requestHeaders.has('X-User-Id')) {
+      try {
+        if (typeof window.getCurrentUserId === 'function') {
+          const currentUserId = window.getCurrentUserId();
+          if (currentUserId) {
+            requestHeaders.set('X-User-Id', String(currentUserId));
+          }
+        }
+      } catch (error) {
+        console.warn('[api.request] Não foi possível resolver o usuário atual.', error);
+      }
+    }
     if (hasBody && !requestHeaders.has('Content-Type')) {
       requestHeaders.set('Content-Type', 'application/json');
     }
