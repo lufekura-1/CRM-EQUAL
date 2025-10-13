@@ -11,7 +11,6 @@ const corsOptions = {
   optionsSuccessStatus: 200,
 };
 
-
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cors(corsOptions));
@@ -28,6 +27,57 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 // --- FIM DO BLOCO ---
+
+
+const ALLOWED_USER_IDS = new Set(['usuario-teste', 'administrador']);
+
+function normalizeUserId(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const text = String(value).trim();
+  if (!text) {
+    return null;
+  }
+
+  return text
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-');
+}
+
+function extractUserId(req) {
+  const headerCandidate =
+    req.header('x-user-id') ||
+    req.header('x-userid') ||
+    req.header('x-usuario-id') ||
+    req.header('x-usuario');
+  const queryCandidate =
+    req.query?.userId ||
+    req.query?.usuarioId ||
+    req.query?.usuario_id ||
+    req.query?.usuario;
+
+  const normalized = normalizeUserId(headerCandidate ?? queryCandidate ?? null);
+  if (!normalized || !ALLOWED_USER_IDS.has(normalized)) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function userContextMiddleware(req, res, next) {
+  const userId = extractUserId(req);
+  if (!userId) {
+    return res.status(400).json({ error: 'Cabeçalho de usuário inválido.' });
+  }
+  req.userId = userId;
+  next();
+}
+
+app.use('/api', userContextMiddleware);
 
 
 function toApiEvento(evento) {
@@ -803,7 +853,7 @@ app.get('/api/clientes', async (req, res) => {
     const { q, page: rawPage } = parsedQuery.data;
     const page = rawPage ?? 1;
 
-    const clientes = await Promise.resolve(storage.listClientes());
+    const clientes = await Promise.resolve(storage.listClientes(req.userId));
     const filteredClientes =
       q === undefined
         ? clientes
@@ -861,7 +911,7 @@ app.post('/api/clientes', async (req, res) => {
       purchases,
     } = parsedBody.data;
     const cliente = await Promise.resolve(
-      storage.createCliente({
+      storage.createCliente(req.userId, {
         nome,
         telefone: telefone ?? null,
         email: email ?? null,
@@ -904,7 +954,7 @@ app.put('/api/clientes/:id', async (req, res) => {
       purchases,
     } = parsedBody.data;
     const updated = await Promise.resolve(
-      storage.updateCliente(id, {
+      storage.updateCliente(req.userId, id, {
         nome,
         telefone: telefone === undefined ? undefined : telefone ?? null,
         email: email === undefined ? undefined : email ?? null,
@@ -938,7 +988,7 @@ app.patch('/api/contatos/:id', async (req, res) => {
     }
 
     const { completed } = parsedBody.data;
-    const result = await Promise.resolve(storage.updateContactStatus(id, completed));
+    const result = await Promise.resolve(storage.updateContactStatus(req.userId, id, completed));
 
     if (!result) {
       return res.status(404).json({ error: 'Contato não encontrado.' });
@@ -958,7 +1008,7 @@ app.patch('/api/contatos/:id', async (req, res) => {
 app.delete('/api/clientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const removed = await Promise.resolve(storage.deleteCliente(id));
+    const removed = await Promise.resolve(storage.deleteCliente(req.userId, id));
 
     if (!removed) {
       return res.status(404).json({ error: 'Cliente não encontrado.' });
@@ -982,9 +1032,9 @@ app.get('/api/eventos', async (req, res) => {
     const toDate = to ? new Date(`${to}T23:59:59.999Z`) : null;
 
     const [eventos, contatos, clientes] = await Promise.all([
-      Promise.resolve(storage.listEventos()),
-      Promise.resolve(storage.listContacts()),
-      Promise.resolve(storage.listClientes()),
+      Promise.resolve(storage.listEventos(req.userId)),
+      Promise.resolve(storage.listContacts(req.userId)),
+      Promise.resolve(storage.listClientes(req.userId)),
     ]);
     const filteredEventos = eventos.filter((evento) => {
       if (!fromDate && !toDate) {
@@ -1145,6 +1195,7 @@ app.post('/api/eventos', async (req, res) => {
     const { date, title, description, color, clientId, completed } = parsedBody.data;
     const created = await Promise.resolve(
       storage.createEvento(
+        req.userId,
         fromApiEvento(
           { date, title, description: description ?? null, color: color ?? null, clientId: clientId ?? null, completed },
           { defaultNull: true }
@@ -1170,6 +1221,7 @@ app.put('/api/eventos/:id', async (req, res) => {
     const { date, title, description, color, clientId, completed } = parsedBody.data;
     const updated = await Promise.resolve(
       storage.updateEvento(
+        req.userId,
         id,
         fromApiEvento({ date, title, description, color, clientId, completed })
       )
@@ -1192,7 +1244,7 @@ app.delete('/api/eventos/:id', async (req, res) => {
   }
 
   try {
-    const removed = await Promise.resolve(storage.deleteEvento(id));
+    const removed = await Promise.resolve(storage.deleteEvento(req.userId, id));
     if (!removed) {
       return res.status(404).json({ error: 'Evento não encontrado.' });
     }

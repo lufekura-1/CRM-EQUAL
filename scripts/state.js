@@ -24,10 +24,8 @@ function getCurrentClientData() {
 }
 
 const USERS = [
-  { id: 'exotica', code: 'E', name: 'EXOTICA', subtitle: 'Usuário 1' },
-  { id: 'jorel-avenida', code: 'A', name: 'JOREL AVENIDA', subtitle: 'Usuário 2' },
-  { id: 'jorel-chicuta', code: 'C', name: 'JOREL CHICUTA', subtitle: 'Usuário 3' },
-  { id: 'administrador', code: 'X', name: 'ADMINISTRADOR', subtitle: 'Usuário 4' },
+  { id: 'usuario-teste', code: 'T', name: 'USUARIO TESTE', subtitle: 'Perfil de demonstração' },
+  { id: 'administrador', code: 'A', name: 'ADMINISTRADOR', subtitle: 'Perfil administrativo' },
 ];
 
 let currentUserId = USERS[0]?.id || '';

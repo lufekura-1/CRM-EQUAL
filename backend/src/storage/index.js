@@ -10,4 +10,11 @@ function resolveAdapter() {
   }
 }
 
-module.exports = resolveAdapter();
+const baseAdapter = resolveAdapter();
+
+if (STORAGE === 'sqlite') {
+  const createUserScopedAdapter = require('./userScopedSqlite');
+  module.exports = createUserScopedAdapter(baseAdapter);
+} else {
+  module.exports = baseAdapter;
+}
