@@ -552,16 +552,7 @@
               <article class="client-card" data-card-id="personal">
                 <header class="client-card__header">
                   <h2 class="client-card__title">
-                    <button
-                      class="client-card__collapse"
-                      type="button"
-                      data-role="client-card-toggle"
-                      aria-expanded="false"
-                      aria-controls="client-card-content-personal"
-                    >
-                      <span class="client-card__toggle-icon" aria-hidden="true"></span>
-                      <span class="client-card__title-text">Dados pessoais</span>
-                    </button>
+                    <span class="client-card__title-text">Dados pessoais</span>
                   </h2>
                 </header>
                 <div class="client-card__content" id="client-card-content-personal" data-role="client-card-content">
@@ -610,16 +601,7 @@
               <article class="client-card client-card--interests" data-card-id="interests">
                 <header class="client-card__header">
                   <h2 class="client-card__title">
-                    <button
-                      class="client-card__collapse"
-                      type="button"
-                      data-role="client-card-toggle"
-                      aria-expanded="false"
-                      aria-controls="client-card-content-interests"
-                    >
-                      <span class="client-card__toggle-icon" aria-hidden="true"></span>
-                      <span class="client-card__title-text">Interesses</span>
-                    </button>
+                    <span class="client-card__title-text">Interesses</span>
                   </h2>
                   <div class="client-card__actions">
                     <button
@@ -649,16 +631,7 @@
               <article class="client-card client-card--purchases" data-card-id="purchases">
                 <header class="client-card__header">
                   <h2 class="client-card__title">
-                    <button
-                      class="client-card__collapse"
-                      type="button"
-                      data-role="client-card-toggle"
-                      aria-expanded="false"
-                      aria-controls="client-card-content-purchases"
-                    >
-                      <span class="client-card__toggle-icon" aria-hidden="true"></span>
-                      <span class="client-card__title-text">Histórico de compras</span>
-                    </button>
+                    <span class="client-card__title-text">Histórico de compras</span>
                   </h2>
                   <div class="client-card__actions">
                     <button
@@ -684,17 +657,20 @@
               <article class="client-card client-card--contact-details" data-card-id="contact-details">
                 <header class="client-card__header">
                   <h2 class="client-card__title">
-                    <button
-                      class="client-card__collapse"
-                      type="button"
-                      data-role="client-card-toggle"
-                      aria-expanded="false"
-                      aria-controls="client-card-content-contact-details"
-                    >
-                      <span class="client-card__toggle-icon" aria-hidden="true"></span>
-                      <span class="client-card__title-text">Detalhes do contato</span>
-                    </button>
+                    <span class="client-card__title-text">Detalhes do contato</span>
                   </h2>
+                  <div class="client-card__actions">
+                    <button
+                      class="client-card__action-button client-card__action-button--add"
+                      type="button"
+                      data-role="client-contact-detail-add"
+                      aria-label="Adicionar detalhe do contato"
+                      title="Adicionar detalhe do contato"
+                      disabled
+                    >
+                      <span aria-hidden="true">+</span>
+                    </button>
+                  </div>
                 </header>
                 <div
                   class="client-card__content"
@@ -702,27 +678,6 @@
                   data-role="client-card-content"
                 >
                   <div class="client-contact-details" data-role="client-contact-details">
-                    <form class="client-contact-details__form" data-role="client-contact-detail-form">
-                      <label class="client-contact-details__label" for="client-contact-detail-input"
-                        >Adicionar detalhe avulso</label
-                      >
-                      <textarea
-                        id="client-contact-detail-input"
-                        class="client-contact-details__textarea"
-                        data-role="client-contact-detail-input"
-                        rows="3"
-                        placeholder="Descreva um detalhe importante sobre o cliente"
-                        disabled
-                      ></textarea>
-                      <button
-                        class="client-contact-details__submit"
-                        type="submit"
-                        data-role="client-contact-detail-submit"
-                        disabled
-                      >
-                        Adicionar detalhe
-                      </button>
-                    </form>
                     <div class="client-contact-details__list" data-role="client-contact-details-list">
                       <div class="client-card__empty">Nenhum detalhe cadastrado.</div>
                     </div>
@@ -732,16 +687,7 @@
               <article class="client-card client-card--contact-history" data-card-id="contact-history">
                 <header class="client-card__header">
                   <h2 class="client-card__title">
-                    <button
-                      class="client-card__collapse"
-                      type="button"
-                      data-role="client-card-toggle"
-                      aria-expanded="false"
-                      aria-controls="client-card-content-contact-history"
-                    >
-                      <span class="client-card__toggle-icon" aria-hidden="true"></span>
-                      <span class="client-card__title-text">Histórico de contato</span>
-                    </button>
+                    <span class="client-card__title-text">Histórico de contato</span>
                   </h2>
                 </header>
                 <div
@@ -1181,6 +1127,62 @@
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" data-modal="client-contact-detail" aria-hidden="true">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="client-contact-detail-title"
+      >
+        <div class="modal__header">
+          <h2 class="modal__title" id="client-contact-detail-title">Adicionar detalhe do contato</h2>
+          <button
+            class="modal__close"
+            type="button"
+            data-action="close-client-contact-detail"
+            aria-label="Fechar modal"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal__content">
+          <form
+            class="modal__form modal__form--contact-detail"
+            data-role="client-contact-detail-form"
+            autocomplete="off"
+            data-prevent-reload="true"
+          >
+            <label class="modal__field modal__field--textarea">
+              <span class="modal__label">Detalhe</span>
+              <textarea
+                class="modal__input"
+                rows="4"
+                data-role="client-contact-detail-textarea"
+                placeholder="Descreva um detalhe importante sobre o cliente"
+                required
+              ></textarea>
+            </label>
+          </form>
+        </div>
+        <div class="modal__footer modal__footer--split">
+          <button
+            class="modal__cancel-button"
+            type="button"
+            data-action="cancel-client-contact-detail"
+          >
+            Cancelar
+          </button>
+          <button
+            class="modal__save-button"
+            type="button"
+            data-action="save-client-contact-detail"
+            disabled
+          >
+            Salvar detalhe
+          </button>
         </div>
       </div>
     </div>

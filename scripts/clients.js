@@ -238,6 +238,7 @@ let isSavingQuickSale = false;
       contacts: {
         focusedContactId: null,
         scrollTop: 0,
+        expandedGroups: Object.create(null),
       },
       cards: {
         expanded: Object.create(null),
@@ -814,25 +815,18 @@ let isSavingQuickSale = false;
     );
   }
 
-  function applyCardCollapseState({ collapseAll = false } = {}) {
+  function applyCardCollapseState() {
     if (!clientCardElements) {
       return;
     }
-    const expandedMap = state.detail.cards?.expanded || Object.create(null);
     Array.from(clientCardElements).forEach((card) => {
       if (!(card instanceof HTMLElement)) {
         return;
       }
-      const cardId = card.dataset.cardId || '';
-      const shouldExpand = collapseAll ? false : Boolean(expandedMap[cardId]);
-      const toggle = card.querySelector('[data-role="client-card-toggle"]');
       const content = card.querySelector('.client-card__content');
-      card.classList.toggle('is-collapsed', !shouldExpand);
-      if (toggle) {
-        toggle.setAttribute('aria-expanded', shouldExpand ? 'true' : 'false');
-      }
+      card.classList.remove('is-collapsed');
       if (content) {
-        content.hidden = !shouldExpand;
+        content.hidden = false;
       }
     });
   }
@@ -854,28 +848,21 @@ let isSavingQuickSale = false;
     if (!card) {
       return;
     }
-    const toggle = card.querySelector('[data-role="client-card-toggle"]');
     const content = card.querySelector('.client-card__content');
-    card.classList.toggle('is-collapsed', !expanded);
-    if (toggle) {
-      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-    }
+    card.classList.remove('is-collapsed');
     if (content) {
-      content.hidden = !expanded;
+      content.hidden = false;
     }
   }
 
   function updateContactDetailFormState(client) {
     const hasClient = Boolean(client?.id);
-    if (clientContactDetailInput) {
-      clientContactDetailInput.disabled = !hasClient;
-      if (!hasClient) {
-        clientContactDetailInput.value = '';
-      }
+    if (clientContactDetailAddButton) {
+      clientContactDetailAddButton.disabled = !hasClient;
     }
-    if (clientContactDetailSubmit) {
-      const text = clientContactDetailInput?.value ?? '';
-      clientContactDetailSubmit.disabled = !hasClient || !text.trim();
+    if (!hasClient) {
+      resetContactDetailModal();
+      closeContactDetailModal();
     }
   }
 
@@ -1402,8 +1389,9 @@ let isSavingQuickSale = false;
     state.detail.purchases.scrollTop = 0;
     state.detail.contacts.focusedContactId = null;
     state.detail.contacts.scrollTop = 0;
+    state.detail.contacts.expandedGroups = Object.create(null);
     state.detail.cards.expanded = Object.create(null);
-    applyCardCollapseState({ collapseAll: true });
+    applyCardCollapseState();
     updateContactDetailFormState(null);
   }
 
@@ -1696,31 +1684,136 @@ let isSavingQuickSale = false;
     entries
       .sort((a, b) => b.sortValue - a.sortValue)
       .forEach((entry) => {
-        const item = document.createElement('div');
-        item.className = 'client-contact-details__item';
+        const chip = document.createElement('div');
+        chip.className = 'client-contact-details__chip';
         if (entry.purchaseId) {
-          item.dataset.purchaseId = entry.purchaseId;
+          chip.dataset.purchaseId = entry.purchaseId;
         }
 
-        const title = document.createElement('h3');
-        title.className = 'client-contact-details__title';
-        title.textContent = entry.title;
-        item.appendChild(title);
+        const detailText = (entry.detail ?? '').trim();
+        const mainText = detailText || entry.title || 'Detalhe registrado';
 
+        const textSpan = document.createElement('span');
+        textSpan.className = 'client-contact-details__chip-text';
+        textSpan.textContent = mainText;
+        chip.appendChild(textSpan);
+
+        const metaParts = [];
+        if (entry.title && entry.title !== mainText) {
+          metaParts.push(entry.title);
+        }
         if (entry.subtitle) {
-          const subtitle = document.createElement('span');
-          subtitle.className = 'client-contact-details__subtitle';
-          subtitle.textContent = entry.subtitle;
-          item.appendChild(subtitle);
+          metaParts.push(entry.subtitle);
         }
 
-        const description = document.createElement('p');
-        description.className = 'client-contact-details__description';
-        description.textContent = entry.detail;
-        item.appendChild(description);
+        if (metaParts.length) {
+          const metaWrapper = document.createElement('span');
+          metaWrapper.className = 'client-contact-details__chip-meta';
+          metaParts.forEach((part) => {
+            if (!part) {
+              return;
+            }
+            const metaSpan = document.createElement('span');
+            metaSpan.textContent = part;
+            metaWrapper.appendChild(metaSpan);
+          });
+          chip.appendChild(metaWrapper);
+        }
 
-        clientContactDetailsList.appendChild(item);
+        const tooltipParts = [];
+        if (entry.title) {
+          tooltipParts.push(entry.title);
+        }
+        if (entry.subtitle) {
+          tooltipParts.push(entry.subtitle);
+        }
+        if (detailText && detailText !== entry.title) {
+          tooltipParts.push(detailText);
+        }
+        if (tooltipParts.length) {
+          chip.title = tooltipParts.join(' • ');
+        }
+
+        clientContactDetailsList.appendChild(chip);
       });
+  }
+
+  function resetContactDetailModal() {
+    if (clientContactDetailTextarea) {
+      clientContactDetailTextarea.value = '';
+    }
+    if (clientContactDetailSaveButton) {
+      clientContactDetailSaveButton.disabled = true;
+    }
+  }
+
+  function closeContactDetailModal() {
+    if (!clientContactDetailOverlay) {
+      return;
+    }
+    resetContactDetailModal();
+    closeOverlay(clientContactDetailOverlay);
+  }
+
+  function openContactDetailModal() {
+    const client = getCurrentClientData();
+    if (!client || !clientContactDetailOverlay) {
+      return;
+    }
+    resetContactDetailModal();
+    openOverlay(clientContactDetailOverlay);
+    if (clientContactDetailTextarea) {
+      window.requestAnimationFrame(() => {
+        try {
+          clientContactDetailTextarea.focus();
+        } catch (error) {
+          clientContactDetailTextarea.focus();
+        }
+      });
+    }
+  }
+
+  function handleContactDetailModalInput() {
+    const text = clientContactDetailTextarea?.value ?? '';
+    if (clientContactDetailSaveButton) {
+      clientContactDetailSaveButton.disabled = !text.trim();
+    }
+  }
+
+  function submitContactDetailModal() {
+    const client = getCurrentClientData();
+    if (!client) {
+      return;
+    }
+    const text = clientContactDetailTextarea?.value ?? '';
+    const trimmed = text.trim();
+    if (!trimmed) {
+      handleContactDetailModalInput();
+      return;
+    }
+    addManualContactNote(client.id, trimmed);
+    renderClientContactDetails(client);
+    setClientCardExpanded('contact-details', true);
+    closeContactDetailModal();
+  }
+
+  function handleContactDetailModalSubmit(event) {
+    event.preventDefault();
+    submitContactDetailModal();
+  }
+
+  function handleContactDetailModalSaveClick(event) {
+    event.preventDefault();
+    submitContactDetailModal();
+  }
+
+  function handleContactDetailOverlayClick(event) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    if (!event.target.closest('.modal')) {
+      closeContactDetailModal();
+    }
   }
 
   function formatFrameMaterial(material) {
@@ -1745,7 +1838,6 @@ let isSavingQuickSale = false;
       return;
     }
 
-    const latestPurchase = getLatestPurchase(client);
     const pendingPurchaseIds = collectPendingPurchaseIds(client);
 
     client.purchases
@@ -1758,11 +1850,7 @@ let isSavingQuickSale = false;
         if (purchaseId) {
           article.dataset.purchaseId = purchaseId;
         }
-        if (storedOpenId) {
-          if (purchaseId && purchaseId === storedOpenId) {
-            article.classList.add('is-open');
-          }
-        } else if (purchase === latestPurchase) {
+        if (storedOpenId && purchaseId && purchaseId === storedOpenId) {
           article.classList.add('is-open');
         }
 
@@ -1807,13 +1895,6 @@ let isSavingQuickSale = false;
         clientPurchasesContainer.appendChild(article);
       });
 
-    if (!clientPurchasesContainer.querySelector('.client-purchase.is-open')) {
-      const firstArticle = clientPurchasesContainer.querySelector('.client-purchase');
-      if (firstArticle) {
-        firstArticle.classList.add('is-open');
-      }
-    }
-
     const openArticle = clientPurchasesContainer.querySelector('.client-purchase.is-open');
     state.detail.purchases.openId = openArticle?.dataset.purchaseId ?? null;
 
@@ -1826,12 +1907,26 @@ let isSavingQuickSale = false;
     state.detail.purchases.scrollTop = nextScrollTop;
   }
 
+  function rememberContactGroupPreference(group, expanded) {
+    if (!(group instanceof HTMLElement)) {
+      return;
+    }
+    const key = group.dataset.groupKey;
+    if (!key) {
+      return;
+    }
+    if (!state.detail.contacts?.expandedGroups) {
+      state.detail.contacts.expandedGroups = Object.create(null);
+    }
+    state.detail.contacts.expandedGroups[key] = Boolean(expanded);
+  }
+
   function setContactGroupExpandedState(group, expanded, options = {}) {
     if (!(group instanceof HTMLElement)) {
       return;
     }
 
-    const { manual = false, overrideUserCollapsed = false } = options;
+    const { remember = false } = options;
     const header = group.querySelector('.client-contact-history__header');
     const rows = group.querySelector('.client-contact-history__rows');
 
@@ -1845,9 +1940,8 @@ let isSavingQuickSale = false;
     if (header instanceof HTMLElement) {
       header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
     }
-
-    if (manual || overrideUserCollapsed || group.dataset.userCollapsed === undefined) {
-      group.dataset.userCollapsed = expanded ? 'false' : 'true';
+    if (remember) {
+      rememberContactGroupPreference(group, expanded);
     }
   }
 
@@ -1984,7 +2078,17 @@ let isSavingQuickSale = false;
         const pendingCount = purchase.contacts.filter((contact) => isContactPending(contact)).length;
         const displayDate =
           formatFullDate(purchase.date) || formatFullDate(purchase.contacts[0]?.purchaseDate) || 'Contatos';
-        const shouldExpand = pendingCount > 0;
+        const fallbackId = `group-${contactHistoryGroupIdCounter}`;
+        const fallbackKeyParts = purchase.contacts
+          .map((contact) => contact.contactDate || contact.id || contact.purchaseId || contact.detail || '')
+          .filter(Boolean);
+        const groupKey = purchaseId
+          ? `purchase:${purchaseId}`
+          : `fallback:${fallbackKeyParts.join('|') || fallbackId}`;
+        group.dataset.groupKey = groupKey;
+
+        const storedExpanded = state.detail.contacts?.expandedGroups?.[groupKey];
+        const shouldExpand = storedExpanded === undefined ? false : Boolean(storedExpanded);
 
         const headerButton = document.createElement('button');
         headerButton.type = 'button';
@@ -2091,11 +2195,11 @@ let isSavingQuickSale = false;
           });
 
         group.append(headerButton, rows);
-        setContactGroupExpandedState(group, shouldExpand, { overrideUserCollapsed: true });
+        setContactGroupExpandedState(group, shouldExpand, { remember: false });
 
         headerButton.addEventListener('click', () => {
           const nextExpanded = group.classList.contains('is-collapsed');
-          setContactGroupExpandedState(group, nextExpanded, { manual: true });
+          setContactGroupExpandedState(group, nextExpanded, { remember: true });
         });
 
         fragment.appendChild(group);
@@ -2119,32 +2223,6 @@ let isSavingQuickSale = false;
       }
     }
     state.detail.contacts.focusedContactId = null;
-  }
-
-  function handleContactDetailInput() {
-    const client = getCurrentClientData();
-    updateContactDetailFormState(client);
-  }
-
-  function handleContactDetailSubmit(event) {
-    event.preventDefault();
-    const client = getCurrentClientData();
-    if (!client) {
-      return;
-    }
-    const text = clientContactDetailInput?.value ?? '';
-    const trimmed = text.trim();
-    if (!trimmed) {
-      updateContactDetailFormState(client);
-      return;
-    }
-    addManualContactNote(client.id, trimmed);
-    if (clientContactDetailInput) {
-      clientContactDetailInput.value = '';
-    }
-    updateContactDetailFormState(client);
-    renderClientContactDetails(client);
-    setClientCardExpanded('contact-details', true);
   }
 
   function updateQuickSaleButtonState(client) {
@@ -2913,13 +2991,6 @@ let isSavingQuickSale = false;
       : 0;
     const pendingText = pendingCount === 0 ? 'Todos concluídos' : `${pendingCount} pendente(s)`;
     patchElement(statusLabel, { text: pendingText });
-
-    const shouldExpand = pendingCount > 0;
-    if (shouldExpand) {
-      setContactGroupExpandedState(group, true, { overrideUserCollapsed: true });
-    } else if (group.dataset.userCollapsed !== 'false') {
-      setContactGroupExpandedState(group, false, { overrideUserCollapsed: true });
-    }
   }
 
   function updateClientContactHistoryUI(client, contactId) {
@@ -3691,19 +3762,13 @@ let isSavingQuickSale = false;
   clientContactHistoryContainer?.addEventListener('scroll', () => {
     state.detail.contacts.scrollTop = clientContactHistoryContainer.scrollTop;
   });
-  clientCardToggleButtons?.forEach((button) => {
-    attachButtonHandler(button, () => {
-      const card = button.closest('.client-card[data-card-id]');
-      const cardId = card?.dataset.cardId ?? '';
-      if (!cardId) {
-        return;
-      }
-      const expanded = button.getAttribute('aria-expanded') === 'true';
-      setClientCardExpanded(cardId, !expanded);
-    });
-  });
-  clientContactDetailInput?.addEventListener('input', handleContactDetailInput);
-  clientContactDetailForm?.addEventListener('submit', handleContactDetailSubmit);
+  attachButtonHandler(clientContactDetailAddButton, openContactDetailModal);
+  attachButtonHandler(clientContactDetailCloseButton, closeContactDetailModal);
+  attachButtonHandler(clientContactDetailCancelButton, closeContactDetailModal);
+  attachButtonHandler(clientContactDetailSaveButton, handleContactDetailModalSaveClick);
+  clientContactDetailTextarea?.addEventListener('input', handleContactDetailModalInput);
+  clientContactDetailForm?.addEventListener('submit', handleContactDetailModalSubmit);
+  clientContactDetailOverlay?.addEventListener('click', handleContactDetailOverlayClick);
   attachButtonHandler(clientQuickSaleButton, openQuickSaleModal);
   attachButtonHandler(clientQuickSaleCloseButton, closeQuickSaleModal);
   attachButtonHandler(clientQuickSaleCancelButton, closeQuickSaleModal);
@@ -3780,7 +3845,7 @@ let isSavingQuickSale = false;
     loadClientsFromApi();
   }
 
-  applyCardCollapseState({ collapseAll: true });
+  applyCardCollapseState();
   applyColumnWidths();
   initializeColumnResizers();
   updateSortIndicators();

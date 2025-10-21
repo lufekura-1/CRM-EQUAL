@@ -57,11 +57,24 @@ const clientPurchasesContainer = clientDetailElement?.querySelector('[data-role=
 const clientContactHistoryContainer = clientDetailElement?.querySelector('[data-role="client-contact-history"]');
 const clientContactDetailsContainer = clientDetailElement?.querySelector('[data-role="client-contact-details"]');
 const clientCardElements = clientDetailElement?.querySelectorAll('.client-card[data-card-id]');
-const clientCardToggleButtons = clientDetailElement?.querySelectorAll('[data-role="client-card-toggle"]');
 const clientContactDetailsList = clientContactDetailsContainer?.querySelector('[data-role="client-contact-details-list"]');
-const clientContactDetailForm = clientContactDetailsContainer?.querySelector('[data-role="client-contact-detail-form"]');
-const clientContactDetailInput = clientContactDetailsContainer?.querySelector('[data-role="client-contact-detail-input"]');
-const clientContactDetailSubmit = clientContactDetailsContainer?.querySelector('[data-role="client-contact-detail-submit"]');
+const clientContactDetailAddButton = clientContactDetailsContainer?.querySelector(
+  '[data-role="client-contact-detail-add"]',
+);
+const clientContactDetailOverlay = document.querySelector('[data-modal="client-contact-detail"]');
+const clientContactDetailForm = clientContactDetailOverlay?.querySelector('[data-role="client-contact-detail-form"]');
+const clientContactDetailTextarea = clientContactDetailOverlay?.querySelector(
+  '[data-role="client-contact-detail-textarea"]',
+);
+const clientContactDetailCloseButton = clientContactDetailOverlay?.querySelector(
+  '[data-action="close-client-contact-detail"]',
+);
+const clientContactDetailCancelButton = clientContactDetailOverlay?.querySelector(
+  '[data-action="cancel-client-contact-detail"]',
+);
+const clientContactDetailSaveButton = clientContactDetailOverlay?.querySelector(
+  '[data-action="save-client-contact-detail"]',
+);
 const clientInterestsContainer = clientDetailElement?.querySelector('[data-role="client-interests"]');
 const clientInterestsEditButton = document.querySelector('[data-role="client-interests-edit"]');
 const clientFormElement = document.querySelector('#client-registration-form');
