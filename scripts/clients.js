@@ -239,6 +239,12 @@ let isSavingQuickSale = false;
         focusedContactId: null,
         scrollTop: 0,
       },
+      cards: {
+        expanded: Object.create(null),
+      },
+      contactDetails: {
+        manualNotes: Object.create(null),
+      },
     },
     currentClientId: null,
   };
@@ -673,17 +679,34 @@ let isSavingQuickSale = false;
     return Math.max(age, 0);
   }
 
-  function formatFullDate(isoString) {
-    if (!isoString) {
+  function formatFullDate(value) {
+    if (!value) {
       return '';
     }
-    const date = new Date(`${isoString}T00:00:00`);
-    if (Number.isNaN(date.getTime())) {
+
+    const stringValue = String(value).trim();
+    if (!stringValue) {
       return '';
     }
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
+
+    const datePart = stringValue.includes('T') ? stringValue.split('T')[0] : stringValue;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+      const date = new Date(`${datePart}T00:00:00`);
+      if (!Number.isNaN(date.getTime())) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      }
+    }
+
+    const fallbackDate = new Date(stringValue);
+    if (Number.isNaN(fallbackDate.getTime())) {
+      return '';
+    }
+    const day = String(fallbackDate.getDate()).padStart(2, '0');
+    const month = String(fallbackDate.getMonth() + 1).padStart(2, '0');
+    const year = fallbackDate.getFullYear();
     return `${day}/${month}/${year}`;
   }
 
@@ -695,6 +718,165 @@ let isSavingQuickSale = false;
       return 'Contato de 1 mês';
     }
     return `Contato de ${months} meses`;
+  }
+
+  function isContactPending(contact) {
+    if (!contact) {
+      return false;
+    }
+    const statusKey = contact.status || (contact.completed ? 'completed' : 'pending');
+    return statusKey !== 'completed';
+  }
+
+  function createPendingStatusDot() {
+    const dot = document.createElement('span');
+    dot.className = 'status-dot status-dot--pending';
+    dot.setAttribute('aria-hidden', 'true');
+    return dot;
+  }
+
+  function collectPendingPurchaseIds(client) {
+    const pendingIds = new Set();
+    if (!client) {
+      return pendingIds;
+    }
+
+    const purchases = Array.isArray(client.purchases) ? client.purchases : [];
+    purchases.forEach((purchase) => {
+      const purchaseId = purchase?.id ? String(purchase.id) : '';
+      if (Array.isArray(purchase?.contacts)) {
+        purchase.contacts.forEach((contact) => {
+          if (!isContactPending(contact)) {
+            return;
+          }
+          if (contact?.purchaseId) {
+            pendingIds.add(String(contact.purchaseId));
+          } else if (purchaseId) {
+            pendingIds.add(purchaseId);
+          }
+        });
+      }
+    });
+
+    const fallbackContacts = Array.isArray(client.contacts) ? client.contacts : [];
+    fallbackContacts.forEach((contact) => {
+      if (isContactPending(contact) && contact?.purchaseId) {
+        pendingIds.add(String(contact.purchaseId));
+      }
+    });
+
+    return pendingIds;
+  }
+
+  function getManualContactNotes(clientId) {
+    if (!clientId) {
+      return [];
+    }
+    if (!state.detail.contactDetails?.manualNotes) {
+      state.detail.contactDetails.manualNotes = Object.create(null);
+    }
+    const key = String(clientId);
+    const notes = state.detail.contactDetails.manualNotes[key];
+    return Array.isArray(notes) ? notes.slice() : [];
+  }
+
+  function addManualContactNote(clientId, text) {
+    if (!clientId || !text) {
+      return null;
+    }
+    if (!state.detail.contactDetails?.manualNotes) {
+      state.detail.contactDetails.manualNotes = Object.create(null);
+    }
+    const key = String(clientId);
+    if (!Array.isArray(state.detail.contactDetails.manualNotes[key])) {
+      state.detail.contactDetails.manualNotes[key] = [];
+    }
+    const entry = {
+      id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      detail: text,
+      createdAt: new Date().toISOString(),
+    };
+    state.detail.contactDetails.manualNotes[key].unshift(entry);
+    if (state.detail.contactDetails.manualNotes[key].length > 50) {
+      state.detail.contactDetails.manualNotes[key].length = 50;
+    }
+    return entry;
+  }
+
+  function findClientCardById(cardId) {
+    if (!cardId || !clientCardElements) {
+      return null;
+    }
+    return (
+      Array.from(clientCardElements).find(
+        (element) => element instanceof HTMLElement && element.dataset.cardId === cardId,
+      ) || null
+    );
+  }
+
+  function applyCardCollapseState({ collapseAll = false } = {}) {
+    if (!clientCardElements) {
+      return;
+    }
+    const expandedMap = state.detail.cards?.expanded || Object.create(null);
+    Array.from(clientCardElements).forEach((card) => {
+      if (!(card instanceof HTMLElement)) {
+        return;
+      }
+      const cardId = card.dataset.cardId || '';
+      const shouldExpand = collapseAll ? false : Boolean(expandedMap[cardId]);
+      const toggle = card.querySelector('[data-role="client-card-toggle"]');
+      const content = card.querySelector('.client-card__content');
+      card.classList.toggle('is-collapsed', !shouldExpand);
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', shouldExpand ? 'true' : 'false');
+      }
+      if (content) {
+        content.hidden = !shouldExpand;
+      }
+    });
+  }
+
+  function setClientCardExpanded(cardId, expanded) {
+    if (!cardId) {
+      return;
+    }
+    if (!state.detail.cards?.expanded) {
+      state.detail.cards.expanded = Object.create(null);
+    }
+    if (expanded) {
+      state.detail.cards.expanded[cardId] = true;
+    } else {
+      delete state.detail.cards.expanded[cardId];
+    }
+
+    const card = findClientCardById(cardId);
+    if (!card) {
+      return;
+    }
+    const toggle = card.querySelector('[data-role="client-card-toggle"]');
+    const content = card.querySelector('.client-card__content');
+    card.classList.toggle('is-collapsed', !expanded);
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+    if (content) {
+      content.hidden = !expanded;
+    }
+  }
+
+  function updateContactDetailFormState(client) {
+    const hasClient = Boolean(client?.id);
+    if (clientContactDetailInput) {
+      clientContactDetailInput.disabled = !hasClient;
+      if (!hasClient) {
+        clientContactDetailInput.value = '';
+      }
+    }
+    if (clientContactDetailSubmit) {
+      const text = clientContactDetailInput?.value ?? '';
+      clientContactDetailSubmit.disabled = !hasClient || !text.trim();
+    }
   }
 
   function formatCurrencyBRL(value) {
@@ -1220,6 +1402,9 @@ let isSavingQuickSale = false;
     state.detail.purchases.scrollTop = 0;
     state.detail.contacts.focusedContactId = null;
     state.detail.contacts.scrollTop = 0;
+    state.detail.cards.expanded = Object.create(null);
+    applyCardCollapseState({ collapseAll: true });
+    updateContactDetailFormState(null);
   }
 
   function renderClientDetail(client) {
@@ -1254,16 +1439,62 @@ let isSavingQuickSale = false;
         return;
       }
       const value = detailMap[key] ?? '-';
+      if (key === 'gender') {
+        updateGenderField(field, client, value);
+        return;
+      }
       field.textContent = value;
       if (key === 'state') {
         field.dataset.state = client.state || '';
       }
     });
 
+    updateContactDetailFormState(client);
     renderClientInterests(client);
     renderPurchaseHistory(client);
     renderClientContactDetails(client);
     renderClientContacts(client);
+    applyCardCollapseState();
+  }
+
+  function updateGenderField(field, client, label) {
+    if (!(field instanceof HTMLElement)) {
+      return;
+    }
+
+    field.innerHTML = '';
+    field.classList.remove('client-gender');
+
+    const text = typeof label === 'string' && label.trim() ? label : '-';
+    const genderCode = client.gender === 'F' || client.gender === 'M' ? client.gender : '';
+
+    if (!genderCode) {
+      field.textContent = text;
+      return;
+    }
+
+    const badge = document.createElement('span');
+    badge.className = 'client-gender-badge';
+
+    if (genderCode === 'F') {
+      badge.classList.add('client-gender-badge--female');
+      badge.textContent = '♀';
+    } else if (genderCode === 'M') {
+      badge.classList.add('client-gender-badge--male');
+      badge.textContent = '♂';
+    }
+
+    if (!badge.textContent) {
+      field.textContent = text;
+      return;
+    }
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'client-gender-text';
+    textSpan.textContent = text;
+
+    field.classList.add('client-gender');
+    field.append(badge, textSpan);
   }
 
   function createMetaItem(label, value) {
@@ -1342,47 +1573,128 @@ let isSavingQuickSale = false;
   }
 
   function renderClientContactDetails(client) {
-    if (!clientContactDetailsContainer) {
+    if (!clientContactDetailsList) {
       return;
     }
 
-    clientContactDetailsContainer.innerHTML = '';
+    clientContactDetailsList.innerHTML = '';
 
+    const entryMap = new Map();
     const entries = [];
+
+    function pushEntry({ key, title, subtitle = '', detail, sortValue = 0, purchaseId = '', source = '' }) {
+      const text = detail === undefined || detail === null ? '' : String(detail).trim();
+      if (!text) {
+        return;
+      }
+      const normalizedKey = key || `${source}:${purchaseId}:${title}:${text}`;
+      if (entryMap.has(normalizedKey)) {
+        return;
+      }
+      entryMap.set(normalizedKey, true);
+      entries.push({
+        title: title || 'Data não informada',
+        subtitle: subtitle || '',
+        detail: text,
+        sortValue: Number.isFinite(sortValue) ? sortValue : 0,
+        purchaseId,
+      });
+    }
+
     if (Array.isArray(client?.purchases)) {
       client.purchases.forEach((purchase) => {
+        const purchaseId = purchase?.id ? String(purchase.id) : '';
         const rawDetail =
           purchase?.detail ??
           purchase?.purchaseDetail ??
           purchase?.purchase_detail ??
           purchase?.detalheCompra ??
           (purchase ? purchase['detalhe_compra'] : undefined);
-        const text = rawDetail === undefined || rawDetail === null ? '' : String(rawDetail).trim();
-        if (!text) {
-          return;
-        }
-        entries.push({
-          purchaseId: purchase?.id ? String(purchase.id) : '',
-          date: purchase?.date ?? '',
-          detail: text,
+        const purchaseSort = purchase?.date
+          ? new Date(`${purchase.date}T00:00:00`).getTime()
+          : 0;
+        pushEntry({
+          key: `purchase:${purchaseId || purchase?.date || rawDetail || ''}`,
+          title: formatFullDate(purchase?.date) || 'Data não informada',
+          subtitle: 'Detalhe da compra',
+          detail: rawDetail,
+          sortValue: purchaseSort,
+          purchaseId,
+          source: 'purchase',
         });
+
+        if (Array.isArray(purchase?.contacts)) {
+          purchase.contacts.forEach((contact) => {
+            const contactDetail =
+              contact?.purchaseDetail ??
+              contact?.detalheCompra ??
+              contact?.detalhe_compra ??
+              rawDetail;
+            const contactDate = contact?.contactDate || purchase?.date || '';
+            const contactSort = contactDate
+              ? new Date(`${contactDate}T00:00:00`).getTime()
+              : purchaseSort;
+            pushEntry({
+              key: contact?.id
+                ? `contact:${contact.id}`
+                : `contact:${purchaseId}:${contactDate}:${contactDetail || ''}`,
+              title: formatFullDate(contactDate) || 'Contato sem data',
+              subtitle: formatContactTitle(contact?.monthsOffset),
+              detail: contactDetail,
+              sortValue: contactSort,
+              purchaseId,
+              source: 'contact',
+            });
+          });
+        }
       });
     }
+
+    const fallbackContacts = Array.isArray(client?.contacts) ? client.contacts : [];
+    fallbackContacts.forEach((contact) => {
+      const contactDetail =
+        contact?.purchaseDetail ?? contact?.detalheCompra ?? contact?.detalhe_compra ?? '';
+      const contactDate = contact?.contactDate || contact?.purchaseDate || '';
+      const sortTimestamp = contactDate
+        ? new Date(`${contactDate}T00:00:00`).getTime()
+        : 0;
+      pushEntry({
+        key: contact?.id
+          ? `contact:${contact.id}`
+          : `contact:${contact?.purchaseId || ''}:${contactDate}:${contactDetail}`,
+        title: formatFullDate(contactDate) || 'Contato sem data',
+        subtitle: formatContactTitle(contact?.monthsOffset),
+        detail: contactDetail,
+        sortValue: sortTimestamp,
+        purchaseId: contact?.purchaseId ? String(contact.purchaseId) : '',
+        source: 'contact',
+      });
+    });
+
+    const manualNotes = client?.id ? getManualContactNotes(client.id) : [];
+    manualNotes.forEach((note) => {
+      const createdAt = note?.createdAt ? new Date(note.createdAt).getTime() : Date.now();
+      pushEntry({
+        key: note?.id ? `manual:${note.id}` : `manual:${createdAt}:${note?.detail || ''}`,
+        title: formatFullDate(note?.createdAt) || 'Anotação registrada',
+        subtitle: 'Detalhe avulso',
+        detail: note?.detail ?? '',
+        sortValue: createdAt,
+        purchaseId: '',
+        source: 'manual',
+      });
+    });
 
     if (!entries.length) {
       const placeholder = document.createElement('div');
       placeholder.className = 'client-card__empty';
       placeholder.textContent = 'Nenhum detalhe cadastrado.';
-      clientContactDetailsContainer.appendChild(placeholder);
+      clientContactDetailsList.appendChild(placeholder);
       return;
     }
 
     entries
-      .sort((a, b) => {
-        const dateA = a.date ? new Date(`${a.date}T00:00:00`).getTime() : 0;
-        const dateB = b.date ? new Date(`${b.date}T00:00:00`).getTime() : 0;
-        return dateB - dateA;
-      })
+      .sort((a, b) => b.sortValue - a.sortValue)
       .forEach((entry) => {
         const item = document.createElement('div');
         item.className = 'client-contact-details__item';
@@ -1392,14 +1704,22 @@ let isSavingQuickSale = false;
 
         const title = document.createElement('h3');
         title.className = 'client-contact-details__title';
-        title.textContent = formatFullDate(entry.date) || 'Data não informada';
+        title.textContent = entry.title;
+        item.appendChild(title);
+
+        if (entry.subtitle) {
+          const subtitle = document.createElement('span');
+          subtitle.className = 'client-contact-details__subtitle';
+          subtitle.textContent = entry.subtitle;
+          item.appendChild(subtitle);
+        }
 
         const description = document.createElement('p');
         description.className = 'client-contact-details__description';
         description.textContent = entry.detail;
+        item.appendChild(description);
 
-        item.append(title, description);
-        clientContactDetailsContainer.appendChild(item);
+        clientContactDetailsList.appendChild(item);
       });
   }
 
@@ -1426,6 +1746,7 @@ let isSavingQuickSale = false;
     }
 
     const latestPurchase = getLatestPurchase(client);
+    const pendingPurchaseIds = collectPendingPurchaseIds(client);
 
     client.purchases
       .slice()
@@ -1449,10 +1770,21 @@ let isSavingQuickSale = false;
         toggle.type = 'button';
         toggle.className = 'client-purchase__toggle';
         toggle.dataset.purchaseId = purchase.id;
-        toggle.innerHTML = `
-          <span>${formatFullDate(purchase.date)}</span>
-          <span>${formatCurrencyBRL((Number(purchase.frameValue) || 0) + (Number(purchase.lensValue) || 0))}</span>
-        `;
+
+        const dateWrapper = document.createElement('span');
+        const shouldHighlight = purchaseId && pendingPurchaseIds.has(purchaseId);
+        if (shouldHighlight) {
+          dateWrapper.appendChild(createPendingStatusDot());
+        }
+        const dateLabel = document.createElement('span');
+        dateLabel.textContent = formatFullDate(purchase.date) || 'Data não informada';
+        dateWrapper.appendChild(dateLabel);
+
+        const valueWrapper = document.createElement('span');
+        const totalValue = (Number(purchase.frameValue) || 0) + (Number(purchase.lensValue) || 0);
+        valueWrapper.textContent = formatCurrencyBRL(totalValue);
+
+        toggle.append(dateWrapper, valueWrapper);
 
         const details = document.createElement('div');
         details.className = 'client-purchase__details';
@@ -1649,7 +1981,7 @@ let isSavingQuickSale = false;
           group.dataset.purchaseId = purchaseId;
         }
 
-        const pendingCount = purchase.contacts.filter((contact) => contact.status !== 'completed').length;
+        const pendingCount = purchase.contacts.filter((contact) => isContactPending(contact)).length;
         const displayDate =
           formatFullDate(purchase.date) || formatFullDate(purchase.contacts[0]?.purchaseDate) || 'Contatos';
         const shouldExpand = pendingCount > 0;
@@ -1661,6 +1993,10 @@ let isSavingQuickSale = false;
         const headerTitle = document.createElement('div');
         headerTitle.className = 'client-contact-history__header-title';
         headerTitle.textContent = displayDate;
+
+        if (pendingCount > 0) {
+          headerTitle.prepend(createPendingStatusDot());
+        }
 
         const headerStatus = document.createElement('div');
         headerStatus.className = 'client-contact-history__header-status';
@@ -1699,6 +2035,9 @@ let isSavingQuickSale = false;
             const contactDate = document.createElement('span');
             contactDate.className = 'client-contact-history__contact-date';
             contactDate.textContent = formatFullDate(contact.contactDate);
+            if (isContactPending(contact)) {
+              contactDate.prepend(createPendingStatusDot());
+            }
 
             const contactTitle = document.createElement('span');
             contactTitle.className = 'client-contact-history__contact-title';
@@ -1780,6 +2119,32 @@ let isSavingQuickSale = false;
       }
     }
     state.detail.contacts.focusedContactId = null;
+  }
+
+  function handleContactDetailInput() {
+    const client = getCurrentClientData();
+    updateContactDetailFormState(client);
+  }
+
+  function handleContactDetailSubmit(event) {
+    event.preventDefault();
+    const client = getCurrentClientData();
+    if (!client) {
+      return;
+    }
+    const text = clientContactDetailInput?.value ?? '';
+    const trimmed = text.trim();
+    if (!trimmed) {
+      updateContactDetailFormState(client);
+      return;
+    }
+    addManualContactNote(client.id, trimmed);
+    if (clientContactDetailInput) {
+      clientContactDetailInput.value = '';
+    }
+    updateContactDetailFormState(client);
+    renderClientContactDetails(client);
+    setClientCardExpanded('contact-details', true);
   }
 
   function updateQuickSaleButtonState(client) {
@@ -3326,6 +3691,19 @@ let isSavingQuickSale = false;
   clientContactHistoryContainer?.addEventListener('scroll', () => {
     state.detail.contacts.scrollTop = clientContactHistoryContainer.scrollTop;
   });
+  clientCardToggleButtons?.forEach((button) => {
+    attachButtonHandler(button, () => {
+      const card = button.closest('.client-card[data-card-id]');
+      const cardId = card?.dataset.cardId ?? '';
+      if (!cardId) {
+        return;
+      }
+      const expanded = button.getAttribute('aria-expanded') === 'true';
+      setClientCardExpanded(cardId, !expanded);
+    });
+  });
+  clientContactDetailInput?.addEventListener('input', handleContactDetailInput);
+  clientContactDetailForm?.addEventListener('submit', handleContactDetailSubmit);
   attachButtonHandler(clientQuickSaleButton, openQuickSaleModal);
   attachButtonHandler(clientQuickSaleCloseButton, closeQuickSaleModal);
   attachButtonHandler(clientQuickSaleCancelButton, closeQuickSaleModal);
@@ -3402,6 +3780,7 @@ let isSavingQuickSale = false;
     loadClientsFromApi();
   }
 
+  applyCardCollapseState({ collapseAll: true });
   applyColumnWidths();
   initializeColumnResizers();
   updateSortIndicators();

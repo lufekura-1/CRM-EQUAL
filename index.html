@@ -549,11 +549,23 @@
         <section class="content__page" data-page="cliente-detalhe" data-label="Página do cliente">
           <div class="client-detail" data-role="client-detail">
             <div class="client-detail__cards">
-              <article class="client-card">
+              <article class="client-card" data-card-id="personal">
                 <header class="client-card__header">
-                  <h2 class="client-card__title">Dados pessoais</h2>
+                  <h2 class="client-card__title">
+                    <button
+                      class="client-card__collapse"
+                      type="button"
+                      data-role="client-card-toggle"
+                      aria-expanded="false"
+                      aria-controls="client-card-content-personal"
+                    >
+                      <span class="client-card__toggle-icon" aria-hidden="true"></span>
+                      <span class="client-card__title-text">Dados pessoais</span>
+                    </button>
+                  </h2>
                 </header>
-                <dl class="client-card__list">
+                <div class="client-card__content" id="client-card-content-personal" data-role="client-card-content">
+                  <dl class="client-card__list">
                   <div class="client-card__item">
                     <dt>Nome</dt>
                     <dd data-client-field="name">Selecione um cliente</dd>
@@ -592,11 +604,23 @@
                     <dt>Aceita contato</dt>
                     <dd data-client-field="acceptsContact">-</dd>
                   </div>
-                </dl>
+                  </dl>
+                </div>
               </article>
-              <article class="client-card client-card--interests">
+              <article class="client-card client-card--interests" data-card-id="interests">
                 <header class="client-card__header">
-                  <h2 class="client-card__title">Interesses</h2>
+                  <h2 class="client-card__title">
+                    <button
+                      class="client-card__collapse"
+                      type="button"
+                      data-role="client-card-toggle"
+                      aria-expanded="false"
+                      aria-controls="client-card-content-interests"
+                    >
+                      <span class="client-card__toggle-icon" aria-hidden="true"></span>
+                      <span class="client-card__title-text">Interesses</span>
+                    </button>
+                  </h2>
                   <div class="client-card__actions">
                     <button
                       class="client-card__action-button client-card__action-button--edit"
@@ -612,13 +636,30 @@
                     </button>
                   </div>
                 </header>
-                <div class="client-interests">
-                  <div class="client-interests__list" data-role="client-interests"></div>
+                <div
+                  class="client-card__content"
+                  id="client-card-content-interests"
+                  data-role="client-card-content"
+                >
+                  <div class="client-interests">
+                    <div class="client-interests__list" data-role="client-interests"></div>
+                  </div>
                 </div>
               </article>
-              <article class="client-card client-card--purchases">
+              <article class="client-card client-card--purchases" data-card-id="purchases">
                 <header class="client-card__header">
-                  <h2 class="client-card__title">Histórico de compras</h2>
+                  <h2 class="client-card__title">
+                    <button
+                      class="client-card__collapse"
+                      type="button"
+                      data-role="client-card-toggle"
+                      aria-expanded="false"
+                      aria-controls="client-card-content-purchases"
+                    >
+                      <span class="client-card__toggle-icon" aria-hidden="true"></span>
+                      <span class="client-card__title-text">Histórico de compras</span>
+                    </button>
+                  </h2>
                   <div class="client-card__actions">
                     <button
                       class="client-card__action-button client-card__action-button--add"
@@ -632,22 +673,85 @@
                     </button>
                   </div>
                 </header>
-                <div class="client-purchases" data-role="client-purchases"></div>
-              </article>
-              <article class="client-card client-card--contact-details">
-                <header class="client-card__header">
-                  <h2 class="client-card__title">Detalhes do contato</h2>
-                </header>
-                <div class="client-contact-details" data-role="client-contact-details">
-                  <div class="client-card__empty">Nenhum detalhe cadastrado.</div>
+                <div
+                  class="client-card__content"
+                  id="client-card-content-purchases"
+                  data-role="client-card-content"
+                >
+                  <div class="client-purchases" data-role="client-purchases"></div>
                 </div>
               </article>
-              <article class="client-card client-card--contact-history">
+              <article class="client-card client-card--contact-details" data-card-id="contact-details">
                 <header class="client-card__header">
-                  <h2 class="client-card__title">Histórico de contato</h2>
+                  <h2 class="client-card__title">
+                    <button
+                      class="client-card__collapse"
+                      type="button"
+                      data-role="client-card-toggle"
+                      aria-expanded="false"
+                      aria-controls="client-card-content-contact-details"
+                    >
+                      <span class="client-card__toggle-icon" aria-hidden="true"></span>
+                      <span class="client-card__title-text">Detalhes do contato</span>
+                    </button>
+                  </h2>
                 </header>
-                <div class="client-contact-history" data-role="client-contact-history">
-                  <div class="client-card__empty">Nenhum contato registrado.</div>
+                <div
+                  class="client-card__content"
+                  id="client-card-content-contact-details"
+                  data-role="client-card-content"
+                >
+                  <div class="client-contact-details" data-role="client-contact-details">
+                    <form class="client-contact-details__form" data-role="client-contact-detail-form">
+                      <label class="client-contact-details__label" for="client-contact-detail-input"
+                        >Adicionar detalhe avulso</label
+                      >
+                      <textarea
+                        id="client-contact-detail-input"
+                        class="client-contact-details__textarea"
+                        data-role="client-contact-detail-input"
+                        rows="3"
+                        placeholder="Descreva um detalhe importante sobre o cliente"
+                        disabled
+                      ></textarea>
+                      <button
+                        class="client-contact-details__submit"
+                        type="submit"
+                        data-role="client-contact-detail-submit"
+                        disabled
+                      >
+                        Adicionar detalhe
+                      </button>
+                    </form>
+                    <div class="client-contact-details__list" data-role="client-contact-details-list">
+                      <div class="client-card__empty">Nenhum detalhe cadastrado.</div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article class="client-card client-card--contact-history" data-card-id="contact-history">
+                <header class="client-card__header">
+                  <h2 class="client-card__title">
+                    <button
+                      class="client-card__collapse"
+                      type="button"
+                      data-role="client-card-toggle"
+                      aria-expanded="false"
+                      aria-controls="client-card-content-contact-history"
+                    >
+                      <span class="client-card__toggle-icon" aria-hidden="true"></span>
+                      <span class="client-card__title-text">Histórico de contato</span>
+                    </button>
+                  </h2>
+                </header>
+                <div
+                  class="client-card__content"
+                  id="client-card-content-contact-history"
+                  data-role="client-card-content"
+                >
+                  <div class="client-contact-history" data-role="client-contact-history">
+                    <div class="client-card__empty">Nenhum contato registrado.</div>
+                  </div>
                 </div>
               </article>
             </div>

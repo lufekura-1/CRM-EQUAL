@@ -56,6 +56,12 @@ const clientDetailFields = clientDetailElement?.querySelectorAll('[data-client-f
 const clientPurchasesContainer = clientDetailElement?.querySelector('[data-role="client-purchases"]');
 const clientContactHistoryContainer = clientDetailElement?.querySelector('[data-role="client-contact-history"]');
 const clientContactDetailsContainer = clientDetailElement?.querySelector('[data-role="client-contact-details"]');
+const clientCardElements = clientDetailElement?.querySelectorAll('.client-card[data-card-id]');
+const clientCardToggleButtons = clientDetailElement?.querySelectorAll('[data-role="client-card-toggle"]');
+const clientContactDetailsList = clientContactDetailsContainer?.querySelector('[data-role="client-contact-details-list"]');
+const clientContactDetailForm = clientContactDetailsContainer?.querySelector('[data-role="client-contact-detail-form"]');
+const clientContactDetailInput = clientContactDetailsContainer?.querySelector('[data-role="client-contact-detail-input"]');
+const clientContactDetailSubmit = clientContactDetailsContainer?.querySelector('[data-role="client-contact-detail-submit"]');
 const clientInterestsContainer = clientDetailElement?.querySelector('[data-role="client-interests"]');
 const clientInterestsEditButton = document.querySelector('[data-role="client-interests-edit"]');
 const clientFormElement = document.querySelector('#client-registration-form');
