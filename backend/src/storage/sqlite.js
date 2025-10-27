@@ -1478,6 +1478,25 @@ function listEventos() {
   return listEventosStmt.all();
 }
 
+function getCliente(id) {
+  const clienteId = Number(id);
+  if (Number.isNaN(clienteId)) {
+    return null;
+  }
+
+  return getClienteWithPurchases(clienteId);
+}
+
+function getEvento(id) {
+  const eventoId = Number(id);
+  if (Number.isNaN(eventoId)) {
+    return null;
+  }
+
+  const row = getEventoStmt.get(eventoId);
+  return row || null;
+}
+
 function normalizeCompletedFlag(value, fallback = 0) {
   if (value === undefined || value === null) {
     return fallback ? 1 : 0;
@@ -1573,10 +1592,12 @@ function deleteEvento(id) {
 
 module.exports = {
   listClientes,
+  getCliente,
   createCliente,
   updateCliente,
   deleteCliente,
   listEventos,
+  getEvento,
   createEvento,
   updateEvento,
   deleteEvento,

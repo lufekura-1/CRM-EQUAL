@@ -152,6 +152,19 @@
       requestHeaders.set('Content-Type', 'application/json');
     }
 
+    if (!requestHeaders.has('X-User-Id')) {
+      try {
+        if (typeof window.getCurrentUserId === 'function') {
+          const currentUserId = window.getCurrentUserId();
+          if (currentUserId) {
+            requestHeaders.set('X-User-Id', currentUserId);
+          }
+        }
+      } catch (error) {
+        console.warn('[api.request] Não foi possível determinar o usuário atual.', error);
+      }
+    }
+
     const fetchOptions = {
       method,
       headers: requestHeaders,
@@ -308,6 +321,19 @@
       }
     }
 
+    if (result.userId === undefined) {
+      try {
+        if (typeof window.getCurrentUserId === 'function') {
+          const currentUserId = window.getCurrentUserId();
+          if (currentUserId) {
+            result.userId = currentUserId;
+          }
+        }
+      } catch (error) {
+        console.warn('[api.normalizeEventPayload] Falha ao obter usuário atual.', error);
+      }
+    }
+
     if (payload.completed !== undefined) {
       result.completed = Boolean(payload.completed);
     }
@@ -460,6 +486,19 @@
                                 : payload.responsible;
     if (userIdValue !== undefined) {
       result.userId = normalizeNullable(userIdValue);
+    }
+
+    if (result.userId === undefined) {
+      try {
+        if (typeof window.getCurrentUserId === 'function') {
+          const currentUserId = window.getCurrentUserId();
+          if (currentUserId) {
+            result.userId = currentUserId;
+          }
+        }
+      } catch (error) {
+        console.warn('[api.normalizeClientPayload] Falha ao obter usuário atual.', error);
+      }
     }
 
     if (Array.isArray(payload.interests)) {

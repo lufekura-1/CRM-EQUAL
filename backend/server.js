@@ -3,6 +3,7 @@ const cors = require('cors');
 const { z, ZodError } = require('zod');
 const storage = require('./src/storage');
 const { PORT, STORAGE } = require('./src/config/env');
+const { DEFAULT_USER_ID, findUserById, normalizeUserId } = require('./src/config/users');
 
 const app = express();
 
@@ -28,6 +29,134 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 // --- FIM DO BLOCO ---
+
+
+const USER_ID_KEYS = [
+  'userId',
+  'user_id',
+  'usuarioId',
+  'usuario_id',
+  'user',
+  'usuario',
+  'ownerId',
+  'owner_id',
+  'owner',
+  'responsavelId',
+  'responsavel_id',
+  'responsavel',
+  'responsibleId',
+  'responsible_id',
+  'responsible',
+  'assigned_user_id',
+  'assigned_user',
+  'assignedUserId',
+  'assignedUser',
+  'responsible_user_id',
+  'responsibleUserId',
+  'responsibleUser',
+];
+
+function extractUserIdCandidates(req) {
+  const candidates = [];
+  const headerNames = ['x-user-id', 'x-user', 'x-usuario-id'];
+  headerNames.forEach((headerName) => {
+    const value = req.get(headerName);
+    if (value !== undefined && value !== null) {
+      candidates.push(value);
+    }
+  });
+
+  const query = req.query && typeof req.query === 'object' ? req.query : {};
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+
+  USER_ID_KEYS.forEach((key) => {
+    if (query[key] !== undefined) {
+      candidates.push(query[key]);
+    }
+  });
+
+  USER_ID_KEYS.forEach((key) => {
+    if (body[key] !== undefined) {
+      candidates.push(body[key]);
+    }
+  });
+
+  return candidates;
+}
+
+function requireRequestUser(req, res) {
+  const candidates = extractUserIdCandidates(req);
+  const hasProvidedCandidate = candidates.some((candidate) => {
+    if (candidate === undefined || candidate === null) {
+      return false;
+    }
+    return String(candidate).trim().length > 0;
+  });
+
+  if (!hasProvidedCandidate) {
+    res.status(400).json({ error: 'Usuário não informado. Envie o cabeçalho X-User-Id.' });
+    return null;
+  }
+
+  for (const candidate of candidates) {
+    const normalized = normalizeUserId(candidate);
+    if (!normalized) {
+      continue;
+    }
+
+    const user = findUserById(normalized);
+    if (user) {
+      const context = { ...user, normalizedId: user.id };
+      req.currentUser = context;
+      return context;
+    }
+  }
+
+  res.status(403).json({ error: 'Usuário não autorizado.' });
+  return null;
+}
+
+function resolveEntityUserId(entity, fallbackId = DEFAULT_USER_ID) {
+  if (!entity || typeof entity !== 'object') {
+    return findUserById(fallbackId)?.id || DEFAULT_USER_ID;
+  }
+
+  for (const key of USER_ID_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(entity, key)) {
+      continue;
+    }
+
+    const normalized = normalizeUserId(entity[key]);
+    if (!normalized) {
+      continue;
+    }
+
+    const user = findUserById(normalized);
+    if (user) {
+      return user.id;
+    }
+  }
+
+  const normalizedFallback = normalizeUserId(fallbackId);
+  const fallbackUser = findUserById(normalizedFallback);
+  return fallbackUser ? fallbackUser.id : DEFAULT_USER_ID;
+}
+
+function assignUserId(entity, userId) {
+  if (!entity || typeof entity !== 'object') {
+    return entity;
+  }
+
+  const normalized = normalizeUserId(userId);
+  const resolvedUser = findUserById(normalized);
+  const finalUserId = resolvedUser ? resolvedUser.id : DEFAULT_USER_ID;
+
+  USER_ID_KEYS.forEach((key) => {
+    entity[key] = finalUserId;
+  });
+
+  return entity;
+}
 
 
 function toApiEvento(evento) {
@@ -587,6 +716,7 @@ function decorateContactResponse(contact) {
 
   const completed = Boolean(contact.completed);
   const statusInfo = resolveContactStatus(contact);
+  const contactUserId = resolveEntityUserId(contact);
 
   return {
     ...contact,
@@ -613,6 +743,23 @@ function decorateContactResponse(contact) {
     status: statusInfo.key,
     statusLabel: statusInfo.label,
     status_label: statusInfo.label,
+    userId: contactUserId ?? null,
+    user_id: contactUserId ?? null,
+    usuarioId: contactUserId ?? null,
+    usuario_id: contactUserId ?? null,
+    user: contactUserId ?? null,
+    usuario: contactUserId ?? null,
+    ownerId: contactUserId ?? null,
+    owner_id: contactUserId ?? null,
+    owner: contactUserId ?? null,
+    responsavelId: contactUserId ?? null,
+    responsavel_id: contactUserId ?? null,
+    responsavel: contactUserId ?? null,
+    responsibleId: contactUserId ?? null,
+    responsible_id: contactUserId ?? null,
+    responsible: contactUserId ?? null,
+    assigned_user_id: contactUserId ?? null,
+    assigned_user: contactUserId ?? null,
   };
 }
 
@@ -794,6 +941,11 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/clientes', async (req, res) => {
+  const currentUser = requireRequestUser(req, res);
+  if (!currentUser) {
+    return;
+  }
+
   try {
     const parsedQuery = clientesQuerySchema.safeParse(req.query);
     if (!parsedQuery.success) {
@@ -804,10 +956,21 @@ app.get('/api/clientes', async (req, res) => {
     const page = rawPage ?? 1;
 
     const clientes = await Promise.resolve(storage.listClientes());
+    const clientesForUser = clientes
+      .map((cliente) => {
+        const resolvedUserId = resolveEntityUserId(cliente);
+        if (resolvedUserId !== currentUser.id) {
+          return null;
+        }
+
+        assignUserId(cliente, resolvedUserId);
+        return cliente;
+      })
+      .filter(Boolean);
     const filteredClientes =
       q === undefined
-        ? clientes
-        : clientes.filter((cliente) => {
+        ? clientesForUser
+        : clientesForUser.filter((cliente) => {
             const normalizedQuery = q.toLowerCase();
             return ['nome', 'email', 'telefone'].some((field) => {
               const value = cliente[field];
@@ -841,6 +1004,11 @@ app.get('/api/clientes', async (req, res) => {
 });
 
 app.post('/api/clientes', async (req, res) => {
+  const currentUser = requireRequestUser(req, res);
+  if (!currentUser) {
+    return;
+  }
+
   try {
     const parsedBody = clienteCreateSchema.safeParse(normalizeClientRequestBody(req.body));
     if (!parsedBody.success) {
@@ -870,11 +1038,14 @@ app.post('/api/clientes', async (req, res) => {
         birthDate: birthDate ?? null,
         acceptsContact: normalizeAcceptsContactInput(acceptsContact),
         userType: userType ?? null,
+        userId: currentUser.id,
         interests: Array.isArray(interests) ? interests : [],
         purchase: purchase ?? null,
         purchases: purchases ?? undefined,
       })
     );
+
+    assignUserId(cliente, currentUser.id);
 
     res.status(201).json({ cliente: decorateClientResponse(cliente) });
   } catch (error) {
@@ -883,11 +1054,26 @@ app.post('/api/clientes', async (req, res) => {
 });
 
 app.put('/api/clientes/:id', async (req, res) => {
+  const currentUser = requireRequestUser(req, res);
+  if (!currentUser) {
+    return;
+  }
+
   try {
     const { id } = req.params;
     const parsedBody = clienteUpdateSchema.safeParse(normalizeClientRequestBody(req.body));
     if (!parsedBody.success) {
       return res.status(400).json({ error: extractValidationError(parsedBody.error) });
+    }
+
+    const existing = await Promise.resolve(storage.getCliente(id));
+    if (!existing) {
+      return res.status(404).json({ error: 'Cliente não encontrado.' });
+    }
+
+    const ownerId = resolveEntityUserId(existing);
+    if (ownerId !== currentUser.id) {
+      return res.status(403).json({ error: 'Você não tem permissão para alterar este cliente.' });
     }
 
     const {
@@ -916,12 +1102,15 @@ app.put('/api/clientes/:id', async (req, res) => {
         interests,
         purchase,
         purchases,
+        userId: currentUser.id,
       })
     );
 
     if (!updated) {
       return res.status(404).json({ error: 'Cliente não encontrado.' });
     }
+
+    assignUserId(updated, currentUser.id);
 
     res.json({ cliente: decorateClientResponse(updated) });
   } catch (error) {
@@ -930,6 +1119,11 @@ app.put('/api/clientes/:id', async (req, res) => {
 });
 
 app.patch('/api/contatos/:id', async (req, res) => {
+  const currentUser = requireRequestUser(req, res);
+  if (!currentUser) {
+    return;
+  }
+
   try {
     const { id } = req.params;
     const parsedBody = contatoUpdateSchema.safeParse(req.body);
@@ -945,6 +1139,13 @@ app.patch('/api/contatos/:id', async (req, res) => {
     }
 
     const { contact, cliente } = result;
+    const ownerId = resolveEntityUserId(cliente);
+    if (ownerId !== currentUser.id) {
+      return res.status(403).json({ error: 'Você não tem permissão para atualizar este contato.' });
+    }
+
+    assignUserId(cliente, ownerId);
+    assignUserId(contact, ownerId);
 
     res.json({
       contato: decorateContactResponse(contact),
@@ -956,8 +1157,23 @@ app.patch('/api/contatos/:id', async (req, res) => {
 });
 
 app.delete('/api/clientes/:id', async (req, res) => {
+  const currentUser = requireRequestUser(req, res);
+  if (!currentUser) {
+    return;
+  }
+
   try {
     const { id } = req.params;
+    const existing = await Promise.resolve(storage.getCliente(id));
+    if (!existing) {
+      return res.status(404).json({ error: 'Cliente não encontrado.' });
+    }
+
+    const ownerId = resolveEntityUserId(existing);
+    if (ownerId !== currentUser.id) {
+      return res.status(403).json({ error: 'Você não tem permissão para remover este cliente.' });
+    }
+
     const removed = await Promise.resolve(storage.deleteCliente(id));
 
     if (!removed) {
@@ -971,6 +1187,11 @@ app.delete('/api/clientes/:id', async (req, res) => {
 });
 
 app.get('/api/eventos', async (req, res) => {
+  const currentUser = requireRequestUser(req, res);
+  if (!currentUser) {
+    return;
+  }
+
   try {
     const parsedQuery = eventosQuerySchema.safeParse(req.query);
     if (!parsedQuery.success) {
@@ -986,7 +1207,57 @@ app.get('/api/eventos', async (req, res) => {
       Promise.resolve(storage.listContacts()),
       Promise.resolve(storage.listClientes()),
     ]);
-    const filteredEventos = eventos.filter((evento) => {
+
+    const clientesForUser = clientes
+      .map((cliente) => {
+        const resolvedUserId = resolveEntityUserId(cliente);
+        if (resolvedUserId !== currentUser.id) {
+          return null;
+        }
+
+        assignUserId(cliente, resolvedUserId);
+        return cliente;
+      })
+      .filter(Boolean);
+
+    const clientMap = new Map();
+    const purchaseMap = new Map();
+
+    clientesForUser.forEach((cliente) => {
+      const clientId = cliente?.id ?? cliente?.cliente_id;
+      if (clientId !== undefined && clientId !== null) {
+        const numericId = Number(clientId);
+        if (!Number.isNaN(numericId)) {
+          clientMap.set(numericId, cliente);
+        }
+      }
+
+      if (Array.isArray(cliente?.purchases)) {
+        cliente.purchases.forEach((purchase) => {
+          if (purchase?.id === undefined || purchase?.id === null) {
+            return;
+          }
+          const numericId = Number(purchase.id);
+          if (!Number.isNaN(numericId)) {
+            purchaseMap.set(numericId, { ...purchase, clientId: cliente?.id ?? cliente?.cliente_id ?? null });
+          }
+        });
+      }
+    });
+
+    const eventosForUser = eventos
+      .map((evento) => {
+        const resolvedUserId = resolveEntityUserId(evento);
+        if (resolvedUserId !== currentUser.id) {
+          return null;
+        }
+
+        assignUserId(evento, resolvedUserId);
+        return evento;
+      })
+      .filter(Boolean);
+
+    const filteredEventos = eventosForUser.filter((evento) => {
       if (!fromDate && !toDate) {
         return true;
       }
@@ -1007,7 +1278,25 @@ app.get('/api/eventos', async (req, res) => {
       return true;
     });
 
-    const filteredContatos = contatos.filter((contato) => {
+    const contatosForUser = contatos
+      .map((contato) => {
+        const clientId = contato?.clientId ?? contato?.cliente_id ?? null;
+        const numericClientId = clientId === null ? null : Number(clientId);
+        if (numericClientId === null || Number.isNaN(numericClientId)) {
+          return null;
+        }
+
+        if (!clientMap.has(numericClientId)) {
+          return null;
+        }
+
+        const normalizedContact = { ...contato, clientId: numericClientId };
+        assignUserId(normalizedContact, currentUser.id);
+        return normalizedContact;
+      })
+      .filter(Boolean);
+
+    const filteredContatos = contatosForUser.filter((contato) => {
       if (!fromDate && !toDate) {
         return true;
       }
@@ -1030,31 +1319,6 @@ app.get('/api/eventos', async (req, res) => {
       }
 
       return true;
-    });
-
-    const clientMap = new Map();
-    const purchaseMap = new Map();
-
-    clientes.forEach((cliente) => {
-      const clientId = cliente?.id ?? cliente?.cliente_id;
-      if (clientId !== undefined && clientId !== null) {
-        const numericId = Number(clientId);
-        if (!Number.isNaN(numericId)) {
-          clientMap.set(numericId, cliente);
-        }
-      }
-
-      if (Array.isArray(cliente?.purchases)) {
-        cliente.purchases.forEach((purchase) => {
-          if (purchase?.id === undefined || purchase?.id === null) {
-            return;
-          }
-          const numericId = Number(purchase.id);
-          if (!Number.isNaN(numericId)) {
-            purchaseMap.set(numericId, { ...purchase, clientId: cliente?.id ?? cliente?.cliente_id ?? null });
-          }
-        });
-      }
     });
 
     const contactEvents = filteredContatos
@@ -1091,7 +1355,7 @@ app.get('/api/eventos', async (req, res) => {
           purchase?.detalhe_compra ??
           null;
 
-        return {
+        const event = {
           id: `contact-${contato.id}`,
           date: contato.contactDate,
           title,
@@ -1114,6 +1378,9 @@ app.get('/api/eventos', async (req, res) => {
           purchaseLens,
           purchaseDetail,
         };
+
+        assignUserId(event, currentUser.id);
+        return event;
       });
 
     const decoratedEventos = filteredEventos.map((evento) => {
@@ -1136,6 +1403,11 @@ app.get('/api/eventos', async (req, res) => {
 });
 
 app.post('/api/eventos', async (req, res) => {
+  const currentUser = requireRequestUser(req, res);
+  if (!currentUser) {
+    return;
+  }
+
   try {
     const parsedBody = eventoCreateSchema.safeParse(req.body);
     if (!parsedBody.success) {
@@ -1143,14 +1415,39 @@ app.post('/api/eventos', async (req, res) => {
     }
 
     const { date, title, description, color, clientId, completed } = parsedBody.data;
+
+    if (clientId !== undefined && clientId !== null) {
+      const cliente = await Promise.resolve(storage.getCliente(clientId));
+      if (!cliente) {
+        return res.status(404).json({ error: 'Cliente não encontrado.' });
+      }
+
+      const ownerId = resolveEntityUserId(cliente);
+      if (ownerId !== currentUser.id) {
+        return res
+          .status(403)
+          .json({ error: 'Você não tem permissão para vincular este cliente ao evento.' });
+      }
+    }
+
     const created = await Promise.resolve(
       storage.createEvento(
         fromApiEvento(
-          { date, title, description: description ?? null, color: color ?? null, clientId: clientId ?? null, completed },
+          {
+            date,
+            title,
+            description: description ?? null,
+            color: color ?? null,
+            clientId: clientId ?? null,
+            completed,
+            userId: currentUser.id,
+          },
           { defaultNull: true }
         )
       )
     );
+
+    assignUserId(created, currentUser.id);
 
     res.status(201).json({ evento: toApiEvento(created) });
   } catch (error) {
@@ -1159,6 +1456,11 @@ app.post('/api/eventos', async (req, res) => {
 });
 
 app.put('/api/eventos/:id', async (req, res) => {
+  const currentUser = requireRequestUser(req, res);
+  if (!currentUser) {
+    return;
+  }
+
   const { id } = req.params;
 
   try {
@@ -1167,17 +1469,44 @@ app.put('/api/eventos/:id', async (req, res) => {
       return res.status(400).json({ error: extractValidationError(parsedBody.error) });
     }
 
+    const existing = await Promise.resolve(storage.getEvento(id));
+    if (!existing) {
+      return res.status(404).json({ error: 'Evento não encontrado.' });
+    }
+
+    const ownerId = resolveEntityUserId(existing);
+    if (ownerId !== currentUser.id) {
+      return res.status(403).json({ error: 'Você não tem permissão para alterar este evento.' });
+    }
+
     const { date, title, description, color, clientId, completed } = parsedBody.data;
+
+    if (clientId !== undefined && clientId !== null) {
+      const cliente = await Promise.resolve(storage.getCliente(clientId));
+      if (!cliente) {
+        return res.status(404).json({ error: 'Cliente não encontrado.' });
+      }
+
+      const clientOwnerId = resolveEntityUserId(cliente);
+      if (clientOwnerId !== currentUser.id) {
+        return res
+          .status(403)
+          .json({ error: 'Você não tem permissão para vincular este cliente ao evento.' });
+      }
+    }
+
     const updated = await Promise.resolve(
       storage.updateEvento(
         id,
-        fromApiEvento({ date, title, description, color, clientId, completed })
+        fromApiEvento({ date, title, description, color, clientId, completed, userId: currentUser.id })
       )
     );
 
     if (!updated) {
       return res.status(404).json({ error: 'Evento não encontrado.' });
     }
+
+    assignUserId(updated, currentUser.id);
 
     res.json({ evento: toApiEvento(updated) });
   } catch (error) {
@@ -1186,12 +1515,27 @@ app.put('/api/eventos/:id', async (req, res) => {
 });
 
 app.delete('/api/eventos/:id', async (req, res) => {
+  const currentUser = requireRequestUser(req, res);
+  if (!currentUser) {
+    return;
+  }
+
   const { id } = req.params;
   if (!id) {
     return res.status(400).json({ error: 'O identificador do evento é obrigatório.' });
   }
 
   try {
+    const existing = await Promise.resolve(storage.getEvento(id));
+    if (!existing) {
+      return res.status(404).json({ error: 'Evento não encontrado.' });
+    }
+
+    const ownerId = resolveEntityUserId(existing);
+    if (ownerId !== currentUser.id) {
+      return res.status(403).json({ error: 'Você não tem permissão para remover este evento.' });
+    }
+
     const removed = await Promise.resolve(storage.deleteEvento(id));
     if (!removed) {
       return res.status(404).json({ error: 'Evento não encontrado.' });
