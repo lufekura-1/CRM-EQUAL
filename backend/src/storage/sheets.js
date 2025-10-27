@@ -276,6 +276,20 @@ function listClientes() {
   return sortClientesByIdDesc(clientes);
 }
 
+function getCliente(id) {
+  const clienteId = Number(id);
+  if (Number.isNaN(clienteId)) {
+    return null;
+  }
+
+  const cliente = clientes.find((client) => client.id === clienteId);
+  if (!cliente) {
+    return null;
+  }
+
+  return cloneClient(cliente);
+}
+
 function createCliente(payload) {
   if (!payload?.nome) {
     throw new Error('Campo "nome" é obrigatório.');
@@ -391,6 +405,16 @@ function listEventos() {
   return sortEventos(eventos);
 }
 
+function getEvento(id) {
+  const eventoId = Number(id);
+  if (Number.isNaN(eventoId)) {
+    return null;
+  }
+
+  const evento = eventos.find((entry) => entry.id === eventoId);
+  return evento ? { ...evento } : null;
+}
+
 function createEvento({
   data,
   titulo,
@@ -481,10 +505,12 @@ function deleteEvento(id) {
 
 module.exports = {
   listClientes,
+  getCliente,
   createCliente,
   updateCliente,
   deleteCliente,
   listEventos,
+  getEvento,
   createEvento,
   updateEvento,
   deleteEvento,
