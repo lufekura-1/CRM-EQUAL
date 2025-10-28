@@ -1214,63 +1214,246 @@ body.modal-open {
 }
 
 .user-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
   border: none;
   padding: 0;
   margin: 0;
+  gap: 12px;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 480px) {
+  .user-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 820px) {
+  .user-selector {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .user-selector {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .user-selector__option {
+  position: relative;
+  display: block;
+}
+
+.user-selector__option input[type='radio'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.user-selector__chip {
   display: flex;
   align-items: center;
   gap: 12px;
   background-color: #1f1f1f;
-  border-radius: 12px;
-  padding: 12px 14px;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border 0.2s ease;
+  border-radius: 999px;
+  padding: 12px 18px;
   border: 1px solid transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
-.user-selector__option:hover,
-.user-selector__option:focus-within {
+.user-selector__option:hover .user-selector__chip,
+.user-selector__option:focus-within .user-selector__chip {
   background-color: #2c2c2c;
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
-.user-selector__option input[type='radio'] {
-  accent-color: #ff9800;
-  margin: 0;
+.user-selector__option input[type='radio']:checked + .user-selector__chip {
+  border-color: rgba(255, 152, 0, 0.6);
+  background-color: rgba(255, 152, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.user-selector__option input[type='radio']:focus-visible + .user-selector__chip {
+  outline: 2px solid #ff9800;
+  outline-offset: 2px;
 }
 
 .user-selector__code {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background-color: rgba(255, 152, 0, 0.2);
-  color: #ff9800;
+  background-color: rgba(255, 152, 0, 0.18);
+  color: #ffb74d;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   letter-spacing: 0.05em;
+  font-size: 14px;
 }
 
 .user-selector__details {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .user-selector__name {
   font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .user-selector__subtitle {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.config-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  min-height: 120px;
+}
+
+.config-card {
+  background-color: #1b1b1b;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 20px 24px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.config-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.config-card__title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.config-card__action {
+  font-size: 14px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  outline: none;
+}
+
+.config-card__action:focus-visible,
+.config-card__action:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.config-card__action--add {
+  border-color: rgba(255, 152, 0, 0.5);
+  color: #ffcc80;
+}
+
+.config-card__action--add:focus-visible,
+.config-card__action--add:hover {
+  border-color: rgba(255, 152, 0, 0.8);
+  background-color: rgba(255, 152, 0, 0.18);
+  color: #ffe082;
+}
+
+.config-card__action--edit {
+  border-color: rgba(33, 150, 243, 0.45);
+  color: #90caf9;
+}
+
+.config-card__action--edit:focus-visible,
+.config-card__action--edit:hover {
+  border-color: rgba(33, 150, 243, 0.8);
+  background-color: rgba(33, 150, 243, 0.18);
+  color: #bbdefb;
+}
+
+.config-card__action--delete {
+  border-color: rgba(244, 67, 54, 0.45);
+  color: #ff8a80;
+}
+
+.config-card__action--delete:focus-visible,
+.config-card__action--delete:hover {
+  border-color: rgba(244, 67, 54, 0.8);
+  background-color: rgba(244, 67, 54, 0.18);
+  color: #ffab91;
+}
+
+.config-card__table-wrapper {
+  overflow-x: auto;
+}
+
+.config-card__table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+}
+
+.config-card__table th,
+.config-card__table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+}
+
+.config-card__table th {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.config-card__table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.config-card__cell-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.config-card__actions-column {
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .config-card__table {
+    min-width: 100%;
+  }
+
+  .config-card__table th,
+  .config-card__table td {
+    padding: 10px 12px;
+  }
 }
 
 .modal__actions {

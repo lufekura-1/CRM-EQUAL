@@ -129,11 +129,14 @@ function triggerDashboardRefresh() {
   }
 
   CLIENTS.forEach((client, index) => {
-    if (client && typeof window.normalizePhoneDigits === 'function') {
-      client.phone = window.normalizePhoneDigits(client.phone);
-    } else if (client) {
-      const digits = client.phone ? String(client.phone).replace(/\D/g, '') : '';
-      client.phone = digits.slice(-11);
+    if (client) {
+      const rawPhone = client.phone ? String(client.phone).trim() : '';
+      const digits =
+        typeof window.normalizePhoneDigits === 'function'
+          ? window.normalizePhoneDigits(rawPhone)
+          : rawPhone.replace(/\D/g, '');
+      client.phone = rawPhone;
+      client.phoneDigits = digits;
     }
 
     if (!client.birthDate) {
@@ -284,37 +287,69 @@ let isSavingQuickSale = false;
     if (typeof window.normalizePhoneDigits === 'function') {
       return window.normalizePhoneDigits(value);
     }
-    return value ? value.toString().replace(/\D/g, '').slice(-11) : '';
+    return value ? value.toString().replace(/\D/g, '') : '';
   }
 
-  function formatClientPhone(value) {
+  function formatClientPhone(value, digitsHint = null) {
+    const text = value === undefined || value === null ? '' : String(value).trim();
+    if (text) {
+      return text;
+    }
+
+    const digits =
+      digitsHint !== null && digitsHint !== undefined
+        ? String(digitsHint)
+        : normalizePhoneDigits(value);
+
+    if (!digits) {
+      return 'Não informado';
+    }
+
     if (typeof window.formatPhoneNumber === 'function') {
       try {
-        return window.formatPhoneNumber(value);
+        const formatted = window.formatPhoneNumber(digits);
+        return formatted || digits;
       } catch (error) {
-        // Ignore formatting errors and fall back to raw value below.
+        // Ignore formatting errors and fall back to digits below.
       }
     }
-    const digits = normalizePhoneDigits(value);
-    return digits || 'Não informado';
+
+    return digits;
   }
 
-  function formatPhoneForInputValue(value) {
-    if (typeof window.formatPhoneForInput === 'function') {
-      return window.formatPhoneForInput(value);
+  function formatPhoneForInputValue(value, digitsHint = null) {
+    const text = value === undefined || value === null ? '' : String(value);
+    if (text.trim()) {
+      return text;
     }
-    if (typeof window.formatPhoneNumber === 'function') {
-      const formatted = window.formatPhoneNumber(value);
-      return formatted === 'Não informado' ? '' : formatted;
-    }
-    const digits = normalizePhoneDigits(value);
+
+    const digits =
+      digitsHint !== null && digitsHint !== undefined
+        ? String(digitsHint)
+        : normalizePhoneDigits(value);
+
     if (!digits) {
       return '';
     }
-    const prefixLength = Math.max(digits.length - 4, 0);
-    const prefix = prefixLength > 0 ? digits.slice(0, prefixLength) : '';
-    const suffix = digits.slice(-4);
-    return prefix ? `${prefix}-${suffix}` : suffix;
+
+    if (typeof window.formatPhoneForInput === 'function') {
+      try {
+        return window.formatPhoneForInput(digits);
+      } catch (error) {
+        // Ignore formatting errors and fall back to digits below.
+      }
+    }
+
+    if (typeof window.formatPhoneNumber === 'function') {
+      try {
+        const formatted = window.formatPhoneNumber(digits);
+        return formatted === 'Não informado' ? digits : formatted;
+      } catch (error) {
+        // Ignore formatting errors and fall back to digits below.
+      }
+    }
+
+    return digits;
   }
 
   function parseFilterDate(value) {
@@ -468,12 +503,12 @@ let isSavingQuickSale = false;
         }
       }
       if (phoneFilterDigits) {
-        const clientDigits = normalizePhoneDigits(client.phone);
+        const clientDigits = client.phoneDigits ?? normalizePhoneDigits(client.phone);
         if (!clientDigits.includes(phoneFilterDigits)) {
           return false;
         }
       } else if (phoneFilterText) {
-        const formattedPhone = formatClientPhone(client.phone);
+        const formattedPhone = formatClientPhone(client.phone, client.phoneDigits);
         if (!normalizeText(formattedPhone).includes(phoneFilterText)) {
           return false;
         }
@@ -639,7 +674,7 @@ let isSavingQuickSale = false;
       createSelectionCell(client),
       createNameCell(client),
       createTextCell('cpf', client.cpf),
-      createTextCell('phone', formatClientPhone(client.phone)),
+      createTextCell('phone', formatClientPhone(client.phone, client.phoneDigits)),
       createTextCell('gender', client.gender),
       createTextCell('age', String(client.age)),
       createTextCell('lastPurchase', formatDisplayDate(client.lastPurchase)),
@@ -1140,18 +1175,22 @@ let isSavingQuickSale = false;
       }
     }
 
+    const phoneSource =
+      apiClient.telefone ??
+      apiClient.phone ??
+      apiClient.celular ??
+      apiClient.telefoneCliente ??
+      apiClient['telefone_cliente'] ??
+      '';
+    const phoneText = phoneSource === undefined || phoneSource === null ? '' : String(phoneSource).trim();
+    const phoneDigits = normalizePhoneDigits(phoneText);
+
     const client = {
       id,
       name: apiClient.nome ?? apiClient.name ?? '',
       cpf: apiClient.cpf ?? apiClient.documento ?? '',
-      phone: normalizePhoneDigits(
-        apiClient.telefone ??
-          apiClient.phone ??
-          apiClient.celular ??
-          apiClient.telefoneCliente ??
-          apiClient['telefone_cliente'] ??
-          ''
-      ),
+      phone: phoneText,
+      phoneDigits,
       gender: apiClient.gender ?? apiClient.genero ?? '',
       birthDate:
         apiClient.birthDate ?? apiClient.dataNascimento ?? apiClient.data_nascimento ?? '',
@@ -1409,7 +1448,7 @@ let isSavingQuickSale = false;
     const detailMap = {
       name: client.name,
       cpf: client.cpf,
-      phone: formatClientPhone(client.phone),
+      phone: formatClientPhone(client.phone, client.phoneDigits),
       gender: genderLabel,
       birthDate: formatFullDate(client.birthDate),
       age: age ? `${age} anos` : '-',
@@ -3054,7 +3093,7 @@ let isSavingQuickSale = false;
     };
 
     updateText('cpf', client.cpf);
-    updateText('phone', formatClientPhone(client.phone));
+    updateText('phone', formatClientPhone(client.phone, client.phoneDigits));
     updateText('gender', client.gender);
     updateText('age', String(client.age));
     updateText('lastPurchase', formatDisplayDate(client.lastPurchase));
@@ -3226,7 +3265,7 @@ let isSavingQuickSale = false;
     const fields = {
       name: client?.name ?? '',
       cpf: client?.cpf ?? '',
-      phone: formatPhoneForInputValue(client?.phone ?? ''),
+      phone: formatPhoneForInputValue(client?.phone ?? '', client?.phoneDigits ?? null),
       gender: client?.gender ?? '',
       userType: client?.userType ?? USER_TYPE_VALUES[0] ?? 'VS',
       birthDate: client?.birthDate ?? defaultBirthDate,
@@ -3287,12 +3326,15 @@ let isSavingQuickSale = false;
     const userType = formData.get('userType')?.toString().toUpperCase() ?? '';
     const frameMaterial = formData.get('frameMaterial')?.toString().toUpperCase() ?? '';
     const purchaseDetail = formData.get('purchaseDetail');
-    const phoneDigits = normalizePhoneDigits(formData.get('phone'));
+    const rawPhone = formData.get('phone');
+    const phoneText = rawPhone === null ? '' : rawPhone.toString().trim();
+    const phoneDigits = normalizePhoneDigits(phoneText);
 
     return {
       name: formData.get('name')?.toString().trim() ?? '',
       cpf: formData.get('cpf')?.toString().trim() ?? '',
-      phone: phoneDigits,
+      phone: phoneText,
+      phoneDigits,
       gender: formData.get('gender')?.toString() ?? '',
       userType,
       birthDate: birthDate ? birthDate.toString() : '',
@@ -3820,11 +3862,9 @@ let isSavingQuickSale = false;
   const clientFormPhoneInput = clientFormElement
     ? clientFormElement.elements.namedItem('phone')
     : null;
-  if (
-    clientFormPhoneInput instanceof HTMLInputElement
-    && typeof window.attachPhoneInputMask === 'function'
-  ) {
-    window.attachPhoneInputMask(clientFormPhoneInput);
+  if (clientFormPhoneInput instanceof HTMLInputElement) {
+    clientFormPhoneInput.setAttribute('inputmode', 'tel');
+    clientFormPhoneInput.setAttribute('autocomplete', 'tel');
   }
   clientFormElement?.addEventListener('submit', handleClientFormSubmit);
   attachButtonHandler(clientFormCancelButton, handleClientDetailBack);
@@ -3844,6 +3884,18 @@ let isSavingQuickSale = false;
   if (clientsPageElement?.classList.contains('is-active')) {
     loadClientsFromApi();
   }
+
+  document.addEventListener('userchange', () => {
+    clientsLoadedOnce = false;
+    clientsErrorMessage = '';
+    clientsFetchPromise = null;
+    clientsLoading = false;
+    CLIENTS.splice(0, CLIENTS.length);
+    state.selectedIds.clear();
+    setCurrentClient(null);
+    renderClients();
+    loadClientsFromApi({ force: true });
+  });
 
   applyCardCollapseState();
   applyColumnWidths();
