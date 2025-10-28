@@ -13,19 +13,7 @@
   }
 
   function normalizePhoneDigits(value) {
-    let digits = extractDigits(value);
-    if (!digits) {
-      return '';
-    }
-
-    if (digits.startsWith('55') && digits.length > 11) {
-      digits = digits.slice(2);
-    }
-
-    if (digits.length > 11) {
-      digits = digits.slice(-11);
-    }
-
+    const digits = extractDigits(value);
     return digits;
   }
 

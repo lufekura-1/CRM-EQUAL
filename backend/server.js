@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { z, ZodError } = require('zod');
-const storage = require('./src/storage');
+const storageFactory = require('./src/storage');
 const { PORT, STORAGE } = require('./src/config/env');
 const { DEFAULT_USER_ID, findUserById, normalizeUserId } = require('./src/config/users');
 
@@ -156,6 +156,19 @@ function assignUserId(entity, userId) {
   });
 
   return entity;
+}
+
+function requireRequestStorage(req, res) {
+  const currentUser = requireRequestUser(req, res);
+  if (!currentUser) {
+    return null;
+  }
+
+  if (!req.currentStorage) {
+    req.currentStorage = storageFactory.forUser(currentUser.id);
+  }
+
+  return req.currentStorage;
 }
 
 
@@ -941,8 +954,9 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/clientes', async (req, res) => {
-  const currentUser = requireRequestUser(req, res);
-  if (!currentUser) {
+  const storage = requireRequestStorage(req, res);
+  const currentUser = req.currentUser;
+  if (!storage || !currentUser) {
     return;
   }
 
@@ -1004,8 +1018,9 @@ app.get('/api/clientes', async (req, res) => {
 });
 
 app.post('/api/clientes', async (req, res) => {
-  const currentUser = requireRequestUser(req, res);
-  if (!currentUser) {
+  const storage = requireRequestStorage(req, res);
+  const currentUser = req.currentUser;
+  if (!storage || !currentUser) {
     return;
   }
 
@@ -1054,8 +1069,9 @@ app.post('/api/clientes', async (req, res) => {
 });
 
 app.put('/api/clientes/:id', async (req, res) => {
-  const currentUser = requireRequestUser(req, res);
-  if (!currentUser) {
+  const storage = requireRequestStorage(req, res);
+  const currentUser = req.currentUser;
+  if (!storage || !currentUser) {
     return;
   }
 
@@ -1119,8 +1135,9 @@ app.put('/api/clientes/:id', async (req, res) => {
 });
 
 app.patch('/api/contatos/:id', async (req, res) => {
-  const currentUser = requireRequestUser(req, res);
-  if (!currentUser) {
+  const storage = requireRequestStorage(req, res);
+  const currentUser = req.currentUser;
+  if (!storage || !currentUser) {
     return;
   }
 
@@ -1157,8 +1174,9 @@ app.patch('/api/contatos/:id', async (req, res) => {
 });
 
 app.delete('/api/clientes/:id', async (req, res) => {
-  const currentUser = requireRequestUser(req, res);
-  if (!currentUser) {
+  const storage = requireRequestStorage(req, res);
+  const currentUser = req.currentUser;
+  if (!storage || !currentUser) {
     return;
   }
 
@@ -1187,8 +1205,9 @@ app.delete('/api/clientes/:id', async (req, res) => {
 });
 
 app.get('/api/eventos', async (req, res) => {
-  const currentUser = requireRequestUser(req, res);
-  if (!currentUser) {
+  const storage = requireRequestStorage(req, res);
+  const currentUser = req.currentUser;
+  if (!storage || !currentUser) {
     return;
   }
 
@@ -1403,8 +1422,9 @@ app.get('/api/eventos', async (req, res) => {
 });
 
 app.post('/api/eventos', async (req, res) => {
-  const currentUser = requireRequestUser(req, res);
-  if (!currentUser) {
+  const storage = requireRequestStorage(req, res);
+  const currentUser = req.currentUser;
+  if (!storage || !currentUser) {
     return;
   }
 
@@ -1456,8 +1476,9 @@ app.post('/api/eventos', async (req, res) => {
 });
 
 app.put('/api/eventos/:id', async (req, res) => {
-  const currentUser = requireRequestUser(req, res);
-  if (!currentUser) {
+  const storage = requireRequestStorage(req, res);
+  const currentUser = req.currentUser;
+  if (!storage || !currentUser) {
     return;
   }
 
@@ -1515,8 +1536,9 @@ app.put('/api/eventos/:id', async (req, res) => {
 });
 
 app.delete('/api/eventos/:id', async (req, res) => {
-  const currentUser = requireRequestUser(req, res);
-  if (!currentUser) {
+  const storage = requireRequestStorage(req, res);
+  const currentUser = req.currentUser;
+  if (!storage || !currentUser) {
     return;
   }
 

@@ -1,4 +1,13 @@
-const storage = require('../storage');
+const storageModule = require('../storage');
+
+function getStorage(userId = 'usuario-teste') {
+  if (storageModule && typeof storageModule.forUser === 'function') {
+    return storageModule.forUser(userId);
+  }
+  return storageModule;
+}
+
+const storage = getStorage();
 
 function seedClientes() {
   const existingClientes = storage.listClientes();

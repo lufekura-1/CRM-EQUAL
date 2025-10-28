@@ -1,6 +1,6 @@
 const { STORAGE } = require('../config/env');
 
-function resolveAdapter() {
+function loadStorageModule() {
   switch (STORAGE) {
     case 'sheets':
       return require('./sheets');
@@ -10,4 +10,15 @@ function resolveAdapter() {
   }
 }
 
-module.exports = resolveAdapter();
+const storageModule = loadStorageModule();
+
+function getStorageForUser(userId) {
+  if (storageModule && typeof storageModule.forUser === 'function') {
+    return storageModule.forUser(userId);
+  }
+  return storageModule;
+}
+
+module.exports = {
+  forUser: getStorageForUser,
+};

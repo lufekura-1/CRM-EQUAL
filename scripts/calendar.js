@@ -1526,3 +1526,10 @@ function getCurrentWeekContacts() {
 window.getCalendarContactsForRange = getCalendarContactsForRange;
 window.getCurrentWeekContacts = getCurrentWeekContacts;
 window.getCurrentWeekRange = getCurrentWeekRange;
+
+document.addEventListener('userchange', () => {
+  Object.keys(events).forEach((key) => {
+    delete events[key];
+  });
+  refreshCalendar({ forceFull: true, allowModalRebuild: true });
+});
