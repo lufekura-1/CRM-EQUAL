@@ -689,7 +689,7 @@ function cloneDioptry(dioptry = {}) {
   };
 }
 
-function decoratePurchaseResponse(purchase) {
+function decoratePurchaseResponse(purchase, fallbackUserId = DEFAULT_USER_ID) {
   if (!purchase) {
     return null;
   }
@@ -697,7 +697,9 @@ function decoratePurchaseResponse(purchase) {
   const dioptry = cloneDioptry(purchase.dioptry);
 
   const contacts = Array.isArray(purchase.contacts)
-    ? purchase.contacts.map((contact) => decorateContactResponse(contact)).filter(Boolean)
+    ? purchase.contacts
+        .map((contact) => decorateContactResponse(contact, fallbackUserId))
+        .filter(Boolean)
     : [];
 
   return {
@@ -722,14 +724,14 @@ function decoratePurchaseResponse(purchase) {
   };
 }
 
-function decorateContactResponse(contact) {
+function decorateContactResponse(contact, fallbackUserId = DEFAULT_USER_ID) {
   if (!contact) {
     return null;
   }
 
   const completed = Boolean(contact.completed);
   const statusInfo = resolveContactStatus(contact);
-  const contactUserId = resolveEntityUserId(contact);
+  const contactUserId = resolveEntityUserId(contact, fallbackUserId);
 
   return {
     ...contact,
@@ -776,11 +778,12 @@ function decorateContactResponse(contact) {
   };
 }
 
-function decorateClientResponse(cliente) {
+function decorateClientResponse(cliente, fallbackUserId = DEFAULT_USER_ID) {
   if (!cliente) {
     return null;
   }
 
+  const clientUserId = resolveEntityUserId(cliente, fallbackUserId);
   const interests = Array.isArray(cliente.interests)
     ? cliente.interests.map((item) => (item === undefined || item === null ? null : String(item).trim()))
     : [];
@@ -788,32 +791,34 @@ function decorateClientResponse(cliente) {
 
   const purchases = Array.isArray(cliente.purchases)
     ? cliente.purchases
-        .map((purchase) => decoratePurchaseResponse(purchase))
+        .map((purchase) => decoratePurchaseResponse(purchase, clientUserId))
         .filter((purchase) => Boolean(purchase))
     : [];
 
   const lastPurchase = cliente.lastPurchase ?? purchases[purchases.length - 1]?.date ?? null;
 
   const contacts = Array.isArray(cliente.contacts)
-    ? cliente.contacts.map((contact) => decorateContactResponse(contact)).filter(Boolean)
+    ? cliente.contacts
+        .map((contact) => decorateContactResponse(contact, clientUserId))
+        .filter(Boolean)
     : [];
 
   return {
     ...cliente,
-    userId: cliente.userId ?? null,
-    user_id: cliente.userId ?? null,
-    usuarioId: cliente.userId ?? null,
-    usuario_id: cliente.userId ?? null,
-    user: cliente.userId ?? null,
-    usuario: cliente.userId ?? null,
-    ownerId: cliente.userId ?? null,
-    owner_id: cliente.userId ?? null,
-    responsavelId: cliente.userId ?? null,
-    responsavel_id: cliente.userId ?? null,
-    responsavel: cliente.userId ?? null,
-    responsibleId: cliente.userId ?? null,
-    responsible_id: cliente.userId ?? null,
-    responsible: cliente.userId ?? null,
+    userId: clientUserId ?? null,
+    user_id: clientUserId ?? null,
+    usuarioId: clientUserId ?? null,
+    usuario_id: clientUserId ?? null,
+    user: clientUserId ?? null,
+    usuario: clientUserId ?? null,
+    ownerId: clientUserId ?? null,
+    owner_id: clientUserId ?? null,
+    responsavelId: clientUserId ?? null,
+    responsavel_id: clientUserId ?? null,
+    responsavel: clientUserId ?? null,
+    responsibleId: clientUserId ?? null,
+    responsible_id: clientUserId ?? null,
+    responsible: clientUserId ?? null,
     gender: cliente.gender ?? null,
     birthDate: cliente.birthDate ?? null,
     acceptsContact: Boolean(cliente.acceptsContact),
@@ -972,7 +977,7 @@ app.get('/api/clientes', async (req, res) => {
     const clientes = await Promise.resolve(storage.listClientes());
     const clientesForUser = clientes
       .map((cliente) => {
-        const resolvedUserId = resolveEntityUserId(cliente);
+        const resolvedUserId = resolveEntityUserId(cliente, currentUser.id);
         if (resolvedUserId !== currentUser.id) {
           return null;
         }
@@ -1002,7 +1007,7 @@ app.get('/api/clientes', async (req, res) => {
     const end = start + CLIENTES_PAGE_SIZE;
     const paginatedClientes = filteredClientes.slice(start, end);
     const decoratedClientes = paginatedClientes.map((cliente) =>
-      decorateClientResponse(cliente)
+      decorateClientResponse(cliente, currentUser.id)
     );
 
     res.json({
@@ -1062,7 +1067,7 @@ app.post('/api/clientes', async (req, res) => {
 
     assignUserId(cliente, currentUser.id);
 
-    res.status(201).json({ cliente: decorateClientResponse(cliente) });
+    res.status(201).json({ cliente: decorateClientResponse(cliente, currentUser.id) });
   } catch (error) {
     handleError(res, error);
   }
@@ -1087,7 +1092,7 @@ app.put('/api/clientes/:id', async (req, res) => {
       return res.status(404).json({ error: 'Cliente não encontrado.' });
     }
 
-    const ownerId = resolveEntityUserId(existing);
+    const ownerId = resolveEntityUserId(existing, currentUser.id);
     if (ownerId !== currentUser.id) {
       return res.status(403).json({ error: 'Você não tem permissão para alterar este cliente.' });
     }
@@ -1128,7 +1133,7 @@ app.put('/api/clientes/:id', async (req, res) => {
 
     assignUserId(updated, currentUser.id);
 
-    res.json({ cliente: decorateClientResponse(updated) });
+    res.json({ cliente: decorateClientResponse(updated, currentUser.id) });
   } catch (error) {
     handleError(res, error);
   }
@@ -1156,7 +1161,7 @@ app.patch('/api/contatos/:id', async (req, res) => {
     }
 
     const { contact, cliente } = result;
-    const ownerId = resolveEntityUserId(cliente);
+    const ownerId = resolveEntityUserId(cliente, currentUser.id);
     if (ownerId !== currentUser.id) {
       return res.status(403).json({ error: 'Você não tem permissão para atualizar este contato.' });
     }
@@ -1165,8 +1170,8 @@ app.patch('/api/contatos/:id', async (req, res) => {
     assignUserId(contact, ownerId);
 
     res.json({
-      contato: decorateContactResponse(contact),
-      cliente: decorateClientResponse(cliente),
+      contato: decorateContactResponse(contact, ownerId),
+      cliente: decorateClientResponse(cliente, ownerId),
     });
   } catch (error) {
     handleError(res, error);
@@ -1187,7 +1192,7 @@ app.delete('/api/clientes/:id', async (req, res) => {
       return res.status(404).json({ error: 'Cliente não encontrado.' });
     }
 
-    const ownerId = resolveEntityUserId(existing);
+    const ownerId = resolveEntityUserId(existing, currentUser.id);
     if (ownerId !== currentUser.id) {
       return res.status(403).json({ error: 'Você não tem permissão para remover este cliente.' });
     }
@@ -1229,7 +1234,7 @@ app.get('/api/eventos', async (req, res) => {
 
     const clientesForUser = clientes
       .map((cliente) => {
-        const resolvedUserId = resolveEntityUserId(cliente);
+        const resolvedUserId = resolveEntityUserId(cliente, currentUser.id);
         if (resolvedUserId !== currentUser.id) {
           return null;
         }
@@ -1266,7 +1271,7 @@ app.get('/api/eventos', async (req, res) => {
 
     const eventosForUser = eventos
       .map((evento) => {
-        const resolvedUserId = resolveEntityUserId(evento);
+        const resolvedUserId = resolveEntityUserId(evento, currentUser.id);
         if (resolvedUserId !== currentUser.id) {
           return null;
         }
@@ -1442,7 +1447,7 @@ app.post('/api/eventos', async (req, res) => {
         return res.status(404).json({ error: 'Cliente não encontrado.' });
       }
 
-      const ownerId = resolveEntityUserId(cliente);
+      const ownerId = resolveEntityUserId(cliente, currentUser.id);
       if (ownerId !== currentUser.id) {
         return res
           .status(403)
@@ -1495,7 +1500,7 @@ app.put('/api/eventos/:id', async (req, res) => {
       return res.status(404).json({ error: 'Evento não encontrado.' });
     }
 
-    const ownerId = resolveEntityUserId(existing);
+    const ownerId = resolveEntityUserId(existing, currentUser.id);
     if (ownerId !== currentUser.id) {
       return res.status(403).json({ error: 'Você não tem permissão para alterar este evento.' });
     }
@@ -1508,7 +1513,7 @@ app.put('/api/eventos/:id', async (req, res) => {
         return res.status(404).json({ error: 'Cliente não encontrado.' });
       }
 
-      const clientOwnerId = resolveEntityUserId(cliente);
+      const clientOwnerId = resolveEntityUserId(cliente, currentUser.id);
       if (clientOwnerId !== currentUser.id) {
         return res
           .status(403)
@@ -1553,7 +1558,7 @@ app.delete('/api/eventos/:id', async (req, res) => {
       return res.status(404).json({ error: 'Evento não encontrado.' });
     }
 
-    const ownerId = resolveEntityUserId(existing);
+    const ownerId = resolveEntityUserId(existing, currentUser.id);
     if (ownerId !== currentUser.id) {
       return res.status(403).json({ error: 'Você não tem permissão para remover este evento.' });
     }
