@@ -79,6 +79,19 @@
       requestHeaders.set('Accept', 'application/json');
     }
 
+    if (!requestHeaders.has('X-User-Id')) {
+      try {
+        if (typeof global.getCurrentUserId === 'function') {
+          const currentUserId = global.getCurrentUserId();
+          if (currentUserId) {
+            requestHeaders.set('X-User-Id', currentUserId);
+          }
+        }
+      } catch (error) {
+        console.warn('[safeFetch] Não foi possível determinar o usuário atual.', error);
+      }
+    }
+
     const controller = new AbortController();
     if (signal instanceof AbortSignal) {
       if (signal.aborted) {
