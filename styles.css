@@ -1088,6 +1088,164 @@ body.modal-open {
   text-align: center;
 }
 
+.modal__secondary-button {
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.modal__secondary-button:hover,
+.modal__secondary-button:focus-visible {
+  border-color: rgba(255, 152, 0, 0.6);
+  background-color: rgba(255, 152, 0, 0.16);
+  outline: none;
+}
+
+.quick-sale-items {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.quick-sale-items__controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.quick-sale-items__field {
+  margin: 0;
+}
+
+.quick-sale-items__field--quantity {
+  max-width: 140px;
+}
+
+.quick-sale-items__buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.quick-sale-items__buttons button {
+  min-width: 120px;
+}
+
+.quick-sale-items__table-wrapper {
+  overflow-x: auto;
+}
+
+.quick-sale-items__table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.quick-sale-items__table thead {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.quick-sale-items__table th,
+.quick-sale-items__table td {
+  padding: 10px 12px;
+  font-size: 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.quick-sale-items__table th {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.quick-sale-items__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.quick-sale-items__column-actions {
+  width: 130px;
+  text-align: center;
+}
+
+.quick-sale-items__row-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.quick-sale-items__action-button {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.quick-sale-items__action-button:hover,
+.quick-sale-items__action-button:focus-visible {
+  background: rgba(255, 152, 0, 0.18);
+  border-color: rgba(255, 152, 0, 0.35);
+  outline: none;
+}
+
+.quick-sale-items__action-button--danger {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.16);
+}
+
+.quick-sale-items__action-button--danger:hover,
+.quick-sale-items__action-button--danger:focus-visible {
+  background: rgba(255, 107, 107, 0.28);
+  border-color: rgba(255, 107, 107, 0.45);
+}
+
+.quick-sale-items__empty {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 16px 12px;
+}
+
+.quick-sale-check__feedback {
+  min-height: 24px;
+  margin-top: 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.quick-sale-check__feedback.is-error {
+  color: #ff6b6b;
+}
+
+.quick-sale-check__feedback.is-success {
+  color: #6bff9d;
+}
+
+.quick-sale-check__footer {
+  justify-content: flex-end;
+}
+
+.quick-sale-check__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .modal__textarea {
   min-height: 100px;
   resize: vertical;
