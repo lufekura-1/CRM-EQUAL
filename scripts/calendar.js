@@ -611,27 +611,9 @@ function resolveApiUrl(path) {
 
 function buildEventsUrl(range = {}) {
   const params = new URLSearchParams();
-  const formatIsoDate = (value, isEndOfDay = false) => {
-    if (!value) {
-      return '';
-    }
 
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return '';
-    }
-
-    if (!isEndOfDay) {
-      date.setHours(0, 0, 0, 0);
-    } else {
-      date.setHours(23, 59, 59, 999);
-    }
-
-    return date.toISOString();
-  };
-
-  const normalizedFrom = formatIsoDate(`${range.from}T00:00:00`);
-  const normalizedTo = formatIsoDate(`${range.to}T00:00:00`, true);
+  const normalizedFrom = extractDateKey(range.from);
+  const normalizedTo = extractDateKey(range.to);
 
   if (normalizedFrom) {
     params.set('from', normalizedFrom);
