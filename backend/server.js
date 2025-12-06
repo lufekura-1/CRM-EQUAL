@@ -862,17 +862,21 @@ const optionalDateParamSchema = z
 
 const eventosQuerySchema = z
   .object({
-    from: optionalDateParamSchema.optional(),
-    to: optionalDateParamSchema.optional(),
+    from: optionalDateParamSchema.transform((value) => new Date(`${value}T00:00:00`)).optional(),
+    to: optionalDateParamSchema.transform((value) => new Date(`${value}T23:59:59.999`)).optional(),
   })
-  .refine((value) => {
-    if (value.from && value.to) {
-      return value.from <= value.to;
+  .superRefine((value, ctx) => {
+    if (value.from && Number.isNaN(value.from.getTime())) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Data inicial inválida.' });
     }
 
-    return true;
-  }, {
-    message: 'O parâmetro "from" deve ser menor ou igual a "to".',
+    if (value.to && Number.isNaN(value.to.getTime())) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Data final inválida.' });
+    }
+
+    if (value.from && value.to && value.from > value.to) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'O parâmetro "from" deve ser menor ou igual a "to".' });
+    }
   });
 
 const clientIdSchema = z
@@ -1222,9 +1226,7 @@ app.get('/api/eventos', async (req, res) => {
       return res.status(400).json({ error: extractValidationError(parsedQuery.error) });
     }
 
-    const { from, to } = parsedQuery.data;
-    const fromDate = from ? new Date(`${from}T00:00:00.000Z`) : null;
-    const toDate = to ? new Date(`${to}T23:59:59.999Z`) : null;
+    const { from: fromDate, to: toDate } = parsedQuery.data;
 
     const [eventos, contatos, clientes] = await Promise.all([
       Promise.resolve(storage.listEventos()),
