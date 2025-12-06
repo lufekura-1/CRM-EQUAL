@@ -853,31 +853,10 @@ const clientesQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
 });
 
-const optionalDateParamSchema = z
-  .string()
-  .trim()
-  .refine((value) => /^\d{4}-\d{2}-\d{2}$/.test(value), {
-    message: 'Datas devem estar no formato YYYY-MM-DD.',
-  });
-
-const eventosQuerySchema = z
-  .object({
-    from: optionalDateParamSchema.transform((value) => new Date(`${value}T00:00:00`)).optional(),
-    to: optionalDateParamSchema.transform((value) => new Date(`${value}T23:59:59.999`)).optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.from && Number.isNaN(value.from.getTime())) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Data inicial inválida.' });
-    }
-
-    if (value.to && Number.isNaN(value.to.getTime())) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Data final inválida.' });
-    }
-
-    if (value.from && value.to && value.from > value.to) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'O parâmetro "from" deve ser menor ou igual a "to".' });
-    }
-  });
+const eventosQuerySchema = z.object({
+  from: z.union([z.string(), z.array(z.string())]).optional(),
+  to: z.union([z.string(), z.array(z.string())]).optional(),
+});
 
 const clientIdSchema = z
   .union([
@@ -1222,11 +1201,44 @@ app.get('/api/eventos', async (req, res) => {
 
   try {
     const parsedQuery = eventosQuerySchema.safeParse(req.query);
-    if (!parsedQuery.success) {
-      return res.status(400).json({ error: extractValidationError(parsedQuery.error) });
-    }
+    const { from: rawFrom, to: rawTo } = parsedQuery.success ? parsedQuery.data : req.query;
 
-    const { from: fromDate, to: toDate } = parsedQuery.data;
+    const parseDateParam = (value, label, endOfDay = false) => {
+      if (value === undefined || value === null) {
+        return undefined;
+      }
+
+      const normalized = Array.isArray(value) ? value[0] : value;
+      const stringValue = String(normalized).trim();
+
+      if (stringValue.length === 0) {
+        return undefined;
+      }
+
+      let parsed;
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(stringValue)) {
+        parsed = new Date(`${stringValue}${endOfDay ? 'T23:59:59.999' : 'T00:00:00'}`);
+      } else {
+        parsed = new Date(stringValue);
+      }
+
+      if (Number.isNaN(parsed.getTime())) {
+        console.warn(`Parâmetro "${label}" inválido: ${stringValue}. Ignorando filtro.`);
+        return undefined;
+      }
+
+      return parsed;
+    };
+
+    let fromDate = parseDateParam(rawFrom, 'from');
+    let toDate = parseDateParam(rawTo, 'to', true);
+
+    if (fromDate && toDate && fromDate > toDate) {
+      console.warn('Intervalo de datas inválido: "from" maior que "to". Ignorando filtros.');
+      fromDate = undefined;
+      toDate = undefined;
+    }
 
     const [eventos, contatos, clientes] = await Promise.all([
       Promise.resolve(storage.listEventos()),
